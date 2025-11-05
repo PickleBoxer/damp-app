@@ -18,7 +18,12 @@ interface ElectronWindow {
   close: () => Promise<void>;
 }
 
+interface DockerContext {
+  getStatus: () => Promise<{ isRunning: boolean; error?: string }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
+  docker: DockerContext;
 }
