@@ -8,6 +8,7 @@ import path from "node:path";
 import { includeIgnoreFile } from "@eslint/compat";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "eslint/config";
+import pluginQuery from '@tanstack/eslint-plugin-query'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,4 +26,5 @@ export default defineConfig([
   reactHooks.configs.flat.recommended,
   eslintPluginPrettierRecommended,
   ...tseslint.configs.recommended,
+  ...pluginQuery.configs['flat/recommended'],
 ]);
