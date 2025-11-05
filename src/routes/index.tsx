@@ -12,7 +12,7 @@ function HomePage() {
     <div className="flex h-full flex-col">
       <div className="flex flex-1 flex-col items-center justify-center gap-2">
         <InitialIcons />
-        <span>
+        <div>
           <h1 className="font-mono text-4xl font-bold">{t("appName")}</h1>
           <p
             className="text-muted-foreground text-end text-sm uppercase"
@@ -20,7 +20,7 @@ function HomePage() {
           >
             {t("titleHomePage")}
           </p>
-        </span>
+        </div>
         <LangToggle />
         <ToggleTheme />
       </div>
