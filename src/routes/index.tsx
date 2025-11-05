@@ -5,7 +5,7 @@ import Footer from "@/components/template/Footer";
 import InitialIcons from "@/components/template/InitialIcons";
 import { createFileRoute } from "@tanstack/react-router";
 
-function HomePage() {
+function DashboardPage() {
   const { t } = useTranslation();
 
   return (
@@ -18,7 +18,7 @@ function HomePage() {
             className="text-muted-foreground text-end text-sm uppercase"
             data-testid="pageTitle"
           >
-            {t("titleHomePage")}
+            {t("titleDashboardPage")}
           </p>
         </div>
         <LangToggle />
@@ -30,5 +30,5 @@ function HomePage() {
 }
 
 export const Route = createFileRoute("/")({
-  component: HomePage,
+  component: DashboardPage,
 });

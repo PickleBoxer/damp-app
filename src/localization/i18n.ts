@@ -7,15 +7,21 @@ i18n.use(initReactI18next).init({
     en: {
       translation: {
         appName: "electron-shadcn",
-        titleHomePage: "Home Page",
-        titleSecondPage: "Second Page",
+        titleDashboardPage: "Dashboard Page",
+        titleServicesPage: "Services Page",
+        titleSitesPage: "Sites Page",
+        titleSettingsPage: "Settings Page",
+        titleAboutPage: "About Page",
       },
     },
     "pt-BR": {
       translation: {
         appName: "electron-shadcn",
-        titleHomePage: "Página Inicial",
-        titleSecondPage: "Segunda Página",
+        titleDashboardPage: "Página Inicial",
+        titleServicesPage: "Página de Serviços",
+        titleSitesPage: "Página de Sites",
+        titleSettingsPage: "Página de Configurações",
+        titleAboutPage: "Página Sobre",
       },
     },
   },
