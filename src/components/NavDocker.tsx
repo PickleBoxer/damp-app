@@ -23,7 +23,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useDockerStatus } from "@/hooks/use-docker-status";
+import { useDockerStatus } from "@/api/docker/docker-queries";
 import {
   Collapsible,
   CollapsibleTrigger,

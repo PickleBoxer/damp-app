@@ -14,7 +14,8 @@
     "components": "@/components",
     "utils": "@/utils/tailwind",
     "ui": "@/components/ui",
-    "hooks": "@/hooks"
+    "hooks": "@/hooks",
+    "api": "@/api"
   },
   "iconLibrary": "lucide"
 }

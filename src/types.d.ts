@@ -22,8 +22,22 @@ interface DockerContext {
   getStatus: () => Promise<{ isRunning: boolean; error?: string }>;
 }
 
+interface ServicesContext {
+  getAllServices: () => Promise<unknown>;
+  getService: (serviceId: string) => Promise<unknown>;
+  checkDockerStatus: () => Promise<unknown>;
+  installService: (serviceId: string, options?: unknown) => Promise<unknown>;
+  uninstallService: (serviceId: string, removeVolumes?: boolean) => Promise<unknown>;
+  startService: (serviceId: string) => Promise<unknown>;
+  stopService: (serviceId: string) => Promise<unknown>;
+  restartService: (serviceId: string) => Promise<unknown>;
+  updateConfig: (serviceId: string, customConfig: unknown) => Promise<unknown>;
+  onInstallProgress: (callback: (serviceId: string, progress: unknown) => void) => () => void;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
   docker: DockerContext;
+  services: ServicesContext;
 }
