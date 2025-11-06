@@ -12,7 +12,7 @@ export default function BaseLayout({
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <DragWindowRegion title="Damp App" />
+        <DragWindowRegion title="DAMP" />
         <main className="flex flex-1 flex-col p-4">{children}</main>
       </SidebarInset>
     </SidebarProvider>

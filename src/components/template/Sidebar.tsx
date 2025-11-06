@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { Command, Globe, Home, Info, Server, Settings } from "lucide-react";
-import { NavUser } from "@/components/NavUser";
+import { NavDocker } from "@/components/NavDocker";
 import {
   Sidebar,
   SidebarContent,
@@ -13,22 +13,18 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-
-// This is sample data
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-};
 
 export default function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation();
+  // Get only the location object from router state
+  const location = useRouterState({ select: (s) => s.location });
+  // Helper to check if a route is active
+  const isActive = (to: string) => location.pathname === to;
+
   return (
     <Sidebar
       collapsible="none"
@@ -60,12 +56,15 @@ export default function AppSidebar({
                   }}
                   className="px-2.5 md:px-2"
                   asChild
+                  isActive={isActive("/")}
                 >
                   <Link to="/">
                     <Home />
                     <span>{t("titleDashboardPage")}</span>
                   </Link>
                 </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={{
                     children: t("titleServicesPage"),
@@ -73,12 +72,15 @@ export default function AppSidebar({
                   }}
                   className="px-2.5 md:px-2"
                   asChild
+                  isActive={isActive("/services")}
                 >
                   <Link to="/services">
                     <Server />
                     <span>{t("titleServicesPage")}</span>
                   </Link>
                 </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={{
                     children: t("titleSitesPage"),
@@ -86,6 +88,7 @@ export default function AppSidebar({
                   }}
                   className="px-2.5 md:px-2"
                   asChild
+                  isActive={isActive("/sites")}
                 >
                   <Link to="/sites">
                     <Globe />
@@ -107,6 +110,7 @@ export default function AppSidebar({
                 }}
                 className="px-2.5 md:px-2"
                 asChild
+                isActive={isActive("/settings")}
               >
                 <Link to="/settings">
                   <Settings />
@@ -122,6 +126,7 @@ export default function AppSidebar({
                 }}
                 className="px-2.5 md:px-2"
                 asChild
+                isActive={isActive("/about")}
               >
                 <Link to="/about">
                   <Info />
@@ -133,7 +138,7 @@ export default function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavDocker />
       </SidebarFooter>
     </Sidebar>
   );

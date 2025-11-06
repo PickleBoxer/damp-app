@@ -5,18 +5,27 @@ import {
 } from "@/helpers/window_helpers";
 import { isMacOS } from "@/utils/platform";
 import { type ReactNode } from "react";
+import { useRouterState } from "@tanstack/react-router"; // Add this import
 
 interface DragWindowRegionProps {
   title?: ReactNode;
 }
 
 export default function DragWindowRegion({ title }: DragWindowRegionProps) {
+  const { location } = useRouterState();
+  const routePath = location.pathname;
+
   return (
     <div className="bg-background sticky top-0 flex h-[calc(var(--sidebar-width-icon)+1px)]! shrink-0 items-center gap-2 border-b px-4">
       <div className="draglayer w-full">
         {title && !isMacOS() && (
-          <div className="flex flex-1 p-2 text-xs whitespace-nowrap text-gray-400 select-none">
-            {title}
+          <div className="flex items-center gap-2">
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">{title}</span>
+              <small className="text-muted-foreground truncate text-xs capitalize">
+                {routePath === "/" ? "Dashboard" : routePath.replace("/", "")}
+              </small>
+            </div>
           </div>
         )}
         {isMacOS() && (

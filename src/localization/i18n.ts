@@ -7,11 +7,11 @@ i18n.use(initReactI18next).init({
     en: {
       translation: {
         appName: "electron-shadcn",
-        titleDashboardPage: "Dashboard Page",
-        titleServicesPage: "Services Page",
-        titleSitesPage: "Sites Page",
-        titleSettingsPage: "Settings Page",
-        titleAboutPage: "About Page",
+        titleDashboardPage: "Dashboard",
+        titleServicesPage: "Services",
+        titleSitesPage: "Sites",
+        titleSettingsPage: "Settings",
+        titleAboutPage: "About",
       },
     },
     "pt-BR": {

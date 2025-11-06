@@ -8,8 +8,12 @@ const docker = new Docker();
 export function addDockerListeners() {
   ipcMain.handle(DOCKER_STATUS_CHANNEL, async (): Promise<DockerStatus> => {
     try {
-      // Ping Docker daemon to check if it's running
-      await docker.ping();
+      // Ping Docker daemon with timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Docker ping timeout (3s)")), 3000)
+      );
+      
+      await Promise.race([docker.ping(), timeoutPromise]);
       console.log("✅ Docker is running");
       return { isRunning: true };
     } catch (error) {
