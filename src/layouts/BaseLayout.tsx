@@ -1,13 +1,9 @@
-import React from "react";
-import DragWindowRegion from "@/components/DragWindowRegion";
-import AppSidebar from "@/components/template/Sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import React from 'react';
+import DragWindowRegion from '@/components/DragWindowRegion';
+import AppSidebar from '@/components/template/Sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 
-export default function BaseLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function BaseLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar />

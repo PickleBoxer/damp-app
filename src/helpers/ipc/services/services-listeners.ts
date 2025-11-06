@@ -3,10 +3,10 @@
  * Handles all service-related IPC calls from renderer process
  */
 
-import { ipcMain, BrowserWindow } from "electron";
-import type { ServiceId, InstallOptions, CustomConfig } from "../../../types/service";
-import { serviceStateManager } from "../../../services/state/service-state-manager";
-import * as CHANNELS from "./services-channels";
+import { ipcMain, BrowserWindow } from 'electron';
+import type { ServiceId, InstallOptions, CustomConfig } from '../../../types/service';
+import { serviceStateManager } from '../../../services/state/service-state-manager';
+import * as CHANNELS from './services-channels';
 
 /**
  * Add service event listeners
@@ -29,7 +29,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await serviceStateManager.getAllServices();
     } catch (error) {
-      console.error("Failed to get all services:", error);
+      console.error('Failed to get all services:', error);
       throw error;
     }
   });
@@ -48,19 +48,6 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * Check Docker status
-   */
-  ipcMain.handle(CHANNELS.SERVICES_CHECK_DOCKER, async () => {
-    try {
-      await ensureInitialized();
-      return await serviceStateManager.checkDockerStatus();
-    } catch (error) {
-      console.error("Failed to check Docker status:", error);
-      throw error;
-    }
-  });
-
-  /**
    * Install a service
    */
   ipcMain.handle(
@@ -71,18 +58,10 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
 
         // Progress callback to send updates to renderer
         const onProgress = (progress: unknown) => {
-          mainWindow.webContents.send(
-            CHANNELS.SERVICES_INSTALL_PROGRESS,
-            serviceId,
-            progress
-          );
+          mainWindow.webContents.send(CHANNELS.SERVICES_INSTALL_PROGRESS, serviceId, progress);
         };
 
-        return await serviceStateManager.installService(
-          serviceId,
-          options,
-          onProgress
-        );
+        return await serviceStateManager.installService(serviceId, options, onProgress);
       } catch (error) {
         console.error(`Failed to install service ${serviceId}:`, error);
         throw error;
@@ -161,5 +140,5 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
     }
   );
 
-  console.log("Service IPC listeners registered");
+  console.log('Service IPC listeners registered');
 }

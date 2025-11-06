@@ -1,6 +1,6 @@
-import { Moon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toggleTheme } from "@/helpers/theme_helpers";
+import { Moon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toggleTheme } from '@/helpers/theme_helpers';
 
 export default function ToggleTheme() {
   return (

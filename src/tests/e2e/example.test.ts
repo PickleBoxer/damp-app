@@ -1,11 +1,5 @@
-import {
-  test,
-  expect,
-  _electron as electron,
-  ElectronApplication,
-  Page,
-} from "@playwright/test";
-import { findLatestBuild, parseElectronApp } from "electron-playwright-helpers";
+import { test, expect, _electron as electron, ElectronApplication, Page } from '@playwright/test';
+import { findLatestBuild, parseElectronApp } from 'electron-playwright-helpers';
 
 /*
  * Using Playwright with Electron:
@@ -17,35 +11,35 @@ let electronApp: ElectronApplication;
 test.beforeAll(async () => {
   const latestBuild = findLatestBuild();
   const appInfo = parseElectronApp(latestBuild);
-  process.env.CI = "e2e";
+  process.env.CI = 'e2e';
 
   electronApp = await electron.launch({
     args: [appInfo.main],
   });
-  electronApp.on("window", async (page) => {
-    const filename = page.url()?.split("/").pop();
+  electronApp.on('window', async page => {
+    const filename = page.url()?.split('/').pop();
     console.log(`Window opened: ${filename}`);
 
-    page.on("pageerror", (error) => {
+    page.on('pageerror', error => {
       console.error(error);
     });
-    page.on("console", (msg) => {
+    page.on('console', msg => {
       console.log(msg.text());
     });
   });
 });
 
-test("renders the first page", async () => {
+test('renders the first page', async () => {
   const page: Page = await electronApp.firstWindow();
-  const title = await page.waitForSelector("h1");
+  const title = await page.waitForSelector('h1');
   const text = await title.textContent();
-  expect(text).toBe("electron-shadcn");
+  expect(text).toBe('electron-shadcn');
 });
 
-test("renders page name", async () => {
+test('renders page name', async () => {
   const page: Page = await electronApp.firstWindow();
-  await page.waitForSelector("h1");
-  const pageName = await page.getByTestId("pageTitle");
+  await page.waitForSelector('h1');
+  const pageName = await page.getByTestId('pageTitle');
   const text = await pageName.textContent();
-  expect(text).toBe("Home Page");
+  expect(text).toBe('Home Page');
 });

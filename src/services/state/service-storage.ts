@@ -2,13 +2,13 @@
  * Service storage - persists service state to JSON file
  */
 
-import { app } from "electron";
-import fs from "node:fs/promises";
-import path from "node:path";
-import type { ServiceStorageData, ServiceState } from "../../types/service";
+import { app } from 'electron';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import type { ServiceStorageData, ServiceState } from '../../types/service';
 
-const STORAGE_VERSION = "1.0.0";
-const STORAGE_FILE_NAME = "services-config.json";
+const STORAGE_VERSION = '1.0.0';
+const STORAGE_FILE_NAME = 'services-config.json';
 
 /**
  * Service storage manager
@@ -19,10 +19,7 @@ class ServiceStorage {
 
   constructor() {
     // Store in app's user data directory
-    this.storagePath = path.join(
-      app.getPath("userData"),
-      STORAGE_FILE_NAME
-    );
+    this.storagePath = path.join(app.getPath('userData'), STORAGE_FILE_NAME);
   }
 
   /**
@@ -46,12 +43,12 @@ class ServiceStorage {
    * Load storage from file
    */
   private async load(): Promise<void> {
-    const content = await fs.readFile(this.storagePath, "utf-8");
+    const content = await fs.readFile(this.storagePath, 'utf-8');
     this.data = JSON.parse(content) as ServiceStorageData;
 
     // Validate version
     if (!this.data.version) {
-      throw new Error("Invalid storage file: missing version");
+      throw new Error('Invalid storage file: missing version');
     }
 
     console.log(`Loaded service configuration from ${this.storagePath}`);
@@ -62,16 +59,12 @@ class ServiceStorage {
    */
   async save(): Promise<void> {
     if (!this.data) {
-      throw new Error("Storage not initialized");
+      throw new Error('Storage not initialized');
     }
 
     this.data.last_updated = Date.now();
 
-    await fs.writeFile(
-      this.storagePath,
-      JSON.stringify(this.data, null, 2),
-      "utf-8"
-    );
+    await fs.writeFile(this.storagePath, JSON.stringify(this.data, null, 2), 'utf-8');
 
     console.log(`Saved service configuration to ${this.storagePath}`);
   }
@@ -81,7 +74,7 @@ class ServiceStorage {
    */
   getServiceState(serviceId: string): ServiceState | null {
     if (!this.data) {
-      throw new Error("Storage not initialized");
+      throw new Error('Storage not initialized');
     }
 
     return this.data.services[serviceId] || null;
@@ -92,7 +85,7 @@ class ServiceStorage {
    */
   getAllServiceStates(): Record<string, ServiceState> {
     if (!this.data) {
-      throw new Error("Storage not initialized");
+      throw new Error('Storage not initialized');
     }
 
     return this.data.services;
@@ -101,12 +94,9 @@ class ServiceStorage {
   /**
    * Set service state
    */
-  async setServiceState(
-    serviceId: string,
-    state: ServiceState
-  ): Promise<void> {
+  async setServiceState(serviceId: string, state: ServiceState): Promise<void> {
     if (!this.data) {
-      throw new Error("Storage not initialized");
+      throw new Error('Storage not initialized');
     }
 
     this.data.services[serviceId] = state;
@@ -116,12 +106,9 @@ class ServiceStorage {
   /**
    * Update service state partially
    */
-  async updateServiceState(
-    serviceId: string,
-    updates: Partial<ServiceState>
-  ): Promise<void> {
+  async updateServiceState(serviceId: string, updates: Partial<ServiceState>): Promise<void> {
     if (!this.data) {
-      throw new Error("Storage not initialized");
+      throw new Error('Storage not initialized');
     }
 
     const existingState = this.data.services[serviceId];
@@ -142,7 +129,7 @@ class ServiceStorage {
    */
   async deleteServiceState(serviceId: string): Promise<void> {
     if (!this.data) {
-      throw new Error("Storage not initialized");
+      throw new Error('Storage not initialized');
     }
 
     delete this.data.services[serviceId];
@@ -154,7 +141,7 @@ class ServiceStorage {
    */
   hasService(serviceId: string): boolean {
     if (!this.data) {
-      throw new Error("Storage not initialized");
+      throw new Error('Storage not initialized');
     }
 
     return serviceId in this.data.services;
@@ -178,6 +165,10 @@ class ServiceStorage {
    * Import data (for restore)
    */
   async importData(data: ServiceStorageData): Promise<void> {
+    // Validate structure
+    if (!data.version || !data.services || typeof data.services !== 'object') {
+      throw new Error('Invalid data: missing required fields');
+    }
     this.data = data;
     await this.save();
   }

@@ -1,10 +1,10 @@
-import { expect, test } from "vitest";
+import { expect, test } from 'vitest';
 
 function sum(a: number, b: number): number {
   return a + b;
 }
 
-test("sum", () => {
+test('sum', () => {
   const param1: number = 2;
   const param2: number = 2;
 

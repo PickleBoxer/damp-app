@@ -5,10 +5,10 @@ import {
   THEME_MODE_LIGHT_CHANNEL,
   THEME_MODE_SYSTEM_CHANNEL,
   THEME_MODE_TOGGLE_CHANNEL,
-} from "./theme-channels";
+} from './theme-channels';
 
 export function exposeThemeContext() {
-  contextBridge.exposeInMainWorld("themeMode", {
+  contextBridge.exposeInMainWorld('themeMode', {
     current: () => ipcRenderer.invoke(THEME_MODE_CURRENT_CHANNEL),
     toggle: () => ipcRenderer.invoke(THEME_MODE_TOGGLE_CHANNEL),
     dark: () => ipcRenderer.invoke(THEME_MODE_DARK_CHANNEL),

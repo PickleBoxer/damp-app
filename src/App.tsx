@@ -1,12 +1,12 @@
-import React, { useEffect } from "react";
-import { createRoot } from "react-dom/client";
-import { syncThemeWithLocal } from "./helpers/theme_helpers";
-import { useTranslation } from "react-i18next";
-import { updateAppLanguage } from "./helpers/language_helpers";
-import { RouterProvider } from "@tanstack/react-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { router } from "./utils/routes";
-import "./localization/i18n";
+import React, { useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
+import { syncThemeWithLocal } from './helpers/theme_helpers';
+import { useTranslation } from 'react-i18next';
+import { updateAppLanguage } from './helpers/language_helpers';
+import { RouterProvider } from '@tanstack/react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { router } from './utils/routes';
+import './localization/i18n';
 
 const queryClient = new QueryClient();
 
@@ -25,9 +25,9 @@ export default function App() {
   );
 }
 
-const root = createRoot(document.getElementById("app")!);
+const root = createRoot(document.getElementById('app')!);
 root.render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  </React.StrictMode>
 );

@@ -1,7 +1,7 @@
-"use client";
-import * as React from "react";
-import { Command, Globe, Home, Info, Server, Settings } from "lucide-react";
-import { NavDocker } from "@/components/NavDocker";
+'use client';
+import * as React from 'react';
+import { Command, Globe, Home, Info, Server, Settings } from 'lucide-react';
+import { NavDocker } from '@/components/NavDocker';
 import {
   Sidebar,
   SidebarContent,
@@ -12,16 +12,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { useTranslation } from "react-i18next";
+} from '@/components/ui/sidebar';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 
-export default function AppSidebar({
-  ...props
-}: React.ComponentProps<typeof Sidebar>) {
+export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { t } = useTranslation();
   // Get only the location object from router state
-  const location = useRouterState({ select: (s) => s.location });
+  const location = useRouterState({ select: s => s.location });
   // Helper to check if a route is active
   const isActive = (to: string) => location.pathname === to;
 
@@ -51,48 +49,48 @@ export default function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={{
-                    children: t("titleDashboardPage"),
+                    children: t('titleDashboardPage'),
                     hidden: false,
                   }}
                   className="px-2.5 md:px-2"
                   asChild
-                  isActive={isActive("/")}
+                  isActive={isActive('/')}
                 >
                   <Link to="/">
                     <Home />
-                    <span>{t("titleDashboardPage")}</span>
+                    <span>{t('titleDashboardPage')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={{
-                    children: t("titleServicesPage"),
+                    children: t('titleServicesPage'),
                     hidden: false,
                   }}
                   className="px-2.5 md:px-2"
                   asChild
-                  isActive={isActive("/services")}
+                  isActive={isActive('/services')}
                 >
                   <Link to="/services">
                     <Server />
-                    <span>{t("titleServicesPage")}</span>
+                    <span>{t('titleServicesPage')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={{
-                    children: t("titleSitesPage"),
+                    children: t('titleSitesPage'),
                     hidden: false,
                   }}
                   className="px-2.5 md:px-2"
                   asChild
-                  isActive={isActive("/sites")}
+                  isActive={isActive('/sites')}
                 >
                   <Link to="/sites">
                     <Globe />
-                    <span>{t("titleSitesPage")}</span>
+                    <span>{t('titleSitesPage')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -105,32 +103,32 @@ export default function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip={{
-                  children: t("titleSettingsPage"),
+                  children: t('titleSettingsPage'),
                   hidden: false,
                 }}
                 className="px-2.5 md:px-2"
                 asChild
-                isActive={isActive("/settings")}
+                isActive={isActive('/settings')}
               >
                 <Link to="/settings">
                   <Settings />
-                  <span>{t("titleSettingsPage")}</span>
+                  <span>{t('titleSettingsPage')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 tooltip={{
-                  children: t("titleAboutPage"),
+                  children: t('titleAboutPage'),
                   hidden: false,
                 }}
                 className="px-2.5 md:px-2"
                 asChild
-                isActive={isActive("/about")}
+                isActive={isActive('/about')}
               >
                 <Link to="/about">
                   <Info />
-                  <span>{t("titleAboutPage")}</span>
+                  <span>{t('titleAboutPage')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

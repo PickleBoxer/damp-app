@@ -1,6 +1,6 @@
-import type { i18n } from "i18next";
+import type { i18n } from 'i18next';
 
-const languageLocalStorageKey = "lang";
+const languageLocalStorageKey = 'lang';
 
 export function setAppLanguage(lang: string, i18n: i18n) {
   localStorage.setItem(languageLocalStorageKey, lang);

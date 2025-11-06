@@ -3,16 +3,16 @@
  * Handles all Docker operations for service containers
  */
 
-import Docker from "dockerode";
-import type { ContainerCreateOptions } from "dockerode";
+import Docker from 'dockerode';
+import type { ContainerCreateOptions } from 'dockerode';
 import type {
   ServiceConfig,
   CustomConfig,
   PullProgress,
   ContainerStatus,
   PortMapping,
-} from "../../types/service";
-import { getAvailablePorts } from "./port-checker";
+} from '../../types/service';
+import { getAvailablePorts } from './port-checker';
 
 /**
  * Docker manager singleton
@@ -51,10 +51,7 @@ class DockerManager {
   /**
    * Pull Docker image with progress callback
    */
-  async pullImage(
-    imageName: string,
-    onProgress?: (progress: PullProgress) => void
-  ): Promise<void> {
+  async pullImage(imageName: string, onProgress?: (progress: PullProgress) => void): Promise<void> {
     try {
       // Check if image already exists
       const images = await this.docker.listImages({
@@ -67,43 +64,40 @@ class DockerManager {
       }
 
       return new Promise((resolve, reject) => {
-        this.docker.pull(
-          imageName,
-          (err: Error | null, stream: NodeJS.ReadableStream) => {
-            if (err) {
-              reject(new Error(`Failed to pull image: ${err.message}`));
-              return;
-            }
-
-            if (!stream) {
-              reject(new Error("No stream returned from pull"));
-              return;
-            }
-
-            // Follow progress
-            this.docker.modem.followProgress(
-              stream,
-              (err: Error | null) => {
-                if (err) {
-                  reject(new Error(`Failed to pull image: ${err.message}`));
-                } else {
-                  console.log(`Successfully pulled image: ${imageName}`);
-                  resolve();
-                }
-              },
-              (event) => {
-                // Send progress updates
-                if (onProgress && event) {
-                  onProgress({
-                    status: event.status || "",
-                    progress: event.progress,
-                    id: event.id,
-                  });
-                }
-              }
-            );
+        this.docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
+          if (err) {
+            reject(new Error(`Failed to pull image: ${err.message}`));
+            return;
           }
-        );
+
+          if (!stream) {
+            reject(new Error('No stream returned from pull'));
+            return;
+          }
+
+          // Follow progress
+          this.docker.modem.followProgress(
+            stream,
+            (err: Error | null) => {
+              if (err) {
+                reject(new Error(`Failed to pull image: ${err.message}`));
+              } else {
+                console.log(`Successfully pulled image: ${imageName}`);
+                resolve();
+              }
+            },
+            event => {
+              // Send progress updates
+              if (onProgress && event) {
+                onProgress({
+                  status: event.status || '',
+                  progress: event.progress,
+                  id: event.id,
+                });
+              }
+            }
+          );
+        });
       });
     } catch (error) {
       throw new Error(`Failed to pull image ${imageName}: ${error}`);
@@ -113,10 +107,7 @@ class DockerManager {
   /**
    * Create and configure a container
    */
-  async createContainer(
-    config: ServiceConfig,
-    customConfig?: CustomConfig
-  ): Promise<string> {
+  async createContainer(config: ServiceConfig, customConfig?: CustomConfig): Promise<string> {
     try {
       // Merge default and custom configs
       const finalConfig = this.mergeConfigs(config, customConfig);
@@ -134,7 +125,7 @@ class DockerManager {
           PortBindings: this.buildPortBindings(portMappings),
           Binds: finalConfig.volume_bindings,
           RestartPolicy: {
-            Name: "unless-stopped",
+            Name: 'unless-stopped',
           },
         },
       };
@@ -194,10 +185,7 @@ class DockerManager {
   /**
    * Remove a container
    */
-  async removeContainer(
-    containerId: string,
-    removeVolumes = false
-  ): Promise<void> {
+  async removeContainer(containerId: string, removeVolumes = false): Promise<void> {
     try {
       const container = this.docker.getContainer(containerId);
 
@@ -222,14 +210,10 @@ class DockerManager {
   /**
    * Get container status
    */
-  async getContainerStatus(
-    containerName: string
-  ): Promise<ContainerStatus | null> {
+  async getContainerStatus(containerName: string): Promise<ContainerStatus | null> {
     try {
       const containers = await this.docker.listContainers({ all: true });
-      const container = containers.find((c) =>
-        c.Names.includes(`/${containerName}`)
-      );
+      const container = containers.find(c => c.Names.includes(`/${containerName}`));
 
       if (!container) {
         return {
@@ -246,17 +230,14 @@ class DockerManager {
       if (container.Ports) {
         for (const port of container.Ports) {
           if (port.PublicPort && port.PrivatePort) {
-            ports.push([
-              port.PublicPort.toString(),
-              port.PrivatePort.toString(),
-            ]);
+            ports.push([port.PublicPort.toString(), port.PrivatePort.toString()]);
           }
         }
       }
 
       return {
         exists: true,
-        running: container.State === "running",
+        running: container.State === 'running',
         container_id: container.Id,
         state: container.State,
         ports,
@@ -276,7 +257,7 @@ class DockerManager {
         filters: { name: [volumeName] },
       });
 
-      if (!volumes.Volumes?.some((v) => v.Name === volumeName)) {
+      if (!volumes.Volumes?.some(v => v.Name === volumeName)) {
         await this.docker.createVolume({ Name: volumeName });
         console.log(`Created volume: ${volumeName}`);
       }
@@ -288,10 +269,7 @@ class DockerManager {
   /**
    * Merge default and custom configurations
    */
-  private mergeConfigs(
-    defaultConfig: ServiceConfig,
-    customConfig?: CustomConfig
-  ): ServiceConfig {
+  private mergeConfigs(defaultConfig: ServiceConfig, customConfig?: CustomConfig): ServiceConfig {
     if (!customConfig) return defaultConfig;
 
     return {
@@ -301,35 +279,31 @@ class DockerManager {
       environment_vars: customConfig.environment_vars
         ? [...defaultConfig.environment_vars, ...customConfig.environment_vars]
         : defaultConfig.environment_vars,
-      volume_bindings:
-        customConfig.volume_bindings || defaultConfig.volume_bindings,
+      volume_bindings: customConfig.volume_bindings || defaultConfig.volume_bindings,
     };
   }
 
   /**
    * Resolve port mappings, adjusting for conflicts
    */
-  private async resolvePortMappings(
-    ports: PortMapping[]
-  ): Promise<PortMapping[]> {
-    const externalPorts = ports.map(([external]) =>
-      Number.parseInt(external, 10)
-    );
+  private async resolvePortMappings(ports: PortMapping[]): Promise<PortMapping[]> {
+    const externalPorts = ports.map(([external]) => Number.parseInt(external, 10));
     const availablePorts = await getAvailablePorts(externalPorts);
 
     return ports.map(([external, internal]) => {
       const desiredPort = Number.parseInt(external, 10);
       const actualPort = availablePorts.get(desiredPort);
-      return [actualPort!.toString(), internal];
+      if (actualPort === undefined) {
+        throw new Error(`No available port mapping found for port ${desiredPort}`);
+      }
+      return [actualPort.toString(), internal];
     });
   }
 
   /**
    * Build ExposedPorts object for Docker
    */
-  private buildExposedPorts(
-    ports: PortMapping[]
-  ): Record<string, Record<string, never>> {
+  private buildExposedPorts(ports: PortMapping[]): Record<string, Record<string, never>> {
     const exposedPorts: Record<string, Record<string, never>> = {};
     for (const [, internal] of ports) {
       exposedPorts[`${internal}/tcp`] = {};
@@ -347,14 +321,12 @@ class DockerManager {
       HostPort: string;
     }>
   > {
-    const portBindings: Record<
-      string,
-      Array<{ HostIp: string; HostPort: string }>
-    > = {};
+    const portBindings: Record<string, Array<{ HostIp: string; HostPort: string }>> = {};
     for (const [external, internal] of ports) {
       portBindings[`${internal}/tcp`] = [
         {
-          HostIp: "0.0.0.0",
+          // Making the host IP configurable (e.g., default to "127.0.0.1" for localhost-only)
+          HostIp: '0.0.0.0',
           HostPort: external,
         },
       ];
@@ -365,10 +337,7 @@ class DockerManager {
   /**
    * Get container logs
    */
-  async getContainerLogs(
-    containerId: string,
-    tail = 100
-  ): Promise<string> {
+  async getContainerLogs(containerId: string, tail = 100): Promise<string> {
     try {
       const container = this.docker.getContainer(containerId);
       const logs = await container.logs({

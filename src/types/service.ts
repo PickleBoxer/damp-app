@@ -6,25 +6,25 @@
  * Unique identifier for each service
  */
 export enum ServiceId {
-  Caddy = "caddy",
-  MySQL = "mysql",
-  Mailpit = "mailpit",
-  PostgreSQL = "postgresql",
-  MariaDB = "mariadb",
-  MongoDB = "mongodb",
-  Redis = "redis",
-  Meilisearch = "meilisearch",
-  MinIO = "minio",
-  Memcached = "memcached",
-  RabbitMQ = "rabbitmq",
-  Typesense = "typesense",
-  Valkey = "valkey",
+  Caddy = 'caddy',
+  MySQL = 'mysql',
+  Mailpit = 'mailpit',
+  PostgreSQL = 'postgresql',
+  MariaDB = 'mariadb',
+  MongoDB = 'mongodb',
+  Redis = 'redis',
+  Meilisearch = 'meilisearch',
+  MinIO = 'minio',
+  Memcached = 'memcached',
+  RabbitMQ = 'rabbitmq',
+  Typesense = 'typesense',
+  Valkey = 'valkey',
 }
 
 /**
  * Service category types
  */
-export type ServiceType = "web" | "database" | "email" | "cache" | "storage" | "search" | "queue";
+export type ServiceType = 'web' | 'database' | 'email' | 'cache' | 'storage' | 'search' | 'queue';
 
 /**
  * Port mapping: [external_port, internal_port]

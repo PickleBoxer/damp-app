@@ -1,22 +1,19 @@
-import { app, BrowserWindow } from "electron";
-import registerListeners from "./helpers/ipc/listeners-register";
+import { app, BrowserWindow } from 'electron';
+import registerListeners from './helpers/ipc/listeners-register';
 // "electron-squirrel-startup" seems broken when packaging with vite
 import started from 'electron-squirrel-startup';
-import path from "node:path";
-import {
-  installExtension,
-  REACT_DEVELOPER_TOOLS,
-} from "electron-devtools-installer";
+import path from 'node:path';
+import { installExtension, REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
 
-const inDevelopment = process.env.NODE_ENV === "development";
+const inDevelopment = process.env.NODE_ENV === 'development';
 
 function createWindow() {
-  const preload = path.join(__dirname, "preload.js");
+  const preload = path.join(__dirname, 'preload.js');
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 800,
@@ -29,9 +26,8 @@ function createWindow() {
 
       preload: preload,
     },
-    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
-    trafficLightPosition:
-      process.platform === "darwin" ? { x: 5, y: 5 } : undefined,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 5, y: 5 } : undefined,
   });
   registerListeners(mainWindow);
 
@@ -39,9 +35,7 @@ function createWindow() {
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-    );
+    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
   // Open the DevTools.
@@ -53,7 +47,7 @@ async function installExtensions() {
     const result = await installExtension(REACT_DEVELOPER_TOOLS);
     console.log(`Extensions installed successfully: ${result.name}`);
   } catch {
-    console.error("Failed to install extensions");
+    console.error('Failed to install extensions');
   }
 }
 
@@ -67,13 +61,13 @@ app.whenReady().then(createWindow).then(installExtensions);
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 //osX only
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-app.on("activate", () => {
+app.on('activate', () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {

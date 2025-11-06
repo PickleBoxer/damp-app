@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer } from "electron";
-import { DOCKER_STATUS_CHANNEL } from "./docker-channels";
+import { contextBridge, ipcRenderer } from 'electron';
+import { DOCKER_STATUS_CHANNEL } from './docker-channels';
 
 export interface DockerStatus {
   isRunning: boolean;
@@ -11,7 +11,7 @@ export interface DockerContext {
 }
 
 export function exposeDockerContext() {
-  contextBridge.exposeInMainWorld("docker", {
+  contextBridge.exposeInMainWorld('docker', {
     getStatus: () => ipcRenderer.invoke(DOCKER_STATUS_CHANNEL),
   });
 }

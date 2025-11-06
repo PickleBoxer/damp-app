@@ -2,13 +2,13 @@
  * TanStack Query hooks for Docker operations
  */
 
-import { useQuery } from "@tanstack/react-query";
-import * as dockerApi from "./docker-api";
+import { useQuery } from '@tanstack/react-query';
+import * as dockerApi from './docker-api';
 
 // Query keys
 export const dockerKeys = {
-  all: ["docker"] as const,
-  status: () => [...dockerKeys.all, "status"] as const,
+  all: ['docker'] as const,
+  status: () => [...dockerKeys.all, 'status'] as const,
 };
 
 /**

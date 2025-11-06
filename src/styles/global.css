@@ -1,6 +1,6 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-@plugin "tailwindcss-animate";
+@plugin 'tailwindcss-animate';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -90,45 +90,44 @@
 
 @layer base {
   @font-face {
-    font-family: "Geist";
+    font-family: 'Geist';
 
-    src: url("../assets/fonts/geist/geist.ttf") format("truetype");
+    src: url('../assets/fonts/geist/geist.ttf') format('truetype');
   }
   @font-face {
-    font-family: "Geist Mono";
+    font-family: 'Geist Mono';
     font-display: swap;
 
-    src: url("../assets/fonts/geist-mono/geist-mono.ttf") format("truetype");
+    src: url('../assets/fonts/geist-mono/geist-mono.ttf') format('truetype');
   }
 
   @font-face {
-    font-family: "Tomorrow";
+    font-family: 'Tomorrow';
     font-weight: 400;
     font-style: normal;
 
-    src: url("../assets/fonts/tomorrow/tomorrow-regular.ttf") format("truetype");
+    src: url('../assets/fonts/tomorrow/tomorrow-regular.ttf') format('truetype');
   }
   @font-face {
-    font-family: "Tomorrow";
+    font-family: 'Tomorrow';
     font-weight: 400;
     font-style: italic;
 
-    src: url("../assets/fonts/tomorrow/tomorrow-italic.ttf") format("truetype");
+    src: url('../assets/fonts/tomorrow/tomorrow-italic.ttf') format('truetype');
   }
   @font-face {
-    font-family: "Tomorrow";
+    font-family: 'Tomorrow';
     font-weight: 700;
     font-style: normal;
 
-    src: url("../assets/fonts/tomorrow/tomorrow-bold.ttf") format("truetype");
+    src: url('../assets/fonts/tomorrow/tomorrow-bold.ttf') format('truetype');
   }
   @font-face {
-    font-family: "Tomorrow";
+    font-family: 'Tomorrow';
     font-weight: 700;
     font-style: italic;
 
-    src: url("../assets/fonts/tomorrow/tomorrow-bold-italic.ttf")
-      format("truetype");
+    src: url('../assets/fonts/tomorrow/tomorrow-bold-italic.ttf') format('truetype');
   }
 }
 
@@ -178,16 +177,11 @@
     --shadow-color: hsl(0 0% 0%);
     --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
     --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
-    --shadow-sm:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
-    --shadow:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
-    --shadow-md:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18);
-    --shadow-lg:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18);
-    --shadow-xl:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 8px 10px -1px hsl(0 0% 0% / 0.18);
+    --shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+    --shadow: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+    --shadow-md: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18);
+    --shadow-lg: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18);
+    --shadow-xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 8px 10px -1px hsl(0 0% 0% / 0.18);
     --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.45);
     --tracking-normal: 0em;
     --spacing: 0.25rem;
@@ -248,16 +242,11 @@
     --shadow-color: hsl(0 0% 0%);
     --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
     --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.09);
-    --shadow-sm:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
-    --shadow:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
-    --shadow-md:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18);
-    --shadow-lg:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18);
-    --shadow-xl:
-      0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 8px 10px -1px hsl(0 0% 0% / 0.18);
+    --shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+    --shadow: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 1px 2px -1px hsl(0 0% 0% / 0.18);
+    --shadow-md: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 2px 4px -1px hsl(0 0% 0% / 0.18);
+    --shadow-lg: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 4px 6px -1px hsl(0 0% 0% / 0.18);
+    --shadow-xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.18), 0px 8px 10px -1px hsl(0 0% 0% / 0.18);
     --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.45);
   }
 }

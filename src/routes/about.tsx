@@ -1,6 +1,6 @@
-import Footer from "@/components/template/Footer";
-import { useTranslation } from "react-i18next";
-import { createFileRoute } from "@tanstack/react-router";
+import Footer from '@/components/template/Footer';
+import { useTranslation } from 'react-i18next';
+import { createFileRoute } from '@tanstack/react-router';
 
 function AboutPage() {
   const { t } = useTranslation();
@@ -8,13 +8,13 @@ function AboutPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-1 flex-col items-center justify-center gap-2">
-        <h1 className="text-4xl font-bold">{t("titleAboutPage")}</h1>
+        <h1 className="text-4xl font-bold">{t('titleAboutPage')}</h1>
       </div>
       <Footer />
     </div>
   );
 }
 
-export const Route = createFileRoute("/about")({
+export const Route = createFileRoute('/about')({
   component: AboutPage,
 });

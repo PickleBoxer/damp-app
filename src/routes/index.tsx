@@ -1,9 +1,9 @@
-import ToggleTheme from "@/components/ToggleTheme";
-import { useTranslation } from "react-i18next";
-import LangToggle from "@/components/LangToggle";
-import Footer from "@/components/template/Footer";
-import InitialIcons from "@/components/template/InitialIcons";
-import { createFileRoute } from "@tanstack/react-router";
+import ToggleTheme from '@/components/ToggleTheme';
+import { useTranslation } from 'react-i18next';
+import LangToggle from '@/components/LangToggle';
+import Footer from '@/components/template/Footer';
+import InitialIcons from '@/components/template/InitialIcons';
+import { createFileRoute } from '@tanstack/react-router';
 
 function DashboardPage() {
   const { t } = useTranslation();
@@ -13,12 +13,9 @@ function DashboardPage() {
       <div className="flex flex-1 flex-col items-center justify-center gap-2">
         <InitialIcons />
         <div>
-          <h1 className="font-mono text-4xl font-bold">{t("appName")}</h1>
-          <p
-            className="text-muted-foreground text-end text-sm uppercase"
-            data-testid="pageTitle"
-          >
-            {t("titleDashboardPage")}
+          <h1 className="font-mono text-4xl font-bold">{t('appName')}</h1>
+          <p className="text-muted-foreground text-end text-sm uppercase" data-testid="pageTitle">
+            {t('titleDashboardPage')}
           </p>
         </div>
         <LangToggle />
@@ -29,6 +26,6 @@ function DashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute('/')({
   component: DashboardPage,
 });

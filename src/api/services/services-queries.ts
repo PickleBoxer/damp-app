@@ -3,22 +3,17 @@
  * Provides reactive data fetching and mutations for services
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type {
-  ServiceId,
-  CustomConfig,
-  InstallOptions,
-  PullProgress,
-} from "../../types/service";
-import * as servicesApi from "./services-api";
-import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ServiceId, CustomConfig, InstallOptions, PullProgress } from '../../types/service';
+import * as servicesApi from './services-api';
+import { useEffect, useState } from 'react';
 
 // Query keys
 export const servicesKeys = {
-  all: ["services"] as const,
-  lists: () => [...servicesKeys.all, "list"] as const,
+  all: ['services'] as const,
+  lists: () => [...servicesKeys.all, 'list'] as const,
   list: (filters?: string) => [...servicesKeys.lists(), filters] as const,
-  details: () => [...servicesKeys.all, "detail"] as const,
+  details: () => [...servicesKeys.all, 'detail'] as const,
   detail: (id: ServiceId) => [...servicesKeys.details(), id] as const,
 };
 
@@ -49,32 +44,25 @@ export function useService(serviceId: ServiceId) {
  */
 export function useInstallService() {
   const queryClient = useQueryClient();
-  const [progress, setProgress] = useState<
-    Record<ServiceId, PullProgress | null>
-  >({} as Record<ServiceId, PullProgress | null>);
+  const [progress, setProgress] = useState<Record<ServiceId, PullProgress | null>>(
+    {} as Record<ServiceId, PullProgress | null>
+  );
 
   // Subscribe to progress events
   useEffect(() => {
-    const cleanup = servicesApi.subscribeToInstallProgress(
-      (serviceId, progressData) => {
-        setProgress((prev) => ({
-          ...prev,
-          [serviceId]: progressData,
-        }));
-      }
-    );
+    const cleanup = servicesApi.subscribeToInstallProgress((serviceId, progressData) => {
+      setProgress(prev => ({
+        ...prev,
+        [serviceId]: progressData,
+      }));
+    });
 
     return cleanup;
   }, []);
 
   const mutation = useMutation({
-    mutationFn: ({
-      serviceId,
-      options,
-    }: {
-      serviceId: ServiceId;
-      options?: InstallOptions;
-    }) => servicesApi.installService(serviceId, options),
+    mutationFn: ({ serviceId, options }: { serviceId: ServiceId; options?: InstallOptions }) =>
+      servicesApi.installService(serviceId, options),
     onSuccess: (data, variables) => {
       // Invalidate and refetch
       void queryClient.invalidateQueries({
@@ -83,7 +71,7 @@ export function useInstallService() {
       void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
 
       // Clear progress for this service
-      setProgress((prev) => ({
+      setProgress(prev => ({
         ...prev,
         [variables.serviceId]: null,
       }));
@@ -92,7 +80,7 @@ export function useInstallService() {
       console.error(`Failed to install service ${variables.serviceId}:`, error);
 
       // Clear progress on error
-      setProgress((prev) => ({
+      setProgress(prev => ({
         ...prev,
         [variables.serviceId]: null,
       }));
@@ -169,8 +157,7 @@ export function useRestartService() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (serviceId: ServiceId) =>
-      servicesApi.restartService(serviceId),
+    mutationFn: (serviceId: ServiceId) => servicesApi.restartService(serviceId),
     onSuccess: (data, serviceId) => {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(serviceId),

@@ -10,7 +10,7 @@ interface ThemeModeContext {
   dark: () => Promise<void>;
   light: () => Promise<void>;
   system: () => Promise<boolean>;
-  current: () => Promise<"dark" | "light" | "system">;
+  current: () => Promise<'dark' | 'light' | 'system'>;
 }
 interface ElectronWindow {
   minimize: () => Promise<void>;
@@ -25,7 +25,6 @@ interface DockerContext {
 interface ServicesContext {
   getAllServices: () => Promise<unknown>;
   getService: (serviceId: string) => Promise<unknown>;
-  checkDockerStatus: () => Promise<unknown>;
   installService: (serviceId: string, options?: unknown) => Promise<unknown>;
   uninstallService: (serviceId: string, removeVolumes?: boolean) => Promise<unknown>;
   startService: (serviceId: string) => Promise<unknown>;

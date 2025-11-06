@@ -11,19 +11,17 @@ import type {
   InstallOptions,
   ServiceOperationResult,
   PullProgress,
-} from "../../types/service";
-import {
-  getServiceDefinition,
-  getAllServiceDefinitions,
-} from "../registry/service-definitions";
-import { dockerManager } from "../docker/docker-manager";
-import { serviceStorage } from "./service-storage";
+} from '../../types/service';
+import { getServiceDefinition, getAllServiceDefinitions } from '../registry/service-definitions';
+import { dockerManager } from '../docker/docker-manager';
+import { serviceStorage } from './service-storage';
 
 /**
  * Service state manager class
  */
 class ServiceStateManager {
   private initialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   /**
    * Initialize the service manager
@@ -33,26 +31,49 @@ class ServiceStateManager {
       return;
     }
 
-    // Initialize storage
-    await serviceStorage.initialize();
-
-    // Initialize default states for all services
-    const definitions = getAllServiceDefinitions();
-    for (const definition of definitions) {
-      if (!serviceStorage.hasService(definition.id)) {
-        const defaultState: ServiceState = {
-          id: definition.id,
-          installed: false,
-          enabled: definition.required, // Required services enabled by default
-          custom_config: null,
-          container_status: null,
-        };
-        await serviceStorage.setServiceState(definition.id, defaultState);
-      }
+    // Return existing initialization promise if already in progress
+    if (this.initializationPromise) {
+      return this.initializationPromise;
     }
 
-    this.initialized = true;
-    console.log("Service state manager initialized");
+    this.initializationPromise = this._initialize();
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+
+  private async _initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    try {
+      // Initialize storage
+      await serviceStorage.initialize();
+
+      // Initialize default states for all services
+      const definitions = getAllServiceDefinitions();
+      for (const definition of definitions) {
+        if (!serviceStorage.hasService(definition.id)) {
+          const defaultState: ServiceState = {
+            id: definition.id,
+            installed: false,
+            enabled: definition.required, // Required services enabled by default
+            custom_config: null,
+            container_status: null,
+          };
+          await serviceStorage.setServiceState(definition.id, defaultState);
+        }
+      }
+
+      this.initialized = true;
+      console.log('Service state manager initialized');
+    } catch (error) {
+      console.error('Failed to initialize service state manager:', error);
+      throw error;
+    }
   }
 
   /**
@@ -60,7 +81,7 @@ class ServiceStateManager {
    */
   private ensureInitialized(): void {
     if (!this.initialized) {
-      throw new Error("Service manager not initialized. Call initialize() first.");
+      throw new Error('Service manager not initialized. Call initialize() first.');
     }
   }
 
@@ -76,20 +97,29 @@ class ServiceStateManager {
     for (const definition of definitions) {
       const state = serviceStorage.getServiceState(definition.id);
       if (state) {
-        // Update container status
-        const containerStatus = await dockerManager.getContainerStatus(
-          state.custom_config?.container_name || definition.default_config.container_name
-        );
-        
-        const updatedState: ServiceState = {
-          ...state,
-          container_status: containerStatus,
-        };
+        try {
+          // Update container status
+          const containerStatus = await dockerManager.getContainerStatus(
+            state.custom_config?.container_name || definition.default_config.container_name
+          );
 
-        serviceInfos.push({
-          definition,
-          state: updatedState,
-        });
+          const updatedState: ServiceState = {
+            ...state,
+            container_status: containerStatus,
+          };
+
+          serviceInfos.push({
+            definition,
+            state: updatedState,
+          });
+        } catch (error) {
+          console.error(`Failed to get container status for service ${definition.id}:`, error);
+          // Return service with existing state if Docker check fails
+          serviceInfos.push({
+            definition,
+            state,
+          });
+        }
       }
     }
 
@@ -152,16 +182,13 @@ class ServiceStateManager {
       if (!dockerAvailable) {
         return {
           success: false,
-          error: "Docker is not running. Please start Docker and try again.",
+          error: 'Docker is not running. Please start Docker and try again.',
         };
       }
 
       // Pull image
       console.log(`Pulling image ${definition.default_config.image}...`);
-      await dockerManager.pullImage(
-        definition.default_config.image,
-        onProgress
-      );
+      await dockerManager.pullImage(definition.default_config.image, onProgress);
 
       // Create container with port resolution
       console.log(`Creating container for ${serviceId}...`);
@@ -178,8 +205,7 @@ class ServiceStateManager {
 
       // Get actual port mappings after creation
       const containerStatus = await dockerManager.getContainerStatus(
-        options?.custom_config?.container_name ||
-          definition.default_config.container_name
+        options?.custom_config?.container_name || definition.default_config.container_name
       );
 
       // Save custom config with actual ports
@@ -201,11 +227,17 @@ class ServiceStateManager {
 
       // Run post-install function if defined
       if (definition.post_install_fn) {
-        await definition.post_install_fn();
+        try {
+          await definition.post_install_fn();
+        } catch (error) {
+          console.error(`Post-install hook failed for ${serviceId}:`, error);
+          // Decide: either rollback or continue
+          // For now, log and continue as the hook is often optional
+        }
       }
 
       console.log(
-        `Service ${serviceId} installed successfully. ${definition.post_install_message || ""}`
+        `Service ${serviceId} installed successfully. ${definition.post_install_message || ''}`
       );
 
       return {
@@ -252,19 +284,14 @@ class ServiceStateManager {
       }
 
       const containerName =
-        state.custom_config?.container_name ||
-        definition.default_config.container_name;
+        state.custom_config?.container_name || definition.default_config.container_name;
 
       // Get container status
-      const containerStatus =
-        await dockerManager.getContainerStatus(containerName);
+      const containerStatus = await dockerManager.getContainerStatus(containerName);
 
       if (containerStatus?.exists && containerStatus.container_id) {
         // Remove container
-        await dockerManager.removeContainer(
-          containerStatus.container_id,
-          removeVolumes
-        );
+        await dockerManager.removeContainer(containerStatus.container_id, removeVolumes);
       }
 
       // Update service state
@@ -317,11 +344,9 @@ class ServiceStateManager {
       }
 
       const containerName =
-        state.custom_config?.container_name ||
-        definition.default_config.container_name;
+        state.custom_config?.container_name || definition.default_config.container_name;
 
-      const containerStatus =
-        await dockerManager.getContainerStatus(containerName);
+      const containerStatus = await dockerManager.getContainerStatus(containerName);
 
       if (!containerStatus?.exists || !containerStatus.container_id) {
         return {
@@ -383,11 +408,9 @@ class ServiceStateManager {
       }
 
       const containerName =
-        state.custom_config?.container_name ||
-        definition.default_config.container_name;
+        state.custom_config?.container_name || definition.default_config.container_name;
 
-      const containerStatus =
-        await dockerManager.getContainerStatus(containerName);
+      const containerStatus = await dockerManager.getContainerStatus(containerName);
 
       if (!containerStatus?.exists || !containerStatus.container_id) {
         return {
@@ -449,11 +472,9 @@ class ServiceStateManager {
       }
 
       const containerName =
-        state.custom_config?.container_name ||
-        definition.default_config.container_name;
+        state.custom_config?.container_name || definition.default_config.container_name;
 
-      const containerStatus =
-        await dockerManager.getContainerStatus(containerName);
+      const containerStatus = await dockerManager.getContainerStatus(containerName);
 
       if (!containerStatus?.exists || !containerStatus.container_id) {
         return {
@@ -490,11 +511,24 @@ class ServiceStateManager {
 
     try {
       const state = serviceStorage.getServiceState(serviceId);
-      if (!state) {
+      if (!state?.installed) {
         return {
           success: false,
-          error: `Service ${serviceId} not found`,
+          error: `Service ${serviceId} is not installed`,
         };
+      }
+
+      const containerName =
+        state.custom_config?.container_name ||
+        getServiceDefinition(serviceId)?.default_config.container_name;
+
+      if (containerName) {
+        const containerStatus = await dockerManager.getContainerStatus(containerName);
+        if (containerStatus?.running) {
+          console.warn(
+            `Service ${serviceId} is running. Configuration changes require container recreation to take effect.`
+          );
+        }
       }
 
       await serviceStorage.updateServiceState(serviceId, {
@@ -505,35 +539,12 @@ class ServiceStateManager {
 
       return {
         success: true,
-        data: { message: `Service ${serviceId} configuration updated` },
+        data: {
+          message: `Service ${serviceId} configuration updated. Recreate the container for changes to take effect.`,
+        },
       };
     } catch (error) {
       console.error(`Failed to update service ${serviceId} configuration:`, error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
-  }
-
-  /**
-   * Check Docker availability
-   */
-  async checkDockerStatus(): Promise<ServiceOperationResult> {
-    try {
-      const available = await dockerManager.isDockerAvailable();
-      if (available) {
-        const version = await dockerManager.getDockerVersion();
-        return {
-          success: true,
-          data: { available: true, version },
-        };
-      }
-      return {
-        success: true,
-        data: { available: false },
-      };
-    } catch (error) {
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

@@ -10,10 +10,17 @@ import type {
   CustomConfig,
   InstallOptions,
   PullProgress,
-} from "../../types/service";
+} from '../../types/service';
 
 // Helper to access services API with proper typing
-const getServicesAPI = () => (globalThis as typeof globalThis & Window).services;
+const getServicesAPI = () => {
+  const api = (globalThis as typeof globalThis & Window).services;
+  if (!api) {
+    throw new Error('Services API is not available. Ensure the preload script has initialized it.');
+  }
+
+  return api;
+};
 
 /**
  * Get all services with their current state
@@ -26,19 +33,9 @@ export async function getAllServices(): Promise<ServiceInfo[]> {
 /**
  * Get a specific service by ID
  */
-export async function getService(
-  serviceId: ServiceId
-): Promise<ServiceInfo | null> {
+export async function getService(serviceId: ServiceId): Promise<ServiceInfo | null> {
   const result = await getServicesAPI().getService(serviceId);
   return result as ServiceInfo | null;
-}
-
-/**
- * Check Docker status
- */
-export async function checkDockerStatus(): Promise<ServiceOperationResult> {
-  const result = await getServicesAPI().checkDockerStatus();
-  return result as ServiceOperationResult;
 }
 
 /**
@@ -59,19 +56,14 @@ export async function uninstallService(
   serviceId: ServiceId,
   removeVolumes = false
 ): Promise<ServiceOperationResult> {
-  const result = await getServicesAPI().uninstallService(
-    serviceId,
-    removeVolumes
-  );
+  const result = await getServicesAPI().uninstallService(serviceId, removeVolumes);
   return result as ServiceOperationResult;
 }
 
 /**
  * Start a service
  */
-export async function startService(
-  serviceId: ServiceId
-): Promise<ServiceOperationResult> {
+export async function startService(serviceId: ServiceId): Promise<ServiceOperationResult> {
   const result = await getServicesAPI().startService(serviceId);
   return result as ServiceOperationResult;
 }
@@ -79,9 +71,7 @@ export async function startService(
 /**
  * Stop a service
  */
-export async function stopService(
-  serviceId: ServiceId
-): Promise<ServiceOperationResult> {
+export async function stopService(serviceId: ServiceId): Promise<ServiceOperationResult> {
   const result = await getServicesAPI().stopService(serviceId);
   return result as ServiceOperationResult;
 }
@@ -89,9 +79,7 @@ export async function stopService(
 /**
  * Restart a service
  */
-export async function restartService(
-  serviceId: ServiceId
-): Promise<ServiceOperationResult> {
+export async function restartService(serviceId: ServiceId): Promise<ServiceOperationResult> {
   const result = await getServicesAPI().restartService(serviceId);
   return result as ServiceOperationResult;
 }
@@ -113,9 +101,7 @@ export async function updateServiceConfig(
 export function subscribeToInstallProgress(
   callback: (serviceId: ServiceId, progress: PullProgress) => void
 ): () => void {
-  return getServicesAPI().onInstallProgress(
-    (serviceId: string, progress: unknown) => {
-      callback(serviceId as ServiceId, progress as PullProgress);
-    }
-  );
+  return getServicesAPI().onInstallProgress((serviceId: string, progress: unknown) => {
+    callback(serviceId as ServiceId, progress as PullProgress);
+  });
 }

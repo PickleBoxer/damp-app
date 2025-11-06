@@ -1,12 +1,5 @@
-"use client";
-import {
-  ChevronUp,
-  Play,
-  Terminal,
-  ChevronRight,
-  RefreshCcw,
-  Square,
-} from "lucide-react";
+'use client';
+import { ChevronUp, Play, Terminal, ChevronRight, RefreshCcw, Square } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,46 +8,37 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { SiDocker } from "react-icons/si";
+} from '@/components/ui/dropdown-menu';
+import { SiDocker } from 'react-icons/si';
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { useDockerStatus } from "@/api/docker/docker-queries";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
-import { useState } from "react";
+} from '@/components/ui/sidebar';
+import { useDockerStatus } from '@/api/docker/docker-queries';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { useState } from 'react';
 
 export function NavDocker() {
   const { isMobile } = useSidebar();
-  const {
-    data: dockerStatus,
-    refetch,
-    isRefetching,
-    isLoading,
-  } = useDockerStatus();
+  const { data: dockerStatus, refetch, isRefetching, isLoading } = useDockerStatus();
   const [isOpen, setIsOpen] = useState(false);
 
   // Determine status based on Docker state
   let status;
   if (dockerStatus?.error) {
-    status = { text: "Error", color: "text-red-500", dot: "bg-red-500" };
+    status = { text: 'Error', color: 'text-red-500', dot: 'bg-red-500' };
   } else if (dockerStatus?.isRunning) {
-    status = { text: "Running", color: "text-green-500", dot: "bg-green-500" };
+    status = { text: 'Running', color: 'text-green-500', dot: 'bg-green-500' };
   } else if (isLoading || !dockerStatus) {
     status = {
-      text: "Checking...",
-      color: "text-yellow-500",
-      dot: "bg-yellow-500",
+      text: 'Checking...',
+      color: 'text-yellow-500',
+      dot: 'bg-yellow-500',
     };
   } else {
-    status = { text: "Stopped", color: "text-gray-500", dot: "bg-gray-500" };
+    status = { text: 'Stopped', color: 'text-gray-500', dot: 'bg-gray-500' };
   }
 
   return (
@@ -78,7 +62,7 @@ export function NavDocker() {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-md"
-            side={isMobile ? "bottom" : "right"}
+            side={isMobile ? 'bottom' : 'right'}
             align="end"
             sideOffset={4}
           >
@@ -88,9 +72,7 @@ export function NavDocker() {
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                     <div className="mt-1 flex items-center justify-between">
-                      <p className={`truncate text-xs ${status.color}`}>
-                        {status.text}
-                      </p>
+                      <p className={`truncate text-xs ${status.color}`}>{status.text}</p>
                       {dockerStatus?.error && (
                         <CollapsibleTrigger asChild>
                           <span className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors">
@@ -119,7 +101,7 @@ export function NavDocker() {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onSelect={() => refetch()}>
-                <RefreshCcw className={isRefetching ? "animate-spin" : ""} />
+                <RefreshCcw className={isRefetching ? 'animate-spin' : ''} />
                 Refresh Status
               </DropdownMenuItem>
             </DropdownMenuGroup>
