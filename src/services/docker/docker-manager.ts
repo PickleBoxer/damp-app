@@ -139,9 +139,10 @@ class DockerManager {
         },
       };
 
-      // Create volumes if specified
-      if (finalConfig.data_volume) {
-        await this.ensureVolumeExists(finalConfig.data_volume);
+      // Create all volumes from volume bindings
+      const volumeNames = this.getVolumeNamesFromBindings(finalConfig.volume_bindings);
+      if (volumeNames.length > 0) {
+        await this.ensureVolumesExist(volumeNames);
       }
 
       // Create container
@@ -306,6 +307,55 @@ class DockerManager {
       }
     } catch (error) {
       throw new Error(`Failed to create volume ${volumeName}: ${error}`);
+    }
+  }
+
+  /**
+   * Extract volume names from volume bindings
+   * @example ['damp_caddy_data:/data', 'damp_caddy_config:/config'] => ['damp_caddy_data', 'damp_caddy_config']
+   */
+  private getVolumeNamesFromBindings(volumeBindings: string[]): string[] {
+    return volumeBindings
+      .map(binding => {
+        const parts = binding.split(':');
+        return parts.length >= 2 ? parts[0] : null;
+      })
+      .filter((name): name is string => name !== null && !name.startsWith('/'));
+  }
+
+  /**
+   * Ensure multiple Docker volumes exist
+   */
+  private async ensureVolumesExist(volumeNames: string[]): Promise<void> {
+    for (const volumeName of volumeNames) {
+      await this.ensureVolumeExists(volumeName);
+    }
+  }
+
+  /**
+   * Remove a Docker volume
+   */
+  async removeVolume(volumeName: string): Promise<void> {
+    try {
+      const volume = this.docker.getVolume(volumeName);
+      await volume.remove();
+      console.log(`Removed volume: ${volumeName}`);
+    } catch (error) {
+      // Ignore if volume doesn't exist
+      if (error instanceof Error && error.message.includes('no such volume')) {
+        console.log(`Volume ${volumeName} does not exist, skipping removal`);
+      } else {
+        throw new Error(`Failed to remove volume ${volumeName}: ${error}`);
+      }
+    }
+  }
+
+  /**
+   * Remove multiple service volumes
+   */
+  async removeServiceVolumes(volumeNames: string[]): Promise<void> {
+    for (const volumeName of volumeNames) {
+      await this.removeVolume(volumeName);
     }
   }
 

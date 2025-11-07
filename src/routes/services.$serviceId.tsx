@@ -1,0 +1,219 @@
+import { useState } from 'react';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { useService } from '@/api/services/services-queries';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ServiceId, ServiceInfo } from '@/types/service';
+import { HealthBadge } from '@/components/HealthBadge';
+import ServiceActions from '@/components/ServiceActions';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Helper function to get status badge styles
+function getStatusBadgeStyles(service: ServiceInfo): string {
+  if (service.state.container_status?.running) {
+    return 'bg-primary text-primary-foreground';
+  }
+
+  if (service.state.installed) {
+    return 'bg-secondary text-secondary-foreground';
+  }
+
+  return 'border-input bg-background border';
+}
+
+// Helper function to get status text
+function getStatusText(service: ServiceInfo): string {
+  if (service.state.container_status?.running) {
+    return 'Running';
+  }
+
+  if (service.state.installed) {
+    return 'Stopped';
+  }
+
+  return 'Not Installed';
+}
+
+// Helper function to get the actual external port for a service
+function getServicePort(service: ServiceInfo, portIndex: number = 0): string {
+  // Try to get the actual mapped port from state config
+  const actualPort = service.state.custom_config?.ports?.[portIndex]?.[0];
+  // Fallback to default port from definition
+  const defaultPort = service.definition.default_config.ports?.[portIndex]?.[0];
+
+  return actualPort || defaultPort || 'N/A';
+}
+
+// Loading skeleton component
+function LoadingSkeleton() {
+  return (
+    <SheetContent>
+      <SheetHeader>
+        <SheetTitle>
+          <Skeleton className="h-6 w-48" />
+        </SheetTitle>
+        <SheetDescription>
+          <Skeleton className="mt-2 h-4 w-full" />
+        </SheetDescription>
+      </SheetHeader>
+      <div className="mt-6 space-y-4">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+    </SheetContent>
+  );
+}
+
+// Not found component
+function ServiceNotFound() {
+  return (
+    <SheetContent>
+      <SheetHeader>
+        <SheetTitle>Service Not Found</SheetTitle>
+        <SheetDescription>The requested service could not be found.</SheetDescription>
+      </SheetHeader>
+    </SheetContent>
+  );
+}
+
+// Service details component
+function ServiceDetails({ service }: { service: ServiceInfo }) {
+  return (
+    <SheetContent className="flex h-full flex-col gap-4 p-0">
+      <SheetHeader className="flex flex-col gap-1.5 p-4">
+        <SheetTitle>{service.definition.display_name}</SheetTitle>
+        <SheetDescription>{service.definition.description}</SheetDescription>
+      </SheetHeader>
+
+      <ScrollArea className="flex-1 px-4">
+        <div className="grid auto-rows-min gap-6">
+          <div className="grid gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Type</span>
+              <span className="bg-secondary text-secondary-foreground rounded-md px-2 py-1 text-xs font-medium capitalize">
+                {service.definition.service_type}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Status</span>
+              <span
+                className={`rounded-md px-2 py-1 text-xs font-medium ${getStatusBadgeStyles(service)}`}
+              >
+                {getStatusText(service)}
+              </span>
+            </div>
+
+            {service.state.container_status?.health_status && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Health</span>
+                <HealthBadge status={service.state.container_status.health_status} />
+              </div>
+            )}
+          </div>
+
+          {service.definition.default_config.ports.length > 0 && (
+            <div className="grid gap-3">
+              <h4 className="mb-3 text-sm font-semibold">Port Mappings</h4>
+              <div className="space-y-2">
+                {service.definition.default_config.ports.map(([, internal], index) => {
+                  const actualPort = getServicePort(service, index);
+                  return (
+                    <div
+                      key={`${actualPort}-${internal}`}
+                      className="bg-muted/50 flex items-center justify-between rounded-md p-2 text-sm"
+                    >
+                      <span className="text-muted-foreground">Host Port</span>
+                      <span className="font-mono font-medium">{actualPort}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <span className="text-muted-foreground">Container Port</span>
+                      <span className="font-mono font-medium">{internal}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {service.definition.default_config.environment_vars.length > 0 && (
+            <div className="grid gap-3">
+              <h4 className="mb-3 text-sm font-semibold">Environment Variables</h4>
+              <div className="bg-muted/50 max-h-48 space-y-1 overflow-y-auto rounded-md p-3">
+                {service.definition.default_config.environment_vars.map((envVar, index) => {
+                  const [key, value] = envVar.split('=');
+                  return (
+                    <div key={`${key}-${index}`} className="font-mono text-xs">
+                      <span className="text-muted-foreground">{key}=</span>
+                      <span>{value}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+      <SheetFooter className="mt-auto flex flex-col gap-2 p-4 sm:flex-col">
+        <ServiceActions service={service} />
+        <SheetClose asChild>
+          <Button variant="outline">Close</Button>
+        </SheetClose>
+      </SheetFooter>
+    </SheetContent>
+  );
+}
+
+function ServiceDetailSheet() {
+  const { serviceId } = Route.useParams();
+  const navigate = useNavigate();
+  const { data: service, isLoading } = useService(serviceId as ServiceId);
+  const [open, setOpen] = useState(true);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setOpen(false);
+      // Delay navigation to allow exit animation to complete
+      setTimeout(() => {
+        navigate({ to: '/services' });
+      }, 200); // Match the Sheet's exit animation duration
+    }
+  };
+
+  // Render loading state
+  if (isLoading) {
+    return (
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <LoadingSkeleton />
+      </Sheet>
+    );
+  }
+
+  // Render not found state
+  if (!service) {
+    return (
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <ServiceNotFound />
+      </Sheet>
+    );
+  }
+
+  // Render service details
+  return (
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <ServiceDetails service={service} />
+    </Sheet>
+  );
+}
+
+export const Route = createFileRoute('/services/$serviceId')({
+  component: ServiceDetailSheet,
+});

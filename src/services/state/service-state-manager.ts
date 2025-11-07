@@ -290,8 +290,27 @@ class ServiceStateManager {
       const containerStatus = await dockerManager.getContainerStatus(containerName);
 
       if (containerStatus?.exists && containerStatus.container_id) {
-        // Remove container
-        await dockerManager.removeContainer(containerStatus.container_id, removeVolumes);
+        // Remove container (but not volumes yet)
+        await dockerManager.removeContainer(containerStatus.container_id, false);
+      }
+
+      // Remove volumes if requested
+      if (removeVolumes) {
+        const volumeBindings =
+          state.custom_config?.volume_bindings || definition.default_config.volume_bindings;
+        if (volumeBindings.length > 0) {
+          // Extract volume names and remove them
+          const volumeNames = volumeBindings
+            .map(binding => {
+              const parts = binding.split(':');
+              return parts.length >= 2 ? parts[0] : null;
+            })
+            .filter((name): name is string => name !== null && !name.startsWith('/'));
+
+          if (volumeNames.length > 0) {
+            await dockerManager.removeServiceVolumes(volumeNames);
+          }
+        }
       }
 
       // Update service state

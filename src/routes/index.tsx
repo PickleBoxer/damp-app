@@ -1,7 +1,6 @@
 import ToggleTheme from '@/components/ToggleTheme';
 import { useTranslation } from 'react-i18next';
 import LangToggle from '@/components/LangToggle';
-import Footer from '@/components/template/Footer';
 import InitialIcons from '@/components/template/InitialIcons';
 import { createFileRoute } from '@tanstack/react-router';
 
@@ -21,7 +20,6 @@ function DashboardPage() {
         <LangToggle />
         <ToggleTheme />
       </div>
-      <Footer />
     </div>
   );
 }
