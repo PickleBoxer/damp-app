@@ -53,6 +53,11 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       ],
       data_volume: 'damp_mysql_data',
       volume_bindings: ['damp_mysql_data:/var/lib/mysql'],
+      healthcheck: {
+        test: ['CMD', 'mysqladmin', 'ping', '-prootpassword'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       "MySQL server installed and started successfully. Root password: 'rootpassword', Database: 'development', User: 'developer', Password: 'devpassword'",
@@ -106,6 +111,11 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       ],
       data_volume: 'damp_pgsql_data',
       volume_bindings: ['damp_pgsql_data:/var/lib/postgresql/data'],
+      healthcheck: {
+        test: ['CMD', 'pg_isready', '-q', '-d', 'development', '-U', 'postgres'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       "PostgreSQL server installed and started successfully. Database: 'development', User: 'postgres', Password: 'postgres'",
@@ -132,6 +142,11 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       ],
       data_volume: 'damp-mariadb',
       volume_bindings: ['damp-mariadb:/var/lib/mysql'],
+      healthcheck: {
+        test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       "MariaDB server installed and started successfully. Root password: 'rootpassword', Database: 'development', User: 'developer', Password: 'devpassword'",
@@ -156,6 +171,16 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       ],
       data_volume: 'damp-mongodb',
       volume_bindings: ['damp-mongodb:/data/db'],
+      healthcheck: {
+        test: [
+          'CMD',
+          'mongosh',
+          'mongodb://localhost:27017/admin',
+          '--eval=db.runCommand({ping:1})',
+        ],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       "MongoDB server installed and started successfully. Username: 'root', Password: 'rootpassword'",
@@ -177,6 +202,11 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       environment_vars: [],
       data_volume: 'damp-redis',
       volume_bindings: ['damp-redis:/data'],
+      healthcheck: {
+        test: ['CMD', 'redis-cli', 'ping'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       'Redis cache server installed and started successfully. Available at localhost:6379',
@@ -198,6 +228,11 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       environment_vars: ['MEILI_NO_ANALYTICS=false', 'MEILI_MASTER_KEY=masterkey'],
       data_volume: 'damp-meilisearch',
       volume_bindings: ['damp-meilisearch:/meili_data'],
+      healthcheck: {
+        test: ['CMD', 'curl', '--fail', 'http://127.0.0.1:7700/health'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       "Meilisearch installed and started successfully. Web UI: http://localhost:7700, Master key: 'masterkey'",
@@ -222,6 +257,11 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       environment_vars: ['MINIO_ROOT_USER=root', 'MINIO_ROOT_PASSWORD=password'],
       data_volume: 'damp-minio',
       volume_bindings: ['damp-minio:/data'],
+      healthcheck: {
+        test: ['CMD', 'mc', 'ready', 'local'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       "MinIO storage server installed and started successfully. Console: http://localhost:8900, API: http://localhost:9000, User: 'root', Password: 'password'",
@@ -267,6 +307,11 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       environment_vars: ['RABBITMQ_DEFAULT_USER=rabbitmq', 'RABBITMQ_DEFAULT_PASS=rabbitmq'],
       data_volume: 'damp-rabbitmq',
       volume_bindings: ['damp-rabbitmq:/var/lib/rabbitmq'],
+      healthcheck: {
+        test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       "RabbitMQ installed and started successfully. Management UI: http://localhost:15672, User: 'rabbitmq', Password: 'rabbitmq'",
@@ -292,6 +337,16 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       ],
       data_volume: 'damp-typesense',
       volume_bindings: ['damp-typesense:/typesense-data'],
+      healthcheck: {
+        test: [
+          'CMD',
+          'bash',
+          '-c',
+          String.raw`exec 3<>/dev/tcp/localhost/8108 && printf 'GET /health HTTP/1.1\r\nConnection: close\r\n\r\n' >&3 && head -n1 <&3 | grep '200' && exec 3>&-`,
+        ],
+        retries: 5,
+        timeout: 7000000000, // 7 seconds
+      },
     },
     post_install_message:
       "Typesense search engine installed and started successfully. Available at http://localhost:8108, API Key: 'xyz'",
@@ -313,9 +368,61 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       environment_vars: [],
       data_volume: 'damp-valkey',
       volume_bindings: ['damp-valkey:/data'],
+      healthcheck: {
+        test: ['CMD', 'valkey-cli', 'ping'],
+        retries: 3,
+        timeout: 5000000000, // 5 seconds
+      },
     },
     post_install_message:
       'Valkey cache server installed and started successfully. Available at localhost:6379',
+  },
+
+  // RustFS service definition (OPTIONAL)
+  [ServiceId.RustFS]: {
+    id: ServiceId.RustFS,
+    name: 'rustfs',
+    display_name: 'RustFS Storage',
+    description: 'RustFS S3-compatible object storage',
+    service_type: 'storage',
+    required: false,
+    default_config: {
+      image: 'rustfs/rustfs:latest',
+      container_name: 'damp-rustfs',
+      ports: [
+        ['9000', '9000'], // API
+        ['9001', '9001'], // Console
+      ],
+      volumes: [],
+      environment_vars: [
+        'RUSTFS_VOLUMES=/data',
+        'RUSTFS_ADDRESS=0.0.0.0:9000',
+        'RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001',
+        'RUSTFS_CONSOLE_ENABLE=true',
+        'RUSTFS_EXTERNAL_ADDRESS=:9000',
+        'RUSTFS_CORS_ALLOWED_ORIGINS=*',
+        'RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS=*',
+        'RUSTFS_ACCESS_KEY=damp',
+        'RUSTFS_SECRET_KEY=password',
+        'RUSTFS_LOG_LEVEL=info',
+      ],
+      data_volume: 'damp_rustfs_data',
+      volume_bindings: ['damp_rustfs_data:/data'],
+      healthcheck: {
+        test: [
+          'CMD',
+          'sh',
+          '-c',
+          'curl -f http://127.0.0.1:9000/health && curl -f http://127.0.0.1:9001/health',
+        ],
+        retries: 3,
+        timeout: 10000000000, // 10 seconds
+        interval: 30000000000, // 30 seconds
+        start_period: 40000000000, // 40 seconds
+      },
+    },
+    post_install_message:
+      "RustFS storage server installed and started successfully. Console: http://localhost:9001, API: http://localhost:9000, Access Key: 'damp', Secret Key: 'password'",
   },
 };
 

@@ -121,6 +121,15 @@ class DockerManager {
         Image: finalConfig.image,
         Env: finalConfig.environment_vars,
         ExposedPorts: this.buildExposedPorts(portMappings),
+        Healthcheck: finalConfig.healthcheck
+          ? {
+              Test: finalConfig.healthcheck.test,
+              Retries: finalConfig.healthcheck.retries,
+              Timeout: finalConfig.healthcheck.timeout,
+              Interval: finalConfig.healthcheck.interval,
+              StartPeriod: finalConfig.healthcheck.start_period,
+            }
+          : undefined,
         HostConfig: {
           PortBindings: this.buildPortBindings(portMappings),
           Binds: finalConfig.volume_bindings,
@@ -222,6 +231,7 @@ class DockerManager {
           container_id: null,
           state: null,
           ports: [],
+          health_status: 'none',
         };
       }
 
@@ -235,12 +245,45 @@ class DockerManager {
         }
       }
 
+      // After getting the container from listContainers
+      let healthStatus: 'starting' | 'healthy' | 'unhealthy' | 'none' = 'none';
+
+      // For more reliable health status, inspect the container
+      try {
+        const containerObj = this.docker.getContainer(container.Id);
+        const inspection = await containerObj.inspect();
+
+        if (inspection.State?.Health) {
+          const healthState = inspection.State.Health.Status;
+          if (healthState === 'healthy') {
+            healthStatus = 'healthy';
+          } else if (healthState === 'unhealthy') {
+            healthStatus = 'unhealthy';
+          } else if (healthState === 'starting') {
+            healthStatus = 'starting';
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to inspect container: ${error}`);
+        // Fall back to parsing Status string if inspect fails
+        if (container.Status) {
+          if (container.Status.includes('(healthy)')) {
+            healthStatus = 'healthy';
+          } else if (container.Status.includes('(unhealthy)')) {
+            healthStatus = 'unhealthy';
+          } else if (container.Status.includes('(health: starting)')) {
+            healthStatus = 'starting';
+          }
+        }
+      }
+
       return {
         exists: true,
         running: container.State === 'running',
         container_id: container.Id,
         state: container.State,
         ports,
+        health_status: healthStatus,
       };
     } catch (error) {
       console.error(`Failed to get container status: ${error}`);

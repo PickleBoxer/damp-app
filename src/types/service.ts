@@ -19,6 +19,7 @@ export enum ServiceId {
   RabbitMQ = 'rabbitmq',
   Typesense = 'typesense',
   Valkey = 'valkey',
+  RustFS = 'rustfs',
 }
 
 /**
@@ -30,6 +31,22 @@ export type ServiceType = 'web' | 'database' | 'email' | 'cache' | 'storage' | '
  * Port mapping: [external_port, internal_port]
  */
 export type PortMapping = [string, string];
+
+/**
+ * Health check configuration for Docker containers
+ */
+export interface HealthCheckConfig {
+  /** Health check command (e.g., ['CMD', 'pg_isready']) */
+  test: string[];
+  /** Number of consecutive failures needed to consider container unhealthy */
+  retries?: number;
+  /** Time to wait for health check in nanoseconds */
+  timeout?: number;
+  /** Time between running health checks in nanoseconds */
+  interval?: number;
+  /** Start period for container to initialize before health checks count in nanoseconds */
+  start_period?: number;
+}
 
 /**
  * Default configuration for a service
@@ -49,6 +66,8 @@ export interface ServiceConfig {
   data_volume: string | null;
   /** Volume bindings in format "volume_name:/container/path" */
   volume_bindings: string[];
+  /** Health check configuration */
+  healthcheck?: HealthCheckConfig;
 }
 
 /**
@@ -123,6 +142,8 @@ export interface ContainerStatus {
   state: string | null;
   /** Actual port mappings (may differ from config if auto-adjusted) */
   ports: PortMapping[];
+  /** Health status of the container */
+  health_status?: 'starting' | 'healthy' | 'unhealthy' | 'none';
 }
 
 /**
