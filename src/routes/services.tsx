@@ -22,6 +22,7 @@ import { useServices } from '@/api/services/services-queries';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ServiceType } from '@/types/service';
 import { Badge } from '@/components/ui/badge';
+import { ServiceIcon } from '@/components/ServiceIcon';
 
 // Service type tabs to display (in order)
 const SERVICE_TYPE_TABS: Array<{ value: ServiceType | 'all'; label: string }> = [
@@ -57,6 +58,79 @@ function ServicesPage() {
   // Type-safe tab change handler
   const handleTabChange = (value: string) => {
     setSelectedType(value as ServiceType | 'all');
+  };
+
+  // Render service list content based on loading/data state
+  const renderServiceList = () => {
+    if (isLoading) {
+      return (
+        <>
+          {[0, 1, 2, 3, 4].map(index => (
+            <Item
+              variant="outline"
+              key={`skeleton-${index}`}
+              className="bg-muted/30 transition-transform duration-200"
+            >
+              <ItemMedia variant="icon">
+                <Skeleton className="h-6 w-6 rounded" />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>
+                  <Skeleton className="h-4 w-32" />
+                </ItemTitle>
+                <ItemDescription>
+                  <Skeleton className="mt-2 h-3 w-48" />
+                </ItemDescription>
+              </ItemContent>
+              <ItemActions>
+                <Skeleton className="h-8 w-20 rounded" />
+              </ItemActions>
+            </Item>
+          ))}
+        </>
+      );
+    }
+
+    if (filteredServices.length === 0) {
+      return (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ShieldAlertIcon />
+            </EmptyMedia>
+            <EmptyTitle>No services found</EmptyTitle>
+            <EmptyDescription>No services match the selected filter.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      );
+    }
+
+    return filteredServices.map(service => (
+      <Item
+        variant="outline"
+        key={service.definition.id}
+        onClick={() =>
+          navigate({
+            to: '/services/$serviceId',
+            params: { serviceId: service.definition.id },
+          })
+        }
+        className={`bg-muted/30 hover:bg-accent flex w-full cursor-pointer transition-colors ${service.state.installed ? '' : 'bg-transparent opacity-50'}`}
+      >
+        <ItemMedia variant="icon">
+          <ServiceIcon serviceId={service.definition.id} />
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle>{service.definition.display_name}</ItemTitle>
+          <ItemDescription>{service.definition.description}</ItemDescription>
+        </ItemContent>
+        <ItemActions>
+          <Badge variant={service.state.container_status?.running ? 'default' : 'secondary'}>
+            {service.state.container_status?.running ? 'Running' : 'Stopped'}
+          </Badge>
+        </ItemActions>
+      </Item>
+    ));
   };
 
   if (error)
@@ -103,75 +177,7 @@ function ServicesPage() {
           </div>
           <TabsContent value={selectedType} className="mt-4 flex-1 overflow-hidden">
             <ScrollArea className="h-full">
-              <div className="space-y-2">
-                {isLoading ? (
-                  <>
-                    {[0, 1, 2, 3, 4].map(index => (
-                      <Item
-                        variant="outline"
-                        key={`skeleton-${index}`}
-                        className="bg-muted/30 transition-transform duration-200"
-                      >
-                        <ItemMedia variant="icon">
-                          <Skeleton className="h-6 w-6 rounded" />
-                        </ItemMedia>
-                        <ItemContent>
-                          <ItemTitle>
-                            <Skeleton className="h-4 w-32" />
-                          </ItemTitle>
-                          <ItemDescription>
-                            <Skeleton className="mt-2 h-3 w-48" />
-                          </ItemDescription>
-                        </ItemContent>
-                        <ItemActions>
-                          <Skeleton className="h-8 w-20 rounded" />
-                        </ItemActions>
-                      </Item>
-                    ))}
-                  </>
-                ) : filteredServices.length === 0 ? (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <ShieldAlertIcon />
-                      </EmptyMedia>
-                      <EmptyTitle>No services found</EmptyTitle>
-                      <EmptyDescription>No services match the selected filter.</EmptyDescription>
-                    </EmptyHeader>
-                  </Empty>
-                ) : (
-                  filteredServices.map(service => (
-                    <Item
-                      variant="outline"
-                      key={service.definition.id}
-                      onClick={() =>
-                        navigate({
-                          to: '/services/$serviceId',
-                          params: { serviceId: service.definition.id },
-                        })
-                      }
-                      className={`bg-muted/30 hover:bg-accent flex w-full cursor-pointer transition-colors ${service.state.installed ? '' : 'bg-transparent opacity-50'}`}
-                    >
-                      <ItemMedia variant="icon">
-                        <ShieldAlertIcon />
-                      </ItemMedia>
-                      <ItemContent>
-                        <ItemTitle>{service.definition.display_name}</ItemTitle>
-                        <ItemDescription>{service.definition.description}</ItemDescription>
-                      </ItemContent>
-                      <ItemActions>
-                        <Badge
-                          variant={
-                            service.state.container_status?.running ? 'default' : 'secondary'
-                          }
-                        >
-                          {service.state.container_status?.running ? 'Running' : 'Stopped'}
-                        </Badge>
-                      </ItemActions>
-                    </Item>
-                  ))
-                )}
-              </div>
+              <div className="space-y-2">{renderServiceList()}</div>
             </ScrollArea>
           </TabsContent>
         </Tabs>
