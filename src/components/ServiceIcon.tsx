@@ -74,5 +74,5 @@ export function ServiceIcon({ serviceId, className = 'w-10 h-10' }: Readonly<Ser
       IconComponent = iconMap[serviceId] || FaQuestionCircle;
       break;
   }
-  return <IconComponent className={className + ' text-black dark:text-white'} style={{ color }} />;
+  return <IconComponent className={className} style={{ color }} />;
 }

@@ -125,9 +125,13 @@ function ServicesPage() {
           <ItemDescription>{service.definition.description}</ItemDescription>
         </ItemContent>
         <ItemActions>
-          <Badge variant={service.state.container_status?.running ? 'default' : 'secondary'}>
-            {service.state.container_status?.running ? 'Running' : 'Stopped'}
-          </Badge>
+          {service.state.installed ? (
+            <Badge variant={service.state.container_status?.running ? 'default' : 'secondary'}>
+              {service.state.container_status?.running ? 'Running' : 'Stopped'}
+            </Badge>
+          ) : (
+            <Badge variant="outline">Not Installed</Badge>
+          )}
         </ItemActions>
       </Item>
     ));

@@ -20,6 +20,10 @@ interface ElectronWindow {
 
 interface DockerContext {
   getStatus: () => Promise<{ isRunning: boolean; error?: string }>;
+  getNetworkName: () => Promise<string>;
+  ensureNetwork: () => Promise<void>;
+  connectToNetwork: (containerIdOrName: string) => Promise<void>;
+  disconnectFromNetwork: (containerIdOrName: string) => Promise<void>;
 }
 
 interface ServicesContext {
