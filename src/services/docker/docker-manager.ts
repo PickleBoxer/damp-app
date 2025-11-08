@@ -64,7 +64,9 @@ class DockerManager {
         console.log(`Created Docker network: ${this.networkName}`);
       }
     } catch (error) {
-      throw new Error(`Failed to ensure network exists: ${error}`);
+      throw new Error(
+        `Failed to ensure network exists: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -84,7 +86,9 @@ class DockerManager {
         console.log(`Container ${containerIdOrName} already connected to ${this.networkName}`);
         return;
       }
-      throw new Error(`Failed to connect container to network: ${error}`);
+      throw new Error(
+        `Failed to connect container to network: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -105,7 +109,9 @@ class DockerManager {
         console.log(`Container ${containerIdOrName} was not connected to ${this.networkName}`);
         return;
       }
-      throw new Error(`Failed to disconnect container from network: ${error}`);
+      throw new Error(
+        `Failed to disconnect container from network: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

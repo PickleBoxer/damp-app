@@ -34,24 +34,48 @@ export function addDockerListeners() {
   });
 
   ipcMain.handle(DOCKER_NETWORK_NAME_CHANNEL, async (): Promise<string> => {
-    return dockerManager.getNetworkName();
+    try {
+      return dockerManager.getNetworkName();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Docker network name error:', errorMessage);
+      throw new Error(`Failed to get network name: ${errorMessage}`);
+    }
   });
 
   ipcMain.handle(DOCKER_ENSURE_NETWORK_CHANNEL, async (): Promise<void> => {
-    await dockerManager.ensureNetworkExists();
+    try {
+      await dockerManager.ensureNetworkExists();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Docker ensure network error:', errorMessage);
+      throw new Error(`Failed to ensure network exists: ${errorMessage}`);
+    }
   });
 
   ipcMain.handle(
     DOCKER_CONNECT_TO_NETWORK_CHANNEL,
     async (_event, containerIdOrName: string): Promise<void> => {
-      await dockerManager.connectContainerToNetwork(containerIdOrName);
+      try {
+        await dockerManager.connectContainerToNetwork(containerIdOrName);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('❌ Docker connect container error:', errorMessage);
+        throw new Error(`Failed to connect container ${containerIdOrName}: ${errorMessage}`);
+      }
     }
   );
 
   ipcMain.handle(
     DOCKER_DISCONNECT_FROM_NETWORK_CHANNEL,
     async (_event, containerIdOrName: string): Promise<void> => {
-      await dockerManager.disconnectContainerFromNetwork(containerIdOrName);
+      try {
+        await dockerManager.disconnectContainerFromNetwork(containerIdOrName);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('❌ Docker disconnect container error:', errorMessage);
+        throw new Error(`Failed to disconnect container ${containerIdOrName}: ${errorMessage}`);
+      }
     }
   );
 }

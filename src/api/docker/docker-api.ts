@@ -11,14 +11,23 @@ export interface DockerStatus {
 // Typed reference to the Docker API exposed via preload script
 const dockerApi = (globalThis as unknown as Window).docker;
 
-if (!dockerApi) {
-  throw new Error('Docker API is not available. Ensure the preload script is properly configured.');
+/**
+ * Ensures the Docker API is available before usage
+ * This allows the module to be imported in test environments without immediate failure
+ */
+function ensureDockerApi() {
+  if (!dockerApi) {
+    throw new Error(
+      'Docker API is not available. Ensure the preload script is properly configured.'
+    );
+  }
 }
 
 /**
  * Get Docker daemon status
  */
 export async function getDockerStatus(): Promise<DockerStatus> {
+  ensureDockerApi();
   return dockerApi.getStatus();
 }
 
@@ -26,6 +35,7 @@ export async function getDockerStatus(): Promise<DockerStatus> {
  * Get the DAMP network name
  */
 export async function getDockerNetworkName(): Promise<string> {
+  ensureDockerApi();
   return dockerApi.getNetworkName();
 }
 
@@ -33,6 +43,7 @@ export async function getDockerNetworkName(): Promise<string> {
  * Ensure the DAMP network exists
  */
 export async function ensureDockerNetwork(): Promise<void> {
+  ensureDockerApi();
   return dockerApi.ensureNetwork();
 }
 
@@ -40,6 +51,7 @@ export async function ensureDockerNetwork(): Promise<void> {
  * Connect a container to the DAMP network
  */
 export async function connectContainerToNetwork(containerIdOrName: string): Promise<void> {
+  ensureDockerApi();
   return dockerApi.connectToNetwork(containerIdOrName);
 }
 
@@ -47,5 +59,6 @@ export async function connectContainerToNetwork(containerIdOrName: string): Prom
  * Disconnect a container from the DAMP network
  */
 export async function disconnectContainerFromNetwork(containerIdOrName: string): Promise<void> {
+  ensureDockerApi();
   return dockerApi.disconnectFromNetwork(containerIdOrName);
 }
