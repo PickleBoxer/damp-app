@@ -86,8 +86,14 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const handleStart = async () => {
     setSuccessMessage(null);
     try {
-      await startMutation.mutateAsync(service.definition.id);
-      setSuccessMessage(`${service.definition.display_name} started successfully`);
+      const result = await startMutation.mutateAsync(service.definition.id);
+      if (result?.success) {
+        setSuccessMessage(`${service.definition.display_name} started successfully`);
+      } else {
+        toast.error(`Failed to start ${service.definition.display_name}`, {
+          description: result?.error || 'Unknown error occurred',
+        });
+      }
     } catch (error) {
       toast.error(`Failed to start ${service.definition.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -98,8 +104,14 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const handleStop = async () => {
     setSuccessMessage(null);
     try {
-      await stopMutation.mutateAsync(service.definition.id);
-      setSuccessMessage(`${service.definition.display_name} stopped successfully`);
+      const result = await stopMutation.mutateAsync(service.definition.id);
+      if (result?.success) {
+        setSuccessMessage(`${service.definition.display_name} stopped successfully`);
+      } else {
+        toast.error(`Failed to stop ${service.definition.display_name}`, {
+          description: result?.error || 'Unknown error occurred',
+        });
+      }
     } catch (error) {
       toast.error(`Failed to stop ${service.definition.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -110,8 +122,14 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const handleRestart = async () => {
     setSuccessMessage(null);
     try {
-      await restartMutation.mutateAsync(service.definition.id);
-      setSuccessMessage(`${service.definition.display_name} restarted successfully`);
+      const result = await restartMutation.mutateAsync(service.definition.id);
+      if (result?.success) {
+        setSuccessMessage(`${service.definition.display_name} restarted successfully`);
+      } else {
+        toast.error(`Failed to restart ${service.definition.display_name}`, {
+          description: result?.error || 'Unknown error occurred',
+        });
+      }
     } catch (error) {
       toast.error(`Failed to restart ${service.definition.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -122,11 +140,17 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const handleUninstall = async () => {
     setSuccessMessage(null);
     try {
-      await uninstallMutation.mutateAsync({
+      const result = await uninstallMutation.mutateAsync({
         serviceId: service.definition.id,
         removeVolumes: false,
       });
-      setSuccessMessage(`${service.definition.display_name} uninstalled successfully`);
+      if (result?.success) {
+        setSuccessMessage(`${service.definition.display_name} uninstalled successfully`);
+      } else {
+        toast.error(`Failed to uninstall ${service.definition.display_name}`, {
+          description: result?.error || 'Unknown error occurred',
+        });
+      }
     } catch (error) {
       toast.error(`Failed to uninstall ${service.definition.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',

@@ -298,7 +298,7 @@ class ServiceStateManager {
       if (removeVolumes) {
         const volumeBindings =
           state.custom_config?.volume_bindings || definition.default_config.volume_bindings;
-        if (volumeBindings.length > 0) {
+        if (volumeBindings && volumeBindings.length > 0) {
           // Extract volume names and remove them
           const volumeNames = volumeBindings
             .map(binding => {

@@ -11,7 +11,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
       <AppSidebar />
       <SidebarInset className="flex h-screen flex-col overflow-hidden select-none">
         <DragWindowRegion title="DAMP" />
-        <div className="flex-1 overflow-auto">{children}</div>
+        <main className="flex-1 overflow-auto">{children}</main>
         <Footer />
       </SidebarInset>
       <Toaster

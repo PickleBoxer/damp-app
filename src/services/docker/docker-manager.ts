@@ -140,7 +140,7 @@ class DockerManager {
       };
 
       // Create all volumes from volume bindings
-      const volumeNames = this.getVolumeNamesFromBindings(finalConfig.volume_bindings);
+      const volumeNames = this.getVolumeNamesFromBindings(finalConfig.volume_bindings || []);
       if (volumeNames.length > 0) {
         await this.ensureVolumesExist(volumeNames);
       }
@@ -341,9 +341,19 @@ class DockerManager {
       await volume.remove();
       console.log(`Removed volume: ${volumeName}`);
     } catch (error) {
-      // Ignore if volume doesn't exist
-      if (error instanceof Error && error.message.includes('no such volume')) {
+      // Ignore if volume doesn't exist (status code 404)
+      if (
+        error instanceof Error &&
+        (error.message.includes('no such volume') ||
+          (error as { statusCode?: number }).statusCode === 404)
+      ) {
         console.log(`Volume ${volumeName} does not exist, skipping removal`);
+      } else if (
+        error instanceof Error &&
+        (error.message.includes('volume is in use') ||
+          (error as { statusCode?: number }).statusCode === 409)
+      ) {
+        throw new Error(`Cannot remove volume ${volumeName}: volume is in use by a container`);
       } else {
         throw new Error(`Failed to remove volume ${volumeName}: ${error}`);
       }
@@ -355,7 +365,11 @@ class DockerManager {
    */
   async removeServiceVolumes(volumeNames: string[]): Promise<void> {
     for (const volumeName of volumeNames) {
-      await this.removeVolume(volumeName);
+      try {
+        await this.removeVolume(volumeName);
+      } catch (error) {
+        console.error(`Failed to remove volume ${volumeName}: ${error}`);
+      }
     }
   }
 

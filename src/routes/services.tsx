@@ -1,6 +1,5 @@
 import React from 'react';
 import { createFileRoute, useNavigate, Outlet } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
 import { ShieldAlertIcon, TriangleAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -22,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useServices } from '@/api/services/services-queries';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ServiceType } from '@/types/service';
+import { Badge } from '@/components/ui/badge';
 
 // Service type tabs to display (in order)
 const SERVICE_TYPE_TABS: Array<{ value: ServiceType | 'all'; label: string }> = [
@@ -129,6 +129,16 @@ function ServicesPage() {
                       </Item>
                     ))}
                   </>
+                ) : filteredServices.length === 0 ? (
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <ShieldAlertIcon />
+                      </EmptyMedia>
+                      <EmptyTitle>No services found</EmptyTitle>
+                      <EmptyDescription>No services match the selected filter.</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   filteredServices.map(service => (
                     <Item
@@ -150,9 +160,13 @@ function ServicesPage() {
                         <ItemDescription>{service.definition.description}</ItemDescription>
                       </ItemContent>
                       <ItemActions>
-                        <Button size="sm" variant="outline">
+                        <Badge
+                          variant={
+                            service.state.container_status?.running ? 'default' : 'secondary'
+                          }
+                        >
                           {service.state.container_status?.running ? 'Running' : 'Stopped'}
-                        </Button>
+                        </Badge>
                       </ItemActions>
                     </Item>
                   ))

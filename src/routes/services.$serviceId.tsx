@@ -149,7 +149,8 @@ function ServiceDetails({ service }: { service: ServiceInfo }) {
               <h4 className="mb-3 text-sm font-semibold">Environment Variables</h4>
               <div className="bg-muted/50 max-h-48 space-y-1 overflow-y-auto rounded-md p-3">
                 {service.definition.default_config.environment_vars.map((envVar, index) => {
-                  const [key, value] = envVar.split('=');
+                  const [key, ...valueParts] = envVar.split('=');
+                  const value = valueParts.join('=');
                   return (
                     <div key={`${key}-${index}`} className="font-mono text-xs">
                       <span className="text-muted-foreground">{key}=</span>
@@ -175,7 +176,7 @@ function ServiceDetails({ service }: { service: ServiceInfo }) {
 function ServiceDetailSheet() {
   const { serviceId } = Route.useParams();
   const navigate = useNavigate();
-  const { data: service, isLoading } = useService(serviceId as ServiceId);
+  const { data: service, isLoading, error } = useService(serviceId as ServiceId);
   const [open, setOpen] = useState(true);
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -197,8 +198,8 @@ function ServiceDetailSheet() {
     );
   }
 
-  // Render not found state
-  if (!service) {
+  // Render error or not found state
+  if (error || !service) {
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <ServiceNotFound />
