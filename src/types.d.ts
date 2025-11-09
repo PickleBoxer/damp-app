@@ -35,6 +35,7 @@ interface ServicesContext {
   stopService: (serviceId: string) => Promise<unknown>;
   restartService: (serviceId: string) => Promise<unknown>;
   updateConfig: (serviceId: string, customConfig: unknown) => Promise<unknown>;
+  downloadCaddyCertificate: () => Promise<unknown>;
   onInstallProgress: (callback: (serviceId: string, progress: unknown) => void) => () => void;
 }
 

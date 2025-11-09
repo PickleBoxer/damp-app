@@ -62,6 +62,7 @@ export async function installService(
  */
 export async function uninstallService(
   serviceId: ServiceId,
+  // TODO: expose option in UI
   removeVolumes = false
 ): Promise<ServiceOperationResult> {
   ensureServicesApi();

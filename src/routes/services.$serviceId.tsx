@@ -16,6 +16,9 @@ import { ServiceId, ServiceInfo } from '@/types/service';
 import { HealthBadge } from '@/components/HealthBadge';
 import ServiceActions from '@/components/ServiceActions';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { downloadCaddyCertificate } from '@/helpers/services_helpers';
+import { Download, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Helper function to get status badge styles
 function getStatusBadgeStyles(service: ServiceInfo): string {
@@ -61,7 +64,7 @@ function LoadingSkeleton() {
         <SheetTitle>
           <Skeleton className="h-6 w-48" />
         </SheetTitle>
-        <SheetDescription>
+        <SheetDescription asChild>
           <Skeleton className="mt-2 h-4 w-full" />
         </SheetDescription>
       </SheetHeader>
@@ -86,7 +89,34 @@ function ServiceNotFound() {
 }
 
 // Service details component
-function ServiceDetails({ service }: { service: ServiceInfo }) {
+function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadCertificate = async () => {
+    setIsDownloading(true);
+    try {
+      const result = await downloadCaddyCertificate();
+      if (result.success) {
+        toast.success('Certificate downloaded successfully', {
+          description: result.path ? `Saved to: ${result.path}` : 'Certificate has been saved',
+        });
+      } else {
+        toast.error('Failed to download certificate', {
+          description: result.error || 'An unknown error occurred',
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to download certificate', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const isCaddy = service.definition.id === ServiceId.Caddy;
+  const certInstalled = service.state.custom_config?.cert_installed ?? false;
+
   return (
     <SheetContent className="flex h-full flex-col gap-4 p-0">
       <SheetHeader className="flex flex-col gap-1.5 p-4">
@@ -117,6 +147,29 @@ function ServiceDetails({ service }: { service: ServiceInfo }) {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Health</span>
                 <HealthBadge status={service.state.container_status.health_status} />
+              </div>
+            )}
+
+            {isCaddy && service.state.installed && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">SSL Certificate</span>
+                <div className="flex items-center gap-2">
+                  {certInstalled ? (
+                    <>
+                      <ShieldCheck className="text-primary h-4 w-4" />
+                      <span className="bg-primary text-primary-foreground rounded-md px-2 py-1 text-xs font-medium">
+                        Installed
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldAlert className="text-muted-foreground h-4 w-4" />
+                      <span className="border-input bg-background rounded-md border px-2 py-1 text-xs font-medium">
+                        Not Installed
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -164,6 +217,17 @@ function ServiceDetails({ service }: { service: ServiceInfo }) {
         </div>
       </ScrollArea>
       <SheetFooter className="mt-auto flex flex-col gap-2 p-4 sm:flex-col">
+        {isCaddy && service.state.installed && (
+          <Button
+            variant="outline"
+            onClick={handleDownloadCertificate}
+            disabled={isDownloading}
+            className="w-full"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            {isDownloading ? 'Downloading...' : 'Download SSL Certificate'}
+          </Button>
+        )}
         <ServiceActions service={service} />
         <SheetClose asChild>
           <Button variant="outline">Close</Button>

@@ -13,6 +13,7 @@ import type {
   PortMapping,
 } from '../../types/service';
 import { getAvailablePorts } from './port-checker';
+import * as tar from 'tar-stream';
 
 /**
  * Docker manager singleton
@@ -550,6 +551,159 @@ class DockerManager {
       return logs.toString();
     } catch (error) {
       throw new Error(`Failed to get container logs: ${error}`);
+    }
+  }
+
+  /**
+   * Execute a command inside a container
+   * @param containerIdOrName Container ID or name
+   * @param cmd Command to execute (e.g., ['ls', '-la', '/data'])
+   * @returns Object with exitCode, stdout, and stderr
+   */
+  async execCommand(
+    containerIdOrName: string,
+    cmd: string[]
+  ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+    try {
+      const container = this.docker.getContainer(containerIdOrName);
+
+      // Create exec instance
+      const exec = await container.exec({
+        Cmd: cmd,
+        AttachStdout: true,
+        AttachStderr: true,
+      });
+
+      // Start exec and capture output
+      return new Promise((resolve, reject) => {
+        exec.start({ Detach: false }, (err, stream) => {
+          if (err) {
+            reject(new Error(`Failed to start exec: ${err.message}`));
+            return;
+          }
+
+          if (!stream) {
+            reject(new Error('No stream returned from exec'));
+            return;
+          }
+
+          let stdout = '';
+          let stderr = '';
+
+          // Demultiplex stdout and stderr
+          const stdoutStream = {
+            write: (chunk: Buffer): boolean => {
+              stdout += chunk.toString();
+              return true;
+            },
+          };
+
+          const stderrStream = {
+            write: (chunk: Buffer): boolean => {
+              stderr += chunk.toString();
+              return true;
+            },
+          };
+
+          this.docker.modem.demuxStream(
+            stream,
+            stdoutStream as NodeJS.WritableStream,
+            stderrStream as NodeJS.WritableStream
+          );
+
+          stream.on('end', async () => {
+            try {
+              const inspection = await exec.inspect();
+              if (inspection.ExitCode == null) {
+                reject(new Error('Exit code not available from exec inspection'));
+                return;
+              }
+              resolve({
+                exitCode: inspection.ExitCode,
+                stdout: stdout.trim(),
+                stderr: stderr.trim(),
+              });
+            } catch (error) {
+              reject(new Error(`Failed to inspect exec: ${error}`));
+            }
+          });
+
+          stream.on('error', (error: Error) => {
+            reject(new Error(`Stream error: ${error.message}`));
+          });
+        });
+      });
+    } catch (error) {
+      throw new Error(
+        `Failed to execute command in container ${containerIdOrName}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
+   * Get a file from a container
+   * @param containerIdOrName Container ID or name
+   * @param containerPath Path to file inside container (e.g., '/data/caddy/pki/authorities/local/root.crt')
+   * @returns File content as Buffer
+   */
+  async getFileFromContainer(containerIdOrName: string, containerPath: string): Promise<Buffer> {
+    try {
+      const container = this.docker.getContainer(containerIdOrName);
+
+      // Get archive stream (tar format)
+      const stream = await container.getArchive({
+        path: containerPath,
+      });
+
+      // Collect stream data
+      const chunks: Buffer[] = [];
+      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+      let totalSize = 0;
+      for await (const chunk of stream) {
+        totalSize += chunk.length;
+        if (totalSize > MAX_FILE_SIZE) {
+          throw new Error(`File size exceeds limit of ${MAX_FILE_SIZE} bytes`);
+        }
+        chunks.push(chunk as Buffer);
+      }
+
+      const tarBuffer = Buffer.concat(chunks);
+
+      // Extract file content from tar archive
+      const extract = tar.extract();
+
+      return new Promise((resolve, reject) => {
+        let fileContent: Buffer | null = null;
+
+        extract.on('entry', (header, entryStream, next) => {
+          const chunks: Buffer[] = [];
+          entryStream.on('data', (chunk: Buffer) => chunks.push(chunk));
+          entryStream.on('end', () => {
+            fileContent ??= Buffer.concat(chunks);
+            next();
+          });
+          entryStream.resume();
+        });
+
+        extract.on('finish', () => {
+          if (fileContent) {
+            resolve(fileContent);
+          } else {
+            reject(new Error(`File not found in archive: ${containerPath}`));
+          }
+        });
+
+        extract.on('error', (error: Error) => {
+          reject(new Error(`Failed to extract file: ${error.message}`));
+        });
+
+        // Pipe tar buffer to extract
+        extract.end(tarBuffer);
+      });
+    } catch (error) {
+      throw new Error(
+        `Failed to get file from container ${containerIdOrName}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }

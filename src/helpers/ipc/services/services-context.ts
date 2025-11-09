@@ -49,6 +49,11 @@ export interface ServicesContext {
   updateConfig: (serviceId: ServiceId, customConfig: CustomConfig) => Promise<unknown>;
 
   /**
+   * Download Caddy SSL certificate
+   */
+  downloadCaddyCertificate: () => Promise<unknown>;
+
+  /**
    * Subscribe to installation progress events
    */
   onInstallProgress: (callback: (serviceId: ServiceId, progress: unknown) => void) => () => void;
@@ -78,6 +83,8 @@ export function exposeServicesContext(): void {
 
     updateConfig: (serviceId: ServiceId, customConfig: CustomConfig) =>
       ipcRenderer.invoke(CHANNELS.SERVICES_UPDATE_CONFIG, serviceId, customConfig),
+
+    downloadCaddyCertificate: () => ipcRenderer.invoke(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT),
 
     onInstallProgress: callback => {
       const listener = (_event: unknown, serviceId: ServiceId, progress: unknown) => {

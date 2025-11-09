@@ -140,5 +140,40 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
     }
   );
 
+  /**
+   * Download Caddy SSL certificate
+   */
+  ipcMain.handle(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT, async () => {
+    try {
+      const { dialog } = await import('electron');
+      const { dockerManager } = await import('../../../services/docker/docker-manager');
+      const { writeFileSync } = await import('node:fs');
+
+      // Get certificate from container
+      const CADDY_ROOT_CERT_PATH = '/data/caddy/pki/authorities/local/root.crt';
+      const certBuffer = await dockerManager.getFileFromContainer('damp-web', CADDY_ROOT_CERT_PATH);
+
+      // Show save dialog
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: 'Save Caddy Root Certificate',
+        defaultPath: 'damp-caddy-root.crt',
+        filters: [
+          { name: 'Certificate Files', extensions: ['crt', 'pem'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+
+      if (!result.canceled && result.filePath) {
+        writeFileSync(result.filePath, certBuffer);
+        return { success: true, path: result.filePath };
+      }
+
+      return { success: false, error: 'Download canceled' };
+    } catch (error) {
+      console.error('Failed to download Caddy certificate:', error);
+      throw error;
+    }
+  });
+
   console.log('Service IPC listeners registered');
 }

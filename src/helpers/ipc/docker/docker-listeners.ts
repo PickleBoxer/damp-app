@@ -21,11 +21,11 @@ export function addDockerListeners() {
       );
 
       await Promise.race([docker.ping(), timeoutPromise]);
-      console.log('✅ Docker is running');
+      console.log('[DockerGateway] Docker is running');
       return { isRunning: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ Docker error:', errorMessage);
+      console.error('[DockerGateway] Docker error:', errorMessage);
       return {
         isRunning: false,
         error: errorMessage,
@@ -38,7 +38,7 @@ export function addDockerListeners() {
       return dockerManager.getNetworkName();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ Docker network name error:', errorMessage);
+      console.error('[DockerGateway] Docker network name error:', errorMessage);
       throw new Error(`Failed to get network name: ${errorMessage}`);
     }
   });
@@ -48,7 +48,7 @@ export function addDockerListeners() {
       await dockerManager.ensureNetworkExists();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ Docker ensure network error:', errorMessage);
+      console.error('[DockerGateway] Docker ensure network error:', errorMessage);
       throw new Error(`Failed to ensure network exists: ${errorMessage}`);
     }
   });
@@ -60,7 +60,7 @@ export function addDockerListeners() {
         await dockerManager.connectContainerToNetwork(containerIdOrName);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('❌ Docker connect container error:', errorMessage);
+        console.error('[DockerGateway] Docker connect container error:', errorMessage);
         throw new Error(`Failed to connect container ${containerIdOrName}: ${errorMessage}`);
       }
     }
@@ -73,7 +73,7 @@ export function addDockerListeners() {
         await dockerManager.disconnectContainerFromNetwork(containerIdOrName);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('❌ Docker disconnect container error:', errorMessage);
+        console.error('[DockerGateway] Docker disconnect container error:', errorMessage);
         throw new Error(`Failed to disconnect container ${containerIdOrName}: ${errorMessage}`);
       }
     }

@@ -86,6 +86,8 @@ export interface CustomConfig {
   container_name?: string;
   /** Custom volume bindings */
   volume_bindings?: string[];
+  /** Whether SSL certificate is installed (Caddy only) */
+  cert_installed?: boolean;
 }
 
 /**
@@ -108,8 +110,6 @@ export interface ServiceDefinition {
   default_config: ServiceConfig;
   /** Message to show after successful installation */
   post_install_message: string | null;
-  /** Optional custom function to run after installation */
-  post_install_fn?: () => Promise<void>;
 }
 
 /**

@@ -3,6 +3,17 @@
  */
 
 import { ServiceDefinition, ServiceId } from '../../types/service';
+import { setupCaddySSL } from '../docker/caddy-setup';
+
+/**
+ * Post-install hooks for services (backend only - not serialized)
+ * Maps service ID to post-install function
+ */
+export const POST_INSTALL_HOOKS: Partial<Record<ServiceId, () => Promise<unknown>>> = {
+  [ServiceId.Caddy]: async () => {
+    return await setupCaddySSL('damp-web');
+  },
+};
 
 /**
  * Registry of all available services
@@ -29,7 +40,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       volume_bindings: ['damp_caddy_data:/data', 'damp_caddy_config:/config'],
     },
     post_install_message:
-      'Caddy web server installed successfully. SSL certificates will be automatically generated for .local domains.',
+      'Caddy web server is ready. SSL certificates are configured and will be automatically generated for .local domains.',
   },
 
   // MySQL service definition (OPTIONAL)
@@ -427,28 +438,28 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
 };
 
 /**
- * Get service definition by ID
+ * Get a service definition by ID
  */
 export function getServiceDefinition(serviceId: ServiceId): ServiceDefinition | undefined {
   return SERVICE_DEFINITIONS[serviceId];
 }
 
 /**
- * Get all service definitions as array
+ * Get all service definitions
  */
 export function getAllServiceDefinitions(): ServiceDefinition[] {
   return Object.values(SERVICE_DEFINITIONS);
 }
 
 /**
- * Get all required services
+ * Get all required service definitions
  */
 export function getRequiredServices(): ServiceDefinition[] {
   return getAllServiceDefinitions().filter(service => service.required);
 }
 
 /**
- * Get all optional services
+ * Get all optional service definitions
  */
 export function getOptionalServices(): ServiceDefinition[] {
   return getAllServiceDefinitions().filter(service => !service.required);

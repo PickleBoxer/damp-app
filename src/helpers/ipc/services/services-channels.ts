@@ -17,5 +17,8 @@ export const SERVICES_RESTART = 'services:restart';
 // Service configuration
 export const SERVICES_UPDATE_CONFIG = 'services:update-config';
 
+// Caddy-specific operations
+export const SERVICES_CADDY_DOWNLOAD_CERT = 'services:caddy-download-cert';
+
 // Progress events (for image pull)
 export const SERVICES_INSTALL_PROGRESS = 'services:install-progress';

@@ -65,7 +65,7 @@ function ServicesPage() {
     if (isLoading) {
       return (
         <>
-          {[0, 1, 2, 3, 4].map(index => (
+          {[0, 1, 2, 3, 4, 5, 6].map(index => (
             <Item
               variant="outline"
               key={`skeleton-${index}`}
@@ -78,9 +78,7 @@ function ServicesPage() {
                 <ItemTitle>
                   <Skeleton className="h-4 w-32" />
                 </ItemTitle>
-                <ItemDescription>
-                  <Skeleton className="mt-2 h-3 w-48" />
-                </ItemDescription>
+                <Skeleton className="mt-2 h-3 w-48" />
               </ItemContent>
               <ItemActions>
                 <Skeleton className="h-8 w-20 rounded" />
@@ -115,22 +113,27 @@ function ServicesPage() {
             params: { serviceId: service.definition.id },
           })
         }
-        className={`bg-muted/30 hover:bg-accent flex w-full cursor-pointer transition-colors ${service.state.installed ? '' : 'bg-transparent opacity-50'}`}
+        className={`bg-muted/30 hover:bg-accent flex w-full cursor-pointer p-2.5 transition-colors ${service.state.installed ? '' : 'bg-transparent opacity-50'}`}
       >
-        <ItemMedia variant="icon">
-          <ServiceIcon serviceId={service.definition.id} />
+        <ItemMedia className="bg-primary/10 rounded-md p-2">
+          <ServiceIcon serviceId={service.definition.id} className="h-6 w-6" />
         </ItemMedia>
-        <ItemContent>
+        <ItemContent className="">
           <ItemTitle>{service.definition.display_name}</ItemTitle>
           <ItemDescription>{service.definition.description}</ItemDescription>
         </ItemContent>
         <ItemActions>
           {service.state.installed ? (
-            <Badge variant={service.state.container_status?.running ? 'default' : 'secondary'}>
+            <Badge
+              variant={service.state.container_status?.running ? 'default' : 'secondary'}
+              className="rounded-md"
+            >
               {service.state.container_status?.running ? 'Running' : 'Stopped'}
             </Badge>
           ) : (
-            <Badge variant="outline">Not Installed</Badge>
+            <Badge variant="outline" className="rounded-md">
+              Not Installed
+            </Badge>
           )}
         </ItemActions>
       </Item>
@@ -167,7 +170,7 @@ function ServicesPage() {
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
           <div>
-            <TabsList className="flex-shrink-0">
+            <TabsList className="h-8 flex-shrink-0">
               {SERVICE_TYPE_TABS.map(tab => (
                 <TabsTrigger
                   key={tab.value}

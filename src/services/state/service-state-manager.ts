@@ -12,7 +12,11 @@ import type {
   ServiceOperationResult,
   PullProgress,
 } from '../../types/service';
-import { getServiceDefinition, getAllServiceDefinitions } from '../registry/service-definitions';
+import {
+  getServiceDefinition,
+  getAllServiceDefinitions,
+  POST_INSTALL_HOOKS,
+} from '../registry/service-definitions';
 import { dockerManager } from '../docker/docker-manager';
 import { serviceStorage } from './service-storage';
 
@@ -114,6 +118,7 @@ class ServiceStateManager {
           });
         } catch (error) {
           console.error(`Failed to get container status for service ${definition.id}:`, error);
+
           // Return service with existing state if Docker check fails
           serviceInfos.push({
             definition,
@@ -225,15 +230,32 @@ class ServiceStateManager {
 
       await serviceStorage.setServiceState(serviceId, newState);
 
-      // Run post-install function if defined
-      if (definition.post_install_fn) {
+      // Run post-install hook if defined (e.g., Caddy SSL setup)
+      let certInstalled = false;
+      const postInstallHook = POST_INSTALL_HOOKS[serviceId];
+      if (postInstallHook) {
         try {
-          await definition.post_install_fn();
+          const result = await postInstallHook();
+
+          // Check if this is a Caddy SSL setup result
+          if (result && typeof result === 'object' && 'certInstalled' in result) {
+            certInstalled = (result as { certInstalled: boolean }).certInstalled;
+            console.log(`Post-install hook completed. Certificate installed: ${certInstalled}`);
+          }
         } catch (error) {
           console.error(`Post-install hook failed for ${serviceId}:`, error);
-          // Decide: either rollback or continue
-          // For now, log and continue as the hook is often optional
+          // Continue anyway - post-install hooks are optional
         }
+      }
+
+      // Update state with cert_installed status if applicable (Caddy only)
+      if (certInstalled) {
+        await serviceStorage.updateServiceState(serviceId, {
+          custom_config: {
+            ...customConfig,
+            cert_installed: true,
+          },
+        });
       }
 
       console.log(
