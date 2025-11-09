@@ -88,9 +88,7 @@ export async function reorderProjects(projectIds: string[]): Promise<ProjectOper
 /**
  * Copy project files to volume
  */
-export async function copyProjectToVolume(
-  projectId: string
-): Promise<ProjectOperationResult> {
+export async function copyProjectToVolume(projectId: string): Promise<ProjectOperationResult> {
   ensureProjectsApi();
   const result = await projectsApi.copyProjectToVolume(projectId);
   return result as ProjectOperationResult;

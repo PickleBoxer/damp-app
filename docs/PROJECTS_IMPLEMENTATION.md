@@ -9,6 +9,7 @@ The Projects feature enables users to create and manage PHP development projects
 ### Backend Components
 
 #### 1. Type Definitions (`src/types/project.ts`)
+
 - **ProjectType enum**: `BasicPhp`, `Laravel`, `Existing`
 - **PhpVersion**: `'7.4' | '8.1' | '8.2' | '8.3' | '8.4'`
 - **NodeVersion**: `'none' | 'lts' | 'latest' | '20' | '22'`
@@ -17,7 +18,9 @@ The Projects feature enables users to create and manage PHP development projects
 - Template constants: `DEFAULT_PHP_INI`, `DEFAULT_XDEBUG_INI`
 
 #### 2. Project Templates (`src/services/projects/project-templates.ts`)
+
 Generates devcontainer configuration files:
+
 - `devcontainer.json` - VS Code devcontainer configuration
 - `Dockerfile` - Custom PHP + Apache + Node.js image
 - `php.ini` - PHP configuration
@@ -25,22 +28,28 @@ Generates devcontainer configuration files:
 - `.vscode/launch.json` - Debug configuration for VS Code
 
 #### 3. Project Storage (`src/services/projects/project-storage.ts`)
+
 JSON-based persistence layer:
+
 - Storage location: `app.getPath('userData')/projects-state.json`
 - Methods: `getAllProjects()`, `getProject()`, `setProject()`, `deleteProject()`, `reorderProjects()`
 - Auto-sorts projects by `order` field
 
 #### 4. Volume Manager (`src/services/projects/volume-manager.ts`)
+
 Docker volume operations:
+
 - Creates Docker volumes with `damp_site_{name}` naming convention
 - Copies project files to volume using tar-stream
 - Progress tracking for large file copies
 - Excludes `.git`, `node_modules`, and other ignored directories
 
 #### 5. Project State Manager (`src/services/projects/project-state-manager.ts`)
+
 Core business logic coordinator (600+ lines):
 
 **Key Features:**
+
 - **Name Sanitization**: Converts project names to URL-safe format (lowercase, alphanumeric + hyphens)
 - **Folder Creation**: Automatically creates `{parentPath}/{sanitized-name}` directory
 - **Laravel Detection**: Auto-detects Laravel projects via `composer.json` analysis
@@ -50,6 +59,7 @@ Core business logic coordinator (600+ lines):
 - **Progress Callbacks**: Reports volume copy progress to renderer
 
 **Project Creation Flow:**
+
 1. Sanitize project name for URL/folder compatibility
 2. Create site folder in parent directory: `{parentPath}/{sanitized-name}`
 3. Detect Laravel if project type is "existing"
@@ -62,21 +72,23 @@ Core business logic coordinator (600+ lines):
 10. Save to storage
 
 #### 6. IPC Layer (`src/helpers/ipc/projects/`)
+
 Three-layer pattern (Channels → Context → Listeners):
 
 **Channels** (`projects-channels.ts`):
+
 ```typescript
-PROJECTS_GET_ALL
-PROJECTS_GET
-PROJECTS_CREATE
-PROJECTS_UPDATE
-PROJECTS_DELETE
-PROJECTS_REORDER
-PROJECTS_COPY_TO_VOLUME
-PROJECTS_SELECT_FOLDER
-PROJECTS_DETECT_LARAVEL
-PROJECTS_DEVCONTAINER_EXISTS
-PROJECTS_COPY_PROGRESS
+PROJECTS_GET_ALL;
+PROJECTS_GET;
+PROJECTS_CREATE;
+PROJECTS_UPDATE;
+PROJECTS_DELETE;
+PROJECTS_REORDER;
+PROJECTS_COPY_TO_VOLUME;
+PROJECTS_SELECT_FOLDER;
+PROJECTS_DETECT_LARAVEL;
+PROJECTS_DEVCONTAINER_EXISTS;
+PROJECTS_COPY_PROGRESS;
 ```
 
 **Context** (`projects-context.ts`):
@@ -88,14 +100,18 @@ Registers `ipcMain.handle()` for all project operations
 ### Frontend Components
 
 #### 1. API Wrapper (`src/api/projects/projects-api.ts`)
+
 Type-safe IPC wrappers:
+
 - `getAllProjects()`, `getProject()`, `createProject()`, etc.
 - `selectFolder()` - Opens folder selection dialog
 - `detectLaravel()` - Checks for Laravel installation
 - `subscribeToCopyProgress()` - Progress event subscription
 
 #### 2. React Query Hooks (`src/api/projects/projects-queries.ts`)
+
 State management with optimistic updates:
+
 - `useProjects()` - Fetches all projects with auto-refresh
 - `useProject(id)` - Fetches single project
 - `useCreateProject()` - Create mutation with invalidation
@@ -105,49 +121,61 @@ State management with optimistic updates:
 - `useCopyProjectToVolume()` - Volume copy with progress
 
 #### 3. Project Icon (`src/components/ProjectIcon.tsx`)
+
 Displays type-specific icons:
+
 - **Laravel**: Custom SVG logo
 - **Basic PHP**: `Code2` icon from lucide-react
 - **Existing**: `Package` icon from lucide-react
 
 #### 4. Project Actions (`src/components/ProjectActions.tsx`)
+
 Dropdown menu with actions:
+
 - **Open in VS Code**: Launch VS Code with devcontainer (TODO: IPC implementation)
 - **Copy to Volume**: Trigger volume copy operation
 - **Delete**: Remove project with options for volume/folder cleanup
 
 #### 5. Create Project Wizard (`src/components/CreateProjectWizard.tsx`)
+
 Multi-step dialog for project creation:
 
 **Step 1 - Project Type:**
+
 - Basic PHP, Laravel, or Existing project selection
 - Visual cards with descriptions
 
 **Step 2 - Basic Information:**
+
 - Project name input (auto-sanitized by backend)
 - Parent folder selection (site folder created inside)
 - Real-time validation
 
 **Step 3 - Configuration:**
+
 - PHP version selector (7.4, 8.1, 8.2, 8.3, 8.4)
 - Node.js version selector (none, lts, latest, 20, 22)
 - Claude AI integration toggle
 - Laravel validation (requires PHP 8.2+)
 
 **Step 4 - PHP Extensions:**
+
 - Default extensions (pre-selected)
 - Optional extensions (click to toggle)
 - Scrollable badge list
 
 **Step 5 - Review & Create:**
+
 - Summary of all selections
 - Final path preview
 - Create button with loading state
 
 #### 6. Projects Page (`src/routes/projects.tsx`)
+
 **Split-view layout (50/50):**
 
 **Left Side:**
+
 - Header with "New Project" button
 - Scrollable project list
 - Each project shows:
@@ -158,11 +186,14 @@ Multi-step dialog for project creation:
 - Empty state with CTA
 
 **Right Side:**
+
 - `<Outlet />` for detail view
 - Routes to `projects.$projectId.tsx`
 
 #### 7. Project Detail Page (`src/routes/projects.$projectId.tsx`)
+
 Detailed project view:
+
 - Header with icon, name, domain
 - Action buttons dropdown
 - Status badges section
@@ -176,9 +207,11 @@ Detailed project view:
 ## Key Design Decisions
 
 ### 1. Name Sanitization (Backend)
+
 **Why backend?** Ensures consistency and prevents client-side bypasses.
 
 **Implementation:**
+
 ```typescript
 private sanitizeName(name: string): string {
   return name
@@ -192,26 +225,36 @@ private sanitizeName(name: string): string {
 **Example:** `"My Awesome Project!"` → `my-awesome-project`
 
 ### 2. Parent Folder Pattern
+
 User selects parent directory, backend creates site folder inside:
+
 - **Input**: `C:\Sites` (parent)
 - **Output**: `C:\Sites\my-awesome-project` (auto-created)
 
 ### 3. Domain Convention
+
 All projects use `.local` TLD with sanitized name:
+
 - `my-awesome-project.local`
 - Automatically added to hosts file (requires admin)
 
 ### 4. Volume Naming
+
 Consistent naming: `damp_site_{sanitized-name}`
+
 - Example: `damp_site_my-awesome-project`
 
 ### 5. Network Integration
+
 All projects join `damp-network` for service connectivity:
+
 - Can communicate with services (MySQL, Redis, etc.)
 - Shared network across all projects and services
 
 ### 6. Split-View vs Sheet
+
 **Projects use split-view, Services use sheet. Why?**
+
 - Projects: Persistent detail view encourages configuration review
 - Services: Quick actions don't need persistent sidebar
 
@@ -249,6 +292,7 @@ src/
 ## Common Operations
 
 ### Creating a Project
+
 1. Click "New Project" button
 2. Complete 5-step wizard
 3. Backend sanitizes name and creates folder
@@ -259,17 +303,20 @@ src/
 8. UI refreshes via React Query
 
 ### Copying to Volume
+
 - Triggered manually or during creation
 - Uses tar-stream for efficient file transfer
 - Progress events emitted to renderer
 - Excludes `.git`, `node_modules`, etc.
 
 ### Opening in VS Code
+
 - TODO: Implement IPC call to launch VS Code
 - Should open folder with `.devcontainer` directory
 - VS Code will detect and offer to reopen in container
 
 ### Deleting a Project
+
 - Confirmation dialog with options:
   - Remove Docker volume
   - Remove project folder
@@ -280,6 +327,7 @@ src/
 ## Dependencies
 
 ### Backend
+
 - **electron**: Dialog API for folder selection
 - **node:fs/promises**: Async file operations
 - **node:path**: Cross-platform path handling
@@ -288,6 +336,7 @@ src/
 - **tar-stream**: Efficient file streaming to volumes
 
 ### Frontend
+
 - **@tanstack/react-router**: File-based routing
 - **@tanstack/react-query**: State management
 - **shadcn/ui**: Dialog, Button, Badge, Input, etc.

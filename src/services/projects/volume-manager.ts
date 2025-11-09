@@ -119,11 +119,13 @@ class VolumeManager {
           const targetDir = path.dirname(targetPath);
 
           // Create directory structure in container
-          await container.exec({
-            Cmd: ['mkdir', '-p', targetDir],
-            AttachStdout: true,
-            AttachStderr: true,
-          }).then(exec => exec.start({ Detach: false }));
+          await container
+            .exec({
+              Cmd: ['mkdir', '-p', targetDir],
+              AttachStdout: true,
+              AttachStderr: true,
+            })
+            .then(exec => exec.start({ Detach: false }));
 
           // Read file content
           const content = await fs.readFile(file);
