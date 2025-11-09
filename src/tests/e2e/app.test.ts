@@ -52,7 +52,7 @@ test.describe('App Navigation', () => {
     const routes = [
       { path: '/', text: 'Dashboard' },
       { path: '/services', text: 'Services' },
-      { path: '/sites', text: 'Sites' },
+      { path: '/projects', text: 'Projects' },
       { path: '/settings', text: 'Settings' },
       { path: '/about', text: 'About' },
     ];

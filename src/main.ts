@@ -3,7 +3,7 @@ import registerListeners from './helpers/ipc/listeners-register';
 // "electron-squirrel-startup" seems broken when packaging with vite
 import started from 'electron-squirrel-startup';
 import path from 'node:path';
-import { installExtension, REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
+import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -39,15 +39,8 @@ function createWindow() {
   }
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
-}
-
-async function installExtensions() {
-  try {
-    const result = await installExtension(REACT_DEVELOPER_TOOLS);
-    console.log(`Extensions installed successfully: ${result.name}`);
-  } catch {
-    console.error('Failed to install extensions');
+  if (inDevelopment) {
+    mainWindow.webContents.openDevTools();
   }
 }
 
@@ -55,7 +48,18 @@ async function installExtensions() {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 // app.on('ready', createWindow);
-app.whenReady().then(createWindow).then(installExtensions);
+
+app.whenReady().then(async () => {
+  if (inDevelopment) {
+    try {
+      await installExtension(REACT_DEVELOPER_TOOLS);
+      console.log('React DevTools loaded');
+    } catch (err) {
+      console.error('Failed to load React DevTools:', err);
+    }
+  }
+  createWindow();
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits

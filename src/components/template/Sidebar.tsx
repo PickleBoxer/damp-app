@@ -81,16 +81,16 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
               <SidebarMenuItem>
                 <SidebarMenuButton
                   tooltip={{
-                    children: t('titleSitesPage'),
+                    children: t('titleProjectsPage'),
                     hidden: false,
                   }}
                   className="px-2.5 md:px-2"
                   asChild
-                  isActive={isActive('/sites')}
+                  isActive={isActive('/projects')}
                 >
-                  <Link to="/sites">
+                  <Link to="/projects">
                     <Globe />
-                    <span>{t('titleSitesPage')}</span>
+                    <span>{t('titleProjectsPage')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

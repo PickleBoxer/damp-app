@@ -1,0 +1,26 @@
+/**
+ * IPC channel constants for project operations
+ */
+
+// Project listing and info
+export const PROJECTS_GET_ALL = 'projects:get-all';
+export const PROJECTS_GET_ONE = 'projects:get-one';
+
+// Project creation and deletion
+export const PROJECTS_CREATE = 'projects:create';
+export const PROJECTS_UPDATE = 'projects:update';
+export const PROJECTS_DELETE = 'projects:delete';
+
+// Project operations
+export const PROJECTS_REORDER = 'projects:reorder';
+export const PROJECTS_COPY_TO_VOLUME = 'projects:copy-to-volume';
+
+// Folder selection
+export const PROJECTS_SELECT_FOLDER = 'projects:select-folder';
+
+// Laravel detection
+export const PROJECTS_DETECT_LARAVEL = 'projects:detect-laravel';
+export const PROJECTS_DEVCONTAINER_EXISTS = 'projects:devcontainer-exists';
+
+// Progress events (for volume copy)
+export const PROJECTS_COPY_PROGRESS = 'projects:copy-progress';

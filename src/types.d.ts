@@ -39,9 +39,28 @@ interface ServicesContext {
   onInstallProgress: (callback: (serviceId: string, progress: unknown) => void) => () => void;
 }
 
+interface ProjectsContext {
+  getAllProjects: () => Promise<unknown>;
+  getProject: (projectId: string) => Promise<unknown>;
+  createProject: (input: unknown) => Promise<unknown>;
+  updateProject: (input: unknown) => Promise<unknown>;
+  deleteProject: (
+    projectId: string,
+    removeVolume?: boolean,
+    removeFolder?: boolean
+  ) => Promise<unknown>;
+  reorderProjects: (projectIds: string[]) => Promise<unknown>;
+  copyProjectToVolume: (projectId: string) => Promise<unknown>;
+  selectFolder: (defaultPath?: string) => Promise<unknown>;
+  detectLaravel: (folderPath: string) => Promise<unknown>;
+  devcontainerExists: (folderPath: string) => Promise<unknown>;
+  onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
   docker: DockerContext;
   services: ServicesContext;
+  projects: ProjectsContext;
 }

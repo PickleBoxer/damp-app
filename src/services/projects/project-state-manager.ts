@@ -1,0 +1,687 @@
+/**
+ * Project state manager
+ * Coordinates project lifecycle: create, update, delete, and file generation
+ */
+
+import { dialog } from 'electron';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import hostile from 'hostile';
+import semver from 'semver';
+import type {
+  Project,
+  ProjectType,
+  CreateProjectInput,
+  UpdateProjectInput,
+  ProjectOperationResult,
+  FolderSelectionResult,
+  LaravelDetectionResult,
+  VolumeCopyProgress,
+  PhpVersion,
+  TemplateContext,
+} from '../../types/project';
+import { DEFAULT_PHP_INI, DEFAULT_XDEBUG_INI } from '../../types/project';
+import { projectStorage } from './project-storage';
+import { volumeManager } from './volume-manager';
+import {
+  generateProjectTemplates,
+  getPostStartCommand,
+  getPostCreateCommand,
+  getDefaultPhpExtensions,
+} from './project-templates';
+
+const DOCKER_NETWORK = 'damp-network';
+const FORWARDED_PORT = 8080;
+const LARAVEL_MIN_PHP_VERSION = '8.2';
+
+/**
+ * Project state manager class
+ */
+class ProjectStateManager {
+  private initialized = false;
+  private initializationPromise: Promise<void> | null = null;
+
+  /**
+   * Initialize the project manager
+   */
+  async initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this._initialize();
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+
+  private async _initialize(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    try {
+      await projectStorage.initialize();
+      this.initialized = true;
+      console.log('Project state manager initialized');
+    } catch (error) {
+      console.error('Failed to initialize project state manager:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check initialization
+   */
+  private ensureInitialized(): void {
+    if (!this.initialized) {
+      throw new Error('Project manager not initialized. Call initialize() first.');
+    }
+  }
+
+  /**
+   * Open folder selection dialog
+   */
+  async selectFolder(defaultPath?: string): Promise<FolderSelectionResult> {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        defaultPath,
+        title: 'Select Project Folder',
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, cancelled: true };
+      }
+
+      return {
+        success: true,
+        path: result.filePaths[0],
+      };
+    } catch (error) {
+      console.error('Failed to open folder selection dialog:', error);
+      return {
+        success: false,
+        cancelled: false,
+      };
+    }
+  }
+
+  /**
+   * Detect if a folder contains a Laravel project
+   */
+  async detectLaravel(folderPath: string): Promise<LaravelDetectionResult> {
+    try {
+      const composerJsonPath = path.join(folderPath, 'composer.json');
+
+      // Check if composer.json exists
+      const exists = await fs
+        .access(composerJsonPath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (!exists) {
+        return { isLaravel: false };
+      }
+
+      // Read composer.json
+      const content = await fs.readFile(composerJsonPath, 'utf-8');
+      const composerJson = JSON.parse(content) as {
+        require?: Record<string, string>;
+        'require-dev'?: Record<string, string>;
+      };
+
+      // Check for Laravel package
+      const hasLaravel =
+        'laravel/framework' in (composerJson.require || {}) ||
+        'laravel/framework' in (composerJson['require-dev'] || {});
+
+      if (hasLaravel) {
+        // Try to extract Laravel version
+        const version =
+          composerJson.require?.['laravel/framework'] ||
+          composerJson['require-dev']?.['laravel/framework'];
+
+        return {
+          isLaravel: true,
+          version,
+          composerJsonPath,
+        };
+      }
+
+      return { isLaravel: false };
+    } catch (error) {
+      console.error('Error detecting Laravel:', error);
+      return { isLaravel: false };
+    }
+  }
+
+  /**
+   * Check if devcontainer folder exists
+   */
+  async devcontainerExists(folderPath: string): Promise<boolean> {
+    try {
+      const devcontainerPath = path.join(folderPath, '.devcontainer');
+      await fs.access(devcontainerPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Generate domain name from project name
+   */
+  private generateDomain(projectName: string): string {
+    return `${projectName.toLowerCase().replaceAll(/\s+/g, '-')}.local`;
+  }
+
+  /**
+   * Generate volume name from project name
+   */
+  private generateVolumeName(projectName: string): string {
+    return `damp_site_${projectName.toLowerCase().replace(/\s+/g, '_')}`;
+  }
+
+  /**
+   * Generate container name from project name
+   */
+  private generateContainerName(projectName: string): string {
+    return `${projectName.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
+  }
+
+  /**
+   * Validate PHP version for Laravel projects
+   */
+  private validatePhpVersion(type: ProjectType, phpVersion: PhpVersion): ProjectOperationResult {
+    if (type === 'laravel' && semver.lt(phpVersion, LARAVEL_MIN_PHP_VERSION)) {
+      return {
+        success: false,
+        error: `Laravel requires PHP ${LARAVEL_MIN_PHP_VERSION} or higher. Selected version: ${phpVersion}`,
+      };
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Create devcontainer files for a project
+   */
+  private async createDevcontainerFiles(
+    project: Project,
+    overwrite = false
+  ): Promise<ProjectOperationResult> {
+    try {
+      const devcontainerPath = path.join(project.path, '.devcontainer');
+      const vscodePath = path.join(project.path, '.vscode');
+
+      // Check if .devcontainer exists and overwrite is false
+      if (!overwrite && (await this.devcontainerExists(project.path))) {
+        return {
+          success: false,
+          error: 'Devcontainer folder already exists. Set overwrite=true to replace.',
+        };
+      }
+
+      // Create directories
+      await fs.mkdir(devcontainerPath, { recursive: true });
+      await fs.mkdir(vscodePath, { recursive: true });
+
+      // Build template context
+      const phpIniString = Object.entries(project.customPhpIni)
+        .map(([key, value]) => `${key} = ${value}`)
+        .join('\n');
+
+      const xdebugIniString = Object.entries(project.customXdebugIni)
+        .map(([key, value]) => `${key} = ${value}`)
+        .join('\n');
+
+      const context: TemplateContext = {
+        projectName: project.name,
+        volumeName: project.volumeName,
+        phpVersion: project.phpVersion,
+        nodeVersion: project.nodeVersion,
+        phpExtensions: project.phpExtensions.join(' '),
+        networkName: project.networkName,
+        containerName: this.generateContainerName(project.name),
+        forwardedPort: project.forwardedPort,
+        enableClaudeAi: project.enableClaudeAi,
+        phpIniSettings: phpIniString,
+        xdebugIniSettings: xdebugIniString,
+        postStartCommand: project.postStartCommand,
+        postCreateCommand: project.postCreateCommand,
+        workspaceFolderName: path.basename(project.path),
+      };
+
+      // Generate templates
+      const templates = generateProjectTemplates(context);
+
+      // Write files
+      await fs.writeFile(
+        path.join(devcontainerPath, 'devcontainer.json'),
+        templates.devcontainerJson,
+        'utf-8'
+      );
+      await fs.writeFile(path.join(devcontainerPath, 'Dockerfile'), templates.dockerfile, 'utf-8');
+      await fs.writeFile(path.join(devcontainerPath, 'php.ini'), templates.phpIni, 'utf-8');
+      await fs.writeFile(path.join(devcontainerPath, 'xdebug.ini'), templates.xdebugIni, 'utf-8');
+      await fs.writeFile(path.join(vscodePath, 'launch.json'), templates.launchJson, 'utf-8');
+
+      console.log(`Created devcontainer files for project ${project.name}`);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Failed to create devcontainer files: ${error}`,
+      };
+    }
+  }
+
+  /**
+   * Add domain to hosts file
+   */
+  private async addDomainToHosts(domain: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      hostile.set('127.0.0.1', domain, (error: Error | null) => {
+        if (error) {
+          console.error(`Failed to add domain ${domain} to hosts file:`, error);
+          reject(error);
+        } else {
+          console.log(`Added domain ${domain} to hosts file`);
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
+   * Remove domain from hosts file
+   */
+  private async removeDomainFromHosts(domain: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      hostile.remove('127.0.0.1', domain, (error: Error | null) => {
+        if (error) {
+          console.error(`Failed to remove domain ${domain} from hosts file:`, error);
+          reject(error);
+        } else {
+          console.log(`Removed domain ${domain} from hosts file`);
+          resolve();
+        }
+      });
+    });
+  }
+
+  /**
+   * Sanitize project name for URL and folder compatibility
+   */
+  private sanitizeName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric with hyphens
+      .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+      .replace(/-+/g, '-'); // Replace multiple hyphens with single hyphen
+  }
+
+  /**
+   * Create a new project
+   */
+  async createProject(
+    input: CreateProjectInput,
+    onProgress?: (progress: VolumeCopyProgress) => void
+  ): Promise<ProjectOperationResult> {
+    this.ensureInitialized();
+
+    try {
+      // Step 1: Sanitize project name
+      const sanitizedName = this.sanitizeName(input.name);
+
+      // Step 2: Select folder if not provided and build full path
+      let parentPath = input.path;
+      let projectType: ProjectType = (input.type as ProjectType) || 'basic-php';
+
+      if (!parentPath) {
+        const folderResult = await this.selectFolder();
+        if (!folderResult.success || !folderResult.path) {
+          return {
+            success: false,
+            error: 'No folder selected',
+          };
+        }
+        parentPath = folderResult.path;
+      }
+
+      // Create the project folder path inside parent directory
+      const projectPath = path.join(parentPath, sanitizedName);
+
+      // Create the site folder if it doesn't exist
+      try {
+        await fs.access(projectPath);
+      } catch {
+        // Folder doesn't exist, create it
+        await fs.mkdir(projectPath, { recursive: true });
+      }
+
+      // Step 3: Detect Laravel for existing projects
+      if (projectType === 'existing') {
+        const laravelDetection = await this.detectLaravel(projectPath);
+        if (laravelDetection.isLaravel) {
+          projectType = 'laravel' as ProjectType;
+          console.log(`Detected Laravel project: ${laravelDetection.version || 'unknown version'}`);
+        } else {
+          projectType = 'basic-php' as ProjectType;
+          console.log('No Laravel detected, using basic PHP configuration');
+        }
+      }
+
+      // Step 3: Validate PHP version
+      const validationResult = this.validatePhpVersion(projectType, input.phpVersion);
+      if (!validationResult.success) {
+        return validationResult;
+      }
+
+      // Step 4: Check if devcontainer exists (warn if not overwriting)
+      const devcontainerExistsFlag = await this.devcontainerExists(projectPath);
+      if (devcontainerExistsFlag && !input.overwriteExisting) {
+        return {
+          success: false,
+          error:
+            'Devcontainer folder already exists in this project. Set overwriteExisting=true to replace it.',
+        };
+      }
+
+      // Step 5: Create project object
+      const project: Project = {
+        id: randomUUID(),
+        name: sanitizedName,
+        type: projectType,
+        path: projectPath,
+        volumeName: this.generateVolumeName(sanitizedName),
+        domain: this.generateDomain(sanitizedName),
+        phpVersion: input.phpVersion,
+        nodeVersion: input.nodeVersion,
+        phpExtensions:
+          input.phpExtensions.length > 0
+            ? input.phpExtensions
+            : getDefaultPhpExtensions(projectType),
+        enableClaudeAi: input.enableClaudeAi,
+        forwardedPort: FORWARDED_PORT,
+        networkName: DOCKER_NETWORK,
+        customPhpIni: input.customPhpIni || DEFAULT_PHP_INI,
+        customXdebugIni: input.customXdebugIni || DEFAULT_XDEBUG_INI,
+        postStartCommand: getPostStartCommand(projectType),
+        postCreateCommand: getPostCreateCommand(projectType),
+        order: projectStorage.getNextOrder(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        devcontainerCreated: false,
+        volumeCopied: false,
+      };
+
+      // Step 6: Create Docker volume
+      await volumeManager.createVolume(project.volumeName);
+
+      // Step 7: Create devcontainer files
+      const filesResult = await this.createDevcontainerFiles(project, input.overwriteExisting);
+      if (!filesResult.success) {
+        // Rollback: remove volume
+        await volumeManager.removeVolume(project.volumeName);
+        // Rollback: remove created folder if empty/minimal
+        try {
+          await fs.rm(projectPath, { recursive: true, force: true });
+        } catch (error) {
+          console.warn('Failed to remove project folder during rollback:', error);
+        }
+        return filesResult;
+      }
+
+      project.devcontainerCreated = true;
+
+      // Step 8: Copy local files to volume
+      await volumeManager.copyToVolume(
+        projectPath,
+        project.volumeName,
+        path.basename(projectPath),
+        onProgress
+      );
+
+      project.volumeCopied = true;
+
+      // Step 9: Update hosts file
+      try {
+        await this.addDomainToHosts(project.domain);
+      } catch (error) {
+        console.warn('Failed to update hosts file (may require admin privileges):', error);
+        // Continue anyway - not critical
+      }
+
+      // Step 10: Save project to storage
+      await projectStorage.setProject(project);
+
+      console.log(`Project ${project.name} created successfully`);
+
+      return {
+        success: true,
+        data: { project },
+      };
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Get all projects
+   */
+  async getAllProjects(): Promise<Project[]> {
+    this.ensureInitialized();
+    return projectStorage.getAllProjects();
+  }
+
+  /**
+   * Get project by ID
+   */
+  async getProject(projectId: string): Promise<Project | null> {
+    this.ensureInitialized();
+    return projectStorage.getProject(projectId);
+  }
+
+  /**
+   * Update project
+   */
+  async updateProject(input: UpdateProjectInput): Promise<ProjectOperationResult> {
+    this.ensureInitialized();
+
+    try {
+      const existingProject = projectStorage.getProject(input.id);
+      if (!existingProject) {
+        return {
+          success: false,
+          error: `Project ${input.id} not found`,
+        };
+      }
+
+      // Update project object
+      const updatedProject: Project = {
+        ...existingProject,
+        ...input,
+        updatedAt: Date.now(),
+      };
+
+      // If regenerating files, create new devcontainer files
+      if (input.regenerateFiles) {
+        // Validate PHP version if applicable
+        if (input.phpVersion) {
+          const validationResult = this.validatePhpVersion(updatedProject.type, input.phpVersion);
+          if (!validationResult.success) {
+            return validationResult;
+          }
+        }
+
+        const filesResult = await this.createDevcontainerFiles(updatedProject, true);
+        if (!filesResult.success) {
+          return filesResult;
+        }
+      }
+
+      // If domain changed, update hosts file
+      if (input.domain && input.domain !== existingProject.domain) {
+        try {
+          await this.removeDomainFromHosts(existingProject.domain); // Remove old
+          await this.addDomainToHosts(input.domain); // Add new
+        } catch (error) {
+          console.warn('Failed to update hosts file:', error);
+        }
+      }
+
+      await projectStorage.updateProject(input.id, updatedProject);
+
+      console.log(`Project ${updatedProject.name} updated successfully`);
+
+      return {
+        success: true,
+        data: { project: updatedProject },
+      };
+    } catch (error) {
+      console.error('Failed to update project:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Delete project
+   */
+  async deleteProject(
+    projectId: string,
+    removeVolume = false,
+    removeFolder = false
+  ): Promise<ProjectOperationResult> {
+    this.ensureInitialized();
+
+    try {
+      const project = projectStorage.getProject(projectId);
+      if (!project) {
+        return {
+          success: false,
+          error: `Project ${projectId} not found`,
+        };
+      }
+
+      // Remove from hosts file
+      try {
+        await this.removeDomainFromHosts(project.domain);
+      } catch (error) {
+        console.warn('Failed to remove domain from hosts file:', error);
+      }
+
+      // Remove Docker volume if requested
+      if (removeVolume) {
+        await volumeManager.removeVolume(project.volumeName);
+      }
+
+      // Remove project folder if requested
+      if (removeFolder) {
+        await fs.rm(project.path, { recursive: true, force: true });
+      }
+
+      // Remove from storage
+      await projectStorage.deleteProject(projectId);
+
+      console.log(`Project ${project.name} deleted successfully`);
+
+      return {
+        success: true,
+        data: { message: `Project ${project.name} deleted successfully` },
+      };
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Reorder projects
+   */
+  async reorderProjects(projectIds: string[]): Promise<ProjectOperationResult> {
+    this.ensureInitialized();
+
+    try {
+      await projectStorage.reorderProjects(projectIds);
+
+      console.log('Projects reordered successfully');
+
+      return {
+        success: true,
+        data: { message: 'Projects reordered successfully' },
+      };
+    } catch (error) {
+      console.error('Failed to reorder projects:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Copy local files to volume (manual trigger)
+   */
+  async copyProjectToVolume(
+    projectId: string,
+    onProgress?: (progress: VolumeCopyProgress) => void
+  ): Promise<ProjectOperationResult> {
+    this.ensureInitialized();
+
+    try {
+      const project = projectStorage.getProject(projectId);
+      if (!project) {
+        return {
+          success: false,
+          error: `Project ${projectId} not found`,
+        };
+      }
+
+      await volumeManager.copyToVolume(
+        project.path,
+        project.volumeName,
+        path.basename(project.path),
+        onProgress
+      );
+
+      // Update volumeCopied flag
+      await projectStorage.updateProject(projectId, { volumeCopied: true });
+
+      console.log(`Files copied to volume for project ${project.name}`);
+
+      return {
+        success: true,
+        data: { message: 'Files copied to volume successfully' },
+      };
+    } catch (error) {
+      console.error('Failed to copy files to volume:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+}
+
+// Export singleton instance
+export const projectStateManager = new ProjectStateManager();
