@@ -115,7 +115,8 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
   };
 
   const isCaddy = service.definition.id === ServiceId.Caddy;
-  const certInstalled = service.state.custom_config?.cert_installed ?? false;
+  const certInstalled =
+    (service.state.custom_config?.metadata?.certInstalled as boolean | undefined) ?? false;
 
   return (
     <SheetContent className="flex h-full flex-col gap-4 p-0">

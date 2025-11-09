@@ -2,16 +2,25 @@
  * Service registry with all predefined service definitions
  */
 
-import { ServiceDefinition, ServiceId } from '../../types/service';
+import { ServiceDefinition, ServiceId, PostInstallHook } from '../../types/service';
 import { setupCaddySSL } from '../docker/caddy-setup';
 
 /**
  * Post-install hooks for services (backend only - not serialized)
  * Maps service ID to post-install function
+ * Hooks receive context (serviceId, containerId, containerName, customConfig)
+ * and return result with success status, message, and optional metadata
  */
-export const POST_INSTALL_HOOKS: Partial<Record<ServiceId, () => Promise<unknown>>> = {
-  [ServiceId.Caddy]: async () => {
-    return await setupCaddySSL('damp-web');
+export const POST_INSTALL_HOOKS: Partial<Record<ServiceId, PostInstallHook>> = {
+  [ServiceId.Caddy]: async context => {
+    const result = await setupCaddySSL(context.containerName);
+    return {
+      success: result.success,
+      message: result.message,
+      metadata: {
+        certInstalled: result.certInstalled,
+      },
+    };
   },
 };
 

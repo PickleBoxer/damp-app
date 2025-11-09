@@ -31,7 +31,7 @@ const CADDY_ROOT_CERT_PATH = '/data/caddy/pki/authorities/local/root.crt';
 /**
  * Path to Caddyfile inside the container
  */
-const CADDYFILE_PATH = '/config/Caddyfile';
+const CADDYFILE_PATH = '/etc/caddy/Caddyfile';
 
 /**
  * Maximum wait time for certificate generation (30 seconds)
@@ -50,7 +50,6 @@ export interface CaddySSLSetupResult {
   success: boolean;
   certInstalled: boolean;
   message: string;
-  error?: string;
 }
 
 /**
@@ -93,7 +92,6 @@ export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySS
         success: false,
         certInstalled: false,
         message: 'SSL certificate was not generated within timeout period',
-        error: 'Certificate generation timeout',
       };
     }
 
@@ -128,7 +126,6 @@ export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySS
         success: true,
         certInstalled: false,
         message: `Caddy is configured but certificate installation failed: ${installResult.error}`,
-        error: installResult.error,
       };
     }
   } catch (error) {
@@ -137,8 +134,7 @@ export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySS
     return {
       success: false,
       certInstalled: false,
-      message: 'Failed to set up Caddy SSL',
-      error: errorMessage,
+      message: `Failed to set up Caddy SSL: ${errorMessage}`,
     };
   }
 }

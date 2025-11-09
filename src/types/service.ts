@@ -86,8 +86,8 @@ export interface CustomConfig {
   container_name?: string;
   /** Custom volume bindings */
   volume_bindings?: string[];
-  /** Whether SSL certificate is installed (Caddy only) */
-  cert_installed?: boolean;
+  /** Generic metadata from post-install hooks (e.g., certInstalled, dbInitialized) */
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -205,3 +205,34 @@ export interface ServiceStorageData {
   /** Last updated timestamp */
   last_updated: number;
 }
+
+/**
+ * Context passed to post-install hooks
+ */
+export interface PostInstallHookContext {
+  /** Service identifier */
+  serviceId: ServiceId;
+  /** Container ID */
+  containerId: string;
+  /** Container name */
+  containerName: string;
+  /** Custom configuration (if any) */
+  customConfig: CustomConfig | null;
+}
+
+/**
+ * Result returned by post-install hooks
+ */
+export interface PostInstallHookResult {
+  /** Whether hook executed successfully */
+  success: boolean;
+  /** Optional message about hook execution */
+  message?: string;
+  /** Service-specific metadata to store */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Post-install hook function signature
+ */
+export type PostInstallHook = (context: PostInstallHookContext) => Promise<PostInstallHookResult>;

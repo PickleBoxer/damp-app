@@ -230,32 +230,50 @@ class ServiceStateManager {
 
       await serviceStorage.setServiceState(serviceId, newState);
 
-      // Run post-install hook if defined (e.g., Caddy SSL setup)
-      let certInstalled = false;
+      // Run post-install hook if defined
       const postInstallHook = POST_INSTALL_HOOKS[serviceId];
       if (postInstallHook) {
         try {
-          const result = await postInstallHook();
+          // Ensure container is running before executing hook
+          const currentStatus = await dockerManager.getContainerStatus(
+            options?.custom_config?.container_name || definition.default_config.container_name
+          );
 
-          // Check if this is a Caddy SSL setup result
-          if (result && typeof result === 'object' && 'certInstalled' in result) {
-            certInstalled = (result as { certInstalled: boolean }).certInstalled;
-            console.log(`Post-install hook completed. Certificate installed: ${certInstalled}`);
+          if (currentStatus?.exists && currentStatus.container_id && !currentStatus.running) {
+            console.log(`Starting container for post-install hook...`);
+            await dockerManager.startContainer(currentStatus.container_id);
+          }
+
+          // Execute hook with context
+          console.log(`Running post-install hook for ${serviceId}...`);
+          const hookResult = await postInstallHook({
+            serviceId,
+            containerId,
+            containerName:
+              options?.custom_config?.container_name || definition.default_config.container_name,
+            customConfig,
+          });
+
+          // Store metadata if provided
+          if (hookResult.metadata) {
+            await serviceStorage.updateServiceState(serviceId, {
+              custom_config: {
+                ...customConfig,
+                metadata: hookResult.metadata,
+              },
+            });
+          }
+
+          // Log hook results (backend only - user not notified)
+          if (hookResult.success) {
+            console.log(`Post-install hook completed successfully: ${hookResult.message || ''}`);
+          } else {
+            console.warn(`Post-install hook failed: ${hookResult.message || 'Unknown error'}`);
           }
         } catch (error) {
+          // Graceful failure - service is still installed
           console.error(`Post-install hook failed for ${serviceId}:`, error);
-          // Continue anyway - post-install hooks are optional
         }
-      }
-
-      // Update state with cert_installed status if applicable (Caddy only)
-      if (certInstalled) {
-        await serviceStorage.updateServiceState(serviceId, {
-          custom_config: {
-            ...customConfig,
-            cert_installed: true,
-          },
-        });
       }
 
       console.log(
