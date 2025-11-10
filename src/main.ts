@@ -4,6 +4,7 @@ import registerListeners from './helpers/ipc/listeners-register';
 import started from 'electron-squirrel-startup';
 import path from 'node:path';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
+import { TrayMenu } from '@/electron/TrayMenu';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -18,6 +19,7 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    show: false, // Do not show immediately
     webPreferences: {
       devTools: inDevelopment,
       contextIsolation: true,
@@ -38,6 +40,11 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
+  // Minimize the window initially
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.minimize(); // Or use mainWindow.show() if you want to show it
+  });
+
   // Open the DevTools.
   if (inDevelopment) {
     mainWindow.webContents.openDevTools();
@@ -48,6 +55,7 @@ function createWindow() {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 // app.on('ready', createWindow);
+// The Tray object can only be instantiated after the 'ready' event is fired
 
 app.whenReady().then(async () => {
   if (inDevelopment) {
@@ -59,6 +67,12 @@ app.whenReady().then(async () => {
     }
   }
   createWindow();
+  // Use TrayMenu class for tray setup
+  new TrayMenu();
+});
+
+app.on('activate', function () {
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -67,7 +81,7 @@ app.whenReady().then(async () => {
 //osX only
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit();
+    //app.quit();
   }
 });
 
