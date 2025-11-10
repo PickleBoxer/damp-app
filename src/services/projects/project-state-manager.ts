@@ -339,6 +339,13 @@ class ProjectStateManager {
   ): Promise<ProjectOperationResult> {
     this.ensureInitialized();
 
+    // Track what we've created for rollback
+    let projectPath: string | null = null;
+    let folderCreated = false;
+    let volumeCreated = false;
+    let domainAdded = false;
+    let project: Project | null = null;
+
     try {
       // Step 1: Sanitize project name
       const sanitizedName = this.sanitizeName(input.name);
@@ -359,7 +366,7 @@ class ProjectStateManager {
       }
 
       // Create the project folder path inside parent directory
-      const projectPath = path.join(parentPath, sanitizedName);
+      projectPath = path.join(parentPath, sanitizedName);
 
       // Create the site folder if it doesn't exist
       try {
@@ -367,6 +374,7 @@ class ProjectStateManager {
       } catch {
         // Folder doesn't exist, create it
         await fs.mkdir(projectPath, { recursive: true });
+        folderCreated = true;
       }
 
       // Step 3: Detect Laravel for existing projects
@@ -381,24 +389,22 @@ class ProjectStateManager {
         }
       }
 
-      // Step 3: Validate PHP version
+      // Step 4: Validate PHP version
       const validationResult = this.validatePhpVersion(projectType, input.phpVersion);
       if (!validationResult.success) {
-        return validationResult;
+        throw new Error(validationResult.error);
       }
 
-      // Step 4: Check if devcontainer exists (warn if not overwriting)
+      // Step 5: Check if devcontainer exists (warn if not overwriting)
       const devcontainerExistsFlag = await this.devcontainerExists(projectPath);
       if (devcontainerExistsFlag && !input.overwriteExisting) {
-        return {
-          success: false,
-          error:
-            'Devcontainer folder already exists in this project. Set overwriteExisting=true to replace it.',
-        };
+        throw new Error(
+          'Devcontainer folder already exists in this project. Set overwriteExisting=true to replace it.'
+        );
       }
 
-      // Step 5: Create project object
-      const project: Project = {
+      // Step 6: Create project object
+      project = {
         id: randomUUID(),
         name: sanitizedName,
         type: projectType,
@@ -425,44 +431,36 @@ class ProjectStateManager {
         volumeCopied: false,
       };
 
-      // Step 6: Create Docker volume
+      // Step 7: Create Docker volume
       await volumeManager.createVolume(project.volumeName);
+      volumeCreated = true;
 
-      // Step 7: Create devcontainer files
+      // Step 8: Create devcontainer files
       const filesResult = await this.createDevcontainerFiles(project, input.overwriteExisting);
       if (!filesResult.success) {
-        // Rollback: remove volume
-        await volumeManager.removeVolume(project.volumeName);
-        // Rollback: remove created folder if empty/minimal
-        try {
-          await fs.rm(projectPath, { recursive: true, force: true });
-        } catch (error) {
-          console.warn('Failed to remove project folder during rollback:', error);
-        }
-        return filesResult;
+        throw new Error(filesResult.error);
       }
-
       project.devcontainerCreated = true;
 
-      // Step 8: Copy local files to volume
+      // Step 9: Copy local files to volume
       await volumeManager.copyToVolume(
         projectPath,
         project.volumeName,
         path.basename(projectPath),
         onProgress
       );
-
       project.volumeCopied = true;
 
-      // Step 9: Update hosts file
+      // Step 10: Update hosts file
       try {
         await this.addDomainToHosts(project.domain);
+        domainAdded = true;
       } catch (error) {
         console.warn('Failed to update hosts file (may require admin privileges):', error);
         // Continue anyway - not critical
       }
 
-      // Step 10: Save project to storage
+      // Step 11: Save project to storage
       await projectStorage.setProject(project);
 
       console.log(`Project ${project.name} created successfully`);
@@ -472,7 +470,43 @@ class ProjectStateManager {
         data: { project },
       };
     } catch (error) {
-      console.error('Failed to create project:', error);
+      console.error('Failed to create project, rolling back changes:', error);
+
+      // Rollback in reverse order
+      try {
+        // Remove domain from hosts file if added
+        if (domainAdded && project) {
+          try {
+            await this.removeDomainFromHosts(project.domain);
+            console.log('Rollback: Removed domain from hosts file');
+          } catch (rollbackError) {
+            console.warn('Rollback failed: Could not remove domain from hosts file', rollbackError);
+          }
+        }
+
+        // Remove Docker volume if created
+        if (volumeCreated && project) {
+          try {
+            await volumeManager.removeVolume(project.volumeName);
+            console.log('Rollback: Removed Docker volume');
+          } catch (rollbackError) {
+            console.warn('Rollback failed: Could not remove volume', rollbackError);
+          }
+        }
+
+        // Remove project folder if we created it
+        if (folderCreated && projectPath) {
+          try {
+            await fs.rm(projectPath, { recursive: true, force: true });
+            console.log('Rollback: Removed project folder');
+          } catch (rollbackError) {
+            console.warn('Rollback failed: Could not remove project folder', rollbackError);
+          }
+        }
+      } catch (rollbackError) {
+        console.error('Error during rollback:', rollbackError);
+      }
+
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

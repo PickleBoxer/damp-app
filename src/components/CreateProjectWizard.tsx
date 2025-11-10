@@ -20,6 +20,28 @@ import { selectFolder as selectProjectFolder } from '@/api/projects/projects-api
 import { ProjectType } from '@/types/project';
 import type { CreateProjectInput, PhpVersion, NodeVersion } from '@/types/project';
 
+/**
+ * Validates a site name according to naming rules
+ */
+function validateSiteName(name: string): {
+  isValid: boolean;
+  error?: string;
+} {
+  if (!name.trim()) {
+    return { isValid: false, error: 'Site name is required' };
+  }
+
+  const nameRegex = /^[a-zA-Z0-9-_]+$/;
+  if (!nameRegex.test(name)) {
+    return {
+      isValid: false,
+      error: 'Site name can only contain letters, numbers, hyphens, and underscores',
+    };
+  }
+
+  return { isValid: true };
+}
+
 interface CreateProjectWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -80,6 +102,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     enableClaudeAi: false,
     phpExtensions: [...DEFAULT_PHP_EXTENSIONS],
   });
+  const [nameError, setNameError] = useState<string | undefined>();
 
   const createProjectMutation = useCreateProject();
 
@@ -152,8 +175,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     switch (step) {
       case 'type':
         return !!formData.type;
-      case 'basic':
-        return !!formData.name && !!formData.path;
+      case 'basic': {
+        const validation = validateSiteName(formData.name || '');
+        return validation.isValid && !!formData.path;
+      }
       case 'configuration':
         return !!formData.phpVersion && !!formData.nodeVersion;
       case 'extensions':
@@ -202,11 +227,24 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 id="project-name"
                 placeholder="My Awesome Project"
                 value={formData.name || ''}
-                onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={e => {
+                  const newName = e.target.value;
+                  setFormData(prev => ({ ...prev, name: newName }));
+
+                  // Validate on change
+                  const validation = validateSiteName(newName);
+                  setNameError(validation.error);
+                }}
+                className={nameError ? 'border-destructive' : ''}
               />
-              <p className="text-muted-foreground text-xs">
-                Name will be sanitized for URL and folder compatibility
-              </p>
+              {nameError ? (
+                <p className="text-destructive text-xs">{nameError}</p>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  This will become the domain ({formData.name || 'site-name'}.local)
+                  {formData.type !== ProjectType.Existing && ' and folder name'}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

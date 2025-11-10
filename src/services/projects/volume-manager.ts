@@ -4,11 +4,33 @@
  */
 
 import Docker from 'dockerode';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import type { VolumeCopyProgress } from '../../types/project';
 
 const docker = new Docker();
+
+/**
+ * Copy operation progress stages
+ */
+export const COPY_STAGES = {
+  STARTING: {
+    message: 'Starting copy operation...',
+    percentage: 0,
+    step: 1,
+    totalSteps: 3,
+  },
+  COPYING: {
+    message: 'Copying files...',
+    percentage: 50,
+    step: 2,
+    totalSteps: 3,
+  },
+  COMPLETED: {
+    message: 'Copy completed',
+    percentage: 100,
+    step: 3,
+    totalSteps: 3,
+  },
+} as const;
 
 /**
  * Volume manager class
@@ -81,8 +103,8 @@ class VolumeManager {
   }
 
   /**
-   * Copy local folder contents to Docker volume
-   * Uses a temporary Alpine container to mount the volume and copy files
+   * Copy local folder contents to Docker volume using tar
+   * Binds both source folder and volume to an Alpine container and uses tar to copy files
    */
   async copyToVolume(
     sourcePath: string,
@@ -90,64 +112,114 @@ class VolumeManager {
     targetSubPath: string,
     onProgress?: (progress: VolumeCopyProgress) => void
   ): Promise<void> {
+    if (!/^[a-zA-Z0-9_\-/]+$/.test(targetSubPath)) {
+      throw new Error(
+        'Invalid targetSubPath: must contain only alphanumeric, underscore, dash, and forward slash characters'
+      );
+    }
+
     try {
       // Ensure volume exists
       await this.createVolume(volumeName);
 
-      // Get list of all files to copy
-      const files = await this.getAllFiles(sourcePath);
-      const totalFiles = files.length;
+      // Normalize paths for Docker bind mounts (Windows paths need conversion)
+      const normalizedSourcePath = this.normalizePathForDocker(sourcePath);
 
-      console.log(`Copying ${totalFiles} files from ${sourcePath} to volume ${volumeName}...`);
+      // Get appropriate UID:GID for the platform
+      const uidGid = await this.getUidGid();
 
-      // Create a temporary Alpine container with the volume mounted
+      console.log(`Copying files from ${sourcePath} to volume ${volumeName}...`);
+
+      // Report initial progress
+      if (onProgress) {
+        onProgress({
+          message: COPY_STAGES.STARTING.message,
+          currentStep: COPY_STAGES.STARTING.step,
+          totalSteps: COPY_STAGES.STARTING.totalSteps,
+          percentage: COPY_STAGES.STARTING.percentage,
+        });
+      }
+
+      // Create Alpine container with both source folder and volume mounted
       const container = await docker.createContainer({
         Image: 'alpine:latest',
-        Cmd: ['sleep', '3600'], // Keep container alive
+        Cmd: [
+          'sh',
+          '-c',
+          // Use tar to copy files with exclusions and set proper permissions
+          `mkdir -p /volume/${targetSubPath} && ` +
+            `cd /source && ` +
+            `tar --exclude='node_modules' ` +
+            `--exclude='vendor' ` +
+            `--exclude='.git' ` +
+            `--exclude='.devcontainer' ` +
+            `--exclude='.vscode' ` +
+            `-cf - . | ` +
+            `tar -xf - -C /volume/${targetSubPath} && ` +
+            `chown -R ${uidGid} /volume/${targetSubPath}`,
+        ],
         HostConfig: {
-          Binds: [`${volumeName}:/workspace`],
+          Binds: [
+            `${normalizedSourcePath}:/source:ro`, // Source as read-only
+            `${volumeName}:/volume`, // Volume as read-write
+          ],
         },
+        User: '0:0', // Run as root to ensure we can set ownership
       });
 
       try {
+        // Start container and wait for it to complete
         await container.start();
 
-        // Copy files one by one (or in batches)
-        for (const [index, file] of files.entries()) {
-          const relativePath = path.relative(sourcePath, file);
-          const targetPath = path.join('/workspace', targetSubPath, relativePath);
-          const targetDir = path.dirname(targetPath);
-
-          // Create directory structure in container
-          await container
-            .exec({
-              Cmd: ['mkdir', '-p', targetDir],
-              AttachStdout: true,
-              AttachStderr: true,
-            })
-            .then(exec => exec.start({ Detach: false }));
-
-          // Read file content
-          const content = await fs.readFile(file);
-
-          // Copy file to container using putArchive (tar format)
-          await this.copyFileToContainer(container, content, targetPath);
-
-          // Report progress
-          if (onProgress) {
-            onProgress({
-              currentFile: relativePath,
-              filesCopied: index + 1,
-              totalFiles,
-              percentage: Math.round(((index + 1) / totalFiles) * 100),
-            });
-          }
+        // Report mid progress
+        if (onProgress) {
+          onProgress({
+            message: COPY_STAGES.COPYING.message,
+            currentStep: COPY_STAGES.COPYING.step,
+            totalSteps: COPY_STAGES.COPYING.totalSteps,
+            percentage: COPY_STAGES.COPYING.percentage,
+          });
         }
 
-        console.log(`Successfully copied ${totalFiles} files to volume ${volumeName}`);
+        // Use Promise.race with a timeout
+        const waitWithTimeout = Promise.race([
+          container.wait(),
+          new Promise(
+            (_, reject) => setTimeout(() => reject(new Error('Copy operation timed out')), 300000) // 5 minutes
+          ),
+        ]);
+
+        await waitWithTimeout;
+
+        // Check exit code
+        const inspectData = await container.inspect();
+        const exitCode = inspectData.State.ExitCode;
+
+        if (exitCode !== 0) {
+          // Get logs for error details
+          const logs = await container.logs({
+            stdout: true,
+            stderr: true,
+          });
+          const logStr = logs.toString('utf-8').trim();
+          throw new Error(
+            `Copy operation failed with exit code ${exitCode}${logStr ? ': ' + logStr : ''}`
+          );
+        }
+
+        console.log(`Successfully copied files to volume ${volumeName}`);
+
+        // Report completion
+        if (onProgress) {
+          onProgress({
+            message: COPY_STAGES.COMPLETED.message,
+            currentStep: COPY_STAGES.COMPLETED.step,
+            totalSteps: COPY_STAGES.COMPLETED.totalSteps,
+            percentage: COPY_STAGES.COMPLETED.percentage,
+          });
+        }
       } finally {
-        // Clean up: stop and remove temporary container
-        await container.stop();
+        // Clean up: remove temporary container
         await container.remove();
       }
     } catch (error) {
@@ -156,61 +228,40 @@ class VolumeManager {
   }
 
   /**
-   * Get all files recursively from a directory
+   * Normalize path for Docker bind mounts
+   * Converts Windows paths to format Docker expects
    */
-  private async getAllFiles(dirPath: string): Promise<string[]> {
-    const files: string[] = [];
-
-    async function traverse(currentPath: string) {
-      const entries = await fs.readdir(currentPath, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const fullPath = path.join(currentPath, entry.name);
-
-        // Skip .git, node_modules, vendor, etc.
-        if (
-          entry.name === '.git' ||
-          entry.name === 'node_modules' ||
-          entry.name === 'vendor' ||
-          entry.name === '.devcontainer' ||
-          entry.name === '.vscode'
-        ) {
-          continue;
-        }
-
-        if (entry.isDirectory()) {
-          await traverse(fullPath);
-        } else {
-          files.push(fullPath);
-        }
-      }
+  private normalizePathForDocker(localPath: string): string {
+    // On Windows, convert C:\path\to\folder to /c/path/to/folder format
+    if (process.platform === 'win32') {
+      return localPath
+        .replaceAll('\\', '/')
+        .replace(/^([A-Z]):/, (match, drive) => `/${drive.toLowerCase()}`);
     }
-
-    await traverse(dirPath);
-    return files;
+    return localPath;
   }
 
   /**
-   * Copy a single file to container using tar archive
+   * Get appropriate UID:GID for the platform
+   * Windows: Use 1000:1000 (standard Docker Desktop behavior)
+   * macOS/Linux: Detect current user's UID:GID
    */
-  private async copyFileToContainer(
-    container: Docker.Container,
-    content: Buffer,
-    targetPath: string
-  ): Promise<void> {
-    // Docker putArchive expects a tar stream
-    const tar = await import('tar-stream');
-    const pack = tar.pack();
+  private async getUidGid(): Promise<string> {
+    // On Windows, always use 1000:1000 (Docker Desktop default)
+    if (process.platform === 'win32') {
+      return '1000:1000';
+    }
 
-    const fileName = path.basename(targetPath);
-    const targetDir = path.dirname(targetPath);
-
-    pack.entry({ name: fileName }, content, (err: Error | null | undefined) => {
-      if (err) throw err;
-      pack.finalize();
-    });
-
-    await container.putArchive(pack, { path: targetDir });
+    // On macOS/Linux, detect current user's UID and GID
+    try {
+      const { execSync } = await import('node:child_process');
+      const uid = execSync('id -u', { encoding: 'utf-8' }).trim();
+      const gid = execSync('id -g', { encoding: 'utf-8' }).trim();
+      return `${uid}:${gid}`;
+    } catch (error) {
+      console.warn('Failed to detect UID:GID, falling back to 1000:1000', error);
+      return '1000:1000';
+    }
   }
 
   /**

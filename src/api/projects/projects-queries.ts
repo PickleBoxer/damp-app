@@ -3,6 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type {
   Project,
   CreateProjectInput,
@@ -52,8 +53,27 @@ export function useCreateProject() {
 
   return useMutation<ProjectOperationResult, Error, CreateProjectInput>({
     mutationFn: projectsApi.createProject,
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+
+      if (data.success) {
+        toast.success('Project created successfully', {
+          description: `${variables.name} is ready to use`,
+        });
+      } else if (data.error) {
+        toast.error('Failed to create project', {
+          description: data.error,
+        });
+      } else {
+        toast.error('Failed to create project', {
+          description: 'An unexpected response was received',
+        });
+      }
+    },
+    onError: error => {
+      toast.error('Failed to create project', {
+        description: error.message || 'An unexpected error occurred',
+      });
     },
   });
 }
@@ -66,9 +86,28 @@ export function useUpdateProject() {
 
   return useMutation<ProjectOperationResult, Error, UpdateProjectInput>({
     mutationFn: projectsApi.updateProject,
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+
+      if (data.success) {
+        toast.success('Project updated successfully', {
+          description: 'Your changes have been saved',
+        });
+      } else if (data.error) {
+        toast.error('Failed to update project', {
+          description: data.error,
+        });
+      } else {
+        toast.error('Failed to update project', {
+          description: 'An unexpected response was received',
+        });
+      }
+    },
+    onError: error => {
+      toast.error('Failed to update project', {
+        description: error.message || 'An unexpected error occurred',
+      });
     },
   });
 }
@@ -86,8 +125,27 @@ export function useDeleteProject() {
   >({
     mutationFn: ({ projectId, removeVolume, removeFolder }) =>
       projectsApi.deleteProject(projectId, removeVolume, removeFolder),
-    onSuccess: () => {
+    onSuccess: data => {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+
+      if (data.success) {
+        toast.success('Project deleted successfully', {
+          description: 'The project has been removed',
+        });
+      } else if (data.error) {
+        toast.error('Failed to delete project', {
+          description: data.error,
+        });
+      } else {
+        toast.error('Failed to delete project', {
+          description: 'An unexpected response was received',
+        });
+      }
+    },
+    onError: error => {
+      toast.error('Failed to delete project', {
+        description: error.message || 'An unexpected error occurred',
+      });
     },
   });
 }
@@ -125,10 +183,27 @@ export function useReorderProjects() {
       // Return a context object with the snapshotted value
       return { previousProjects };
     },
-    onError: (_error, _newOrder, context) => {
+    onError: (error, _newOrder, context) => {
       // Rollback to the previous value on error
       if (context?.previousProjects) {
         queryClient.setQueryData(projectKeys.lists(), context.previousProjects);
+      }
+
+      toast.error('Failed to reorder projects', {
+        description: error.message || 'An unexpected error occurred',
+      });
+    },
+    onSuccess: data => {
+      if (data.success) {
+        toast.success('Projects reordered successfully');
+      } else if (data.error) {
+        toast.error('Failed to reorder projects', {
+          description: data.error,
+        });
+      } else {
+        toast.error('Failed to reorder projects', {
+          description: 'An unexpected response was received',
+        });
       }
     },
     onSettled: () => {
@@ -146,8 +221,27 @@ export function useCopyProjectToVolume() {
 
   return useMutation<ProjectOperationResult, Error, string>({
     mutationFn: projectsApi.copyProjectToVolume,
-    onSuccess: (_data, projectId) => {
+    onSuccess: (data, projectId) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+
+      if (data.success) {
+        toast.success('Files copied to volume successfully', {
+          description: 'Your project files are now available in the volume',
+        });
+      } else if (data.error) {
+        toast.error('Failed to copy files to volume', {
+          description: data.error,
+        });
+      } else {
+        toast.error('Failed to copy files to volume', {
+          description: 'An unexpected response was received',
+        });
+      }
+    },
+    onError: error => {
+      toast.error('Failed to copy files to volume', {
+        description: error.message || 'An unexpected error occurred',
+      });
     },
   });
 }

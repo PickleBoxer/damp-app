@@ -206,15 +206,15 @@ export interface LaravelDetectionResult {
 }
 
 /**
- * Volume copy progress
+ * Volume copy progress (step-based for bulk operations)
  */
 export interface VolumeCopyProgress {
-  /** Current file being copied */
-  currentFile: string;
-  /** Files copied so far */
-  filesCopied: number;
-  /** Total files to copy */
-  totalFiles: number;
+  /** Current operation stage message */
+  message: string;
+  /** Current step number */
+  currentStep: number;
+  /** Total number of steps */
+  totalSteps: number;
   /** Percentage complete (0-100) */
   percentage: number;
 }
