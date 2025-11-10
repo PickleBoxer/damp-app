@@ -13,29 +13,46 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
       - name: Install dependencies
         run: npm ci
       - name: Run unit tests
         run: npm run test:unit
 
   test-e2e:
-    timeout-minutes: 10
+    timeout-minutes: 15
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      - name: Get Playwright version
+        id: playwright-version
+        run: |
+          $version = node -p "require('@playwright/test/package.json').version"
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
       - name: Install Playwright Browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
-      - name: Create Executable
-        run: npm run make
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
+      - name: Build package (faster than make)
+        run: npm run package
       - name: Run Playwright tests
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: failure()
         with:
           name: playwright-report
           path: playwright-report/
