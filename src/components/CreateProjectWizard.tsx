@@ -19,6 +19,15 @@ import { useCreateProject } from '@/api/projects/projects-queries';
 import { selectFolder as selectProjectFolder } from '@/api/projects/projects-api';
 import { ProjectType } from '@/types/project';
 import type { CreateProjectInput, PhpVersion, NodeVersion } from '@/types/project';
+import { ProjectIcon } from '@/components/ProjectIcon';
+import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 /**
  * Validates a site name according to naming rules
@@ -53,7 +62,7 @@ const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: str
   {
     value: ProjectType.BasicPhp,
     label: 'Basic PHP',
-    description: 'Simple PHP project with Apache server',
+    description: 'A flexible PHP scaffold you can build on',
   },
   {
     value: ProjectType.Laravel,
@@ -195,23 +204,21 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       case 'type':
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Project Type</Label>
-              <p className="text-muted-foreground text-sm">
-                Choose the type of project you want to create
-              </p>
-            </div>
+            <div className="space-y-2"></div>
             <div className="space-y-2">
               {PROJECT_TYPES.map(type => (
                 <div
                   key={type.value}
                   onClick={() => setFormData(prev => ({ ...prev, type: type.value }))}
-                  className={`border-input hover:border-primary cursor-pointer rounded-lg border p-4 transition-colors ${
+                  className={`border-input hover:border-primary flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors ${
                     formData.type === type.value ? 'border-primary bg-primary/5' : ''
                   }`}
                 >
-                  <div className="font-medium">{type.label}</div>
-                  <p className="text-muted-foreground mt-1 text-sm">{type.description}</p>
+                  <ProjectIcon projectType={type.value} className="text-primary h-8 w-8 shrink-0" />
+                  <div className="flex flex-col">
+                    <div className="font-medium">{type.label}</div>
+                    <p className="text-muted-foreground mt-1 text-sm">{type.description}</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -235,7 +242,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   const validation = validateSiteName(newName);
                   setNameError(validation.error);
                 }}
-                className={nameError ? 'border-destructive' : ''}
+                className={nameError ? 'border-destructive h-10' : 'h-10'}
               />
               {nameError ? (
                 <p className="text-destructive text-xs">{nameError}</p>
@@ -254,10 +261,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   readOnly
                   placeholder="Click to select parent folder..."
                   value={formData.path || ''}
-                  className="flex-1"
+                  className="h-10 flex-1"
                 />
-                <Button type="button" variant="outline" onClick={handleSelectFolder}>
-                  <FolderOpen className="h-4 w-4" />
+                <Button type="button" variant="outline" size="icon" onClick={handleSelectFolder}>
+                  <FolderOpen />
                 </Button>
               </div>
               <p className="text-muted-foreground text-xs">
@@ -270,58 +277,100 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       case 'configuration':
         return (
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label>PHP Version</Label>
-              <div className="flex flex-wrap gap-2">
-                {PHP_VERSIONS.map(version => (
-                  <Badge
-                    key={version}
-                    variant={formData.phpVersion === version ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => setFormData(prev => ({ ...prev, phpVersion: version }))}
-                  >
-                    PHP {version}
-                  </Badge>
-                ))}
+            <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <SiPhp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="flex-1">
+                    <Label htmlFor="phpVersion" className="cursor-pointer text-sm font-medium">
+                      PHP Version
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      {formData.type === ProjectType.Laravel
+                        ? 'Laravel requires PHP 8.2 or higher'
+                        : 'Select the PHP runtime version for your project'}
+                    </p>
+                  </div>
+                </div>
+                <Select
+                  value={formData.phpVersion}
+                  onValueChange={value =>
+                    setFormData(prev => ({ ...prev, phpVersion: value as PhpVersion }))
+                  }
+                >
+                  <SelectTrigger className="w-[80px] rounded-md">
+                    <SelectValue placeholder="Select version" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    {PHP_VERSIONS.map(version => (
+                      <SelectItem
+                        key={version}
+                        value={version}
+                        disabled={
+                          formData.type === ProjectType.Laravel && ['7.4', '8.1'].includes(version)
+                        }
+                      >
+                        {version}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              {formData.type === ProjectType.Laravel &&
-                formData.phpVersion &&
-                ['7.4', '8.1'].includes(formData.phpVersion) && (
-                  <p className="text-destructive text-sm">Laravel requires PHP 8.2 or higher</p>
-                )}
             </div>
 
-            <Separator />
-
-            <div className="space-y-2">
-              <Label>Node.js Version</Label>
-              <div className="flex flex-wrap gap-2">
-                {NODE_VERSIONS.map(version => (
-                  <Badge
-                    key={version}
-                    variant={formData.nodeVersion === version ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => setFormData(prev => ({ ...prev, nodeVersion: version }))}
-                  >
-                    {version === 'none' ? 'None' : `Node ${version}`}
-                  </Badge>
-                ))}
+            <div className="rounded-lg border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-4 dark:border-green-800 dark:from-green-950/30 dark:to-emerald-950/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <SiNodedotjs className="text-green-600 dark:text-green-400" />
+                  <div className="flex-1">
+                    <Label htmlFor="nodeVersion" className="cursor-pointer text-sm font-medium">
+                      Node.js Version
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      Runtime version with Node.js, nvm, yarn, pnpm, and dependencies
+                    </p>
+                  </div>
+                </div>
+                <Select
+                  value={formData.nodeVersion}
+                  onValueChange={value =>
+                    setFormData(prev => ({ ...prev, nodeVersion: value as NodeVersion }))
+                  }
+                >
+                  <SelectTrigger className="w-[80px] rounded-md">
+                    <SelectValue placeholder="Select version" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-md">
+                    {NODE_VERSIONS.map(version => (
+                      <SelectItem key={version} value={version}>
+                        {version}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Claude AI Integration</Label>
-                <p className="text-muted-foreground text-sm">Enable AI-powered coding assistance</p>
+            <div className="rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 dark:border-orange-800 dark:from-orange-950/30 dark:to-amber-950/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <SiClaude className="text-orange-600 dark:text-orange-400" />
+                  <div>
+                    <Label htmlFor="claudeAI" className="cursor-pointer text-sm font-medium">
+                      Add Claude Code CLI
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      Include Claude Code CLI coding assistant in your devcontainer
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={formData.enableClaudeAi || false}
+                  onCheckedChange={checked =>
+                    setFormData(prev => ({ ...prev, enableClaudeAi: checked }))
+                  }
+                />
               </div>
-              <Switch
-                checked={formData.enableClaudeAi || false}
-                onCheckedChange={checked =>
-                  setFormData(prev => ({ ...prev, enableClaudeAi: checked }))
-                }
-              />
             </div>
           </div>
         );
@@ -329,13 +378,6 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       case 'extensions':
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>PHP Extensions</Label>
-              <p className="text-muted-foreground text-sm">
-                Select the PHP extensions you need for your project
-              </p>
-            </div>
-
             <ScrollArea className="h-[300px]">
               <div className="space-y-4">
                 <div>
@@ -395,7 +437,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Domain:</span>
-                    <span className="font-medium">{formData.name}.local (auto-sanitized)</span>
+                    <span className="font-medium">{formData.name}.local</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Parent Path:</span>
@@ -483,15 +525,17 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         {renderStepContent()}
 
         <DialogFooter className="flex-row justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleBack}
-            disabled={step === 'type' || createProjectMutation.isPending}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+          {step !== 'type' && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBack}
+              disabled={createProjectMutation.isPending}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+          )}
 
           <div className="flex gap-2">
             {step !== 'review' ? (
