@@ -1,5 +1,5 @@
 import React from 'react';
-import { createFileRoute, useNavigate, Outlet } from '@tanstack/react-router';
+import { createFileRoute, Outlet, Link } from '@tanstack/react-router';
 import { ShieldAlertIcon, TriangleAlert } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -37,7 +37,6 @@ const SERVICE_TYPE_TABS: Array<{ value: ServiceType | 'all'; label: string }> = 
 ];
 
 function ServicesPage() {
-  const navigate = useNavigate();
   const {
     data: services,
     isLoading,
@@ -105,37 +104,38 @@ function ServicesPage() {
 
     return filteredServices.map(service => (
       <Item
+        asChild
         variant="outline"
         key={service.definition.id}
-        onClick={() =>
-          navigate({
-            to: '/services/$serviceId',
-            params: { serviceId: service.definition.id },
-          })
-        }
         className={`bg-muted/30 hover:bg-accent flex w-full cursor-pointer p-2.5 transition-colors ${service.state.installed ? '' : 'bg-transparent opacity-50'}`}
       >
-        <ItemMedia className="bg-primary/10 rounded-md p-2">
-          <ServiceIcon serviceId={service.definition.id} className="h-6 w-6" />
-        </ItemMedia>
-        <ItemContent className="">
-          <ItemTitle>{service.definition.display_name}</ItemTitle>
-          <ItemDescription>{service.definition.description}</ItemDescription>
-        </ItemContent>
-        <ItemActions>
-          {service.state.installed ? (
-            <Badge
-              variant={service.state.container_status?.running ? 'default' : 'secondary'}
-              className="rounded-md"
-            >
-              {service.state.container_status?.running ? 'Running' : 'Stopped'}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="rounded-md">
-              Not Installed
-            </Badge>
-          )}
-        </ItemActions>
+        <Link
+          to="/services/$serviceId"
+          params={{ serviceId: service.definition.id }}
+          className="contents"
+        >
+          <ItemMedia className="bg-primary/10 rounded-md p-2">
+            <ServiceIcon serviceId={service.definition.id} className="h-6 w-6" />
+          </ItemMedia>
+          <ItemContent className="">
+            <ItemTitle>{service.definition.display_name}</ItemTitle>
+            <ItemDescription>{service.definition.description}</ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            {service.state.installed ? (
+              <Badge
+                variant={service.state.container_status?.running ? 'default' : 'secondary'}
+                className="rounded-md"
+              >
+                {service.state.container_status?.running ? 'Running' : 'Stopped'}
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="rounded-md">
+                Not Installed
+              </Badge>
+            )}
+          </ItemActions>
+        </Link>
       </Item>
     ));
   };

@@ -3,7 +3,13 @@
  * Provides reactive data fetching and mutations for services
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  queryOptions,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import type { ServiceId, CustomConfig, InstallOptions, PullProgress } from '../../types/service';
 import * as servicesApi from './services-api';
 import { useEffect, useState } from 'react';
@@ -18,14 +24,38 @@ export const servicesKeys = {
 };
 
 /**
+ * Query options for all services - use this in loaders
+ */
+export const servicesQueryOptions = () =>
+  queryOptions({
+    queryKey: servicesKeys.lists(),
+    queryFn: servicesApi.getAllServices,
+  });
+
+/**
+ * Query options for a specific service - use this in loaders
+ */
+export const serviceQueryOptions = (serviceId: ServiceId) =>
+  queryOptions({
+    queryKey: servicesKeys.detail(serviceId),
+    queryFn: () => servicesApi.getService(serviceId),
+  });
+
+/**
  * Hook to fetch all services
  */
 export function useServices(options?: { refetchInterval?: number }) {
   return useQuery({
-    queryKey: servicesKeys.lists(),
-    queryFn: servicesApi.getAllServices,
+    ...servicesQueryOptions(),
     refetchInterval: options?.refetchInterval,
   });
+}
+
+/**
+ * Hook to fetch all services with suspense (preferred for SSR)
+ */
+export function useSuspenseServices() {
+  return useSuspenseQuery(servicesQueryOptions());
 }
 
 /**
@@ -33,10 +63,16 @@ export function useServices(options?: { refetchInterval?: number }) {
  */
 export function useService(serviceId: ServiceId) {
   return useQuery({
-    queryKey: servicesKeys.detail(serviceId),
-    queryFn: () => servicesApi.getService(serviceId),
+    ...serviceQueryOptions(serviceId),
     enabled: !!serviceId,
   });
+}
+
+/**
+ * Hook to fetch a specific service with suspense (preferred for SSR)
+ */
+export function useSuspenseService(serviceId: ServiceId) {
+  return useSuspenseQuery(serviceQueryOptions(serviceId));
 }
 
 /**

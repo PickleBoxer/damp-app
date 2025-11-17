@@ -10,8 +10,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { useService } from '@/api/services/services-queries';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useSuspenseService, serviceQueryOptions } from '@/api/services/services-queries';
 import { ServiceId, ServiceInfo } from '@/types/service';
 import { HealthBadge } from '@/components/HealthBadge';
 import ServiceActions from '@/components/ServiceActions';
@@ -54,38 +53,6 @@ function getServicePort(service: ServiceInfo, portIndex: number = 0): string {
   const defaultPort = service.definition.default_config.ports?.[portIndex]?.[0];
 
   return actualPort || defaultPort || 'N/A';
-}
-
-// Loading skeleton component
-function LoadingSkeleton() {
-  return (
-    <SheetContent>
-      <SheetHeader>
-        <SheetTitle>
-          <Skeleton className="h-6 w-48" />
-        </SheetTitle>
-        <SheetDescription asChild>
-          <Skeleton className="mt-2 h-4 w-full" />
-        </SheetDescription>
-      </SheetHeader>
-      <div className="mt-6 space-y-4">
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-      </div>
-    </SheetContent>
-  );
-}
-
-// Not found component
-function ServiceNotFound() {
-  return (
-    <SheetContent>
-      <SheetHeader>
-        <SheetTitle>Service Not Found</SheetTitle>
-        <SheetDescription>The requested service could not be found.</SheetDescription>
-      </SheetHeader>
-    </SheetContent>
-  );
 }
 
 // Service details component
@@ -241,7 +208,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 function ServiceDetailSheet() {
   const { serviceId } = Route.useParams();
   const navigate = useNavigate();
-  const { data: service, isLoading, error } = useService(serviceId as ServiceId);
+  const { data: service } = useSuspenseService(serviceId as ServiceId);
   const [open, setOpen] = useState(true);
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -254,24 +221,6 @@ function ServiceDetailSheet() {
     }
   };
 
-  // Render loading state
-  if (isLoading) {
-    return (
-      <Sheet open={open} onOpenChange={handleOpenChange}>
-        <LoadingSkeleton />
-      </Sheet>
-    );
-  }
-
-  // Render error or not found state
-  if (error || !service) {
-    return (
-      <Sheet open={open} onOpenChange={handleOpenChange}>
-        <ServiceNotFound />
-      </Sheet>
-    );
-  }
-
   // Render service details
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
@@ -281,5 +230,9 @@ function ServiceDetailSheet() {
 }
 
 export const Route = createFileRoute('/services/$serviceId')({
+  loader: ({ context, params }) => {
+    // Prefetch service data in the loader
+    context.queryClient.ensureQueryData(serviceQueryOptions(params.serviceId as ServiceId));
+  },
   component: ServiceDetailSheet,
 });
