@@ -1,7 +1,8 @@
 import BaseLayout from '@/layouts/BaseLayout';
-import { Outlet, createRootRoute } from '@tanstack/react-router';
+import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import type { RouterContext } from '@/utils/routes';
 
 function Root() {
   return (
@@ -15,6 +16,6 @@ function Root() {
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
   component: Root,
 });

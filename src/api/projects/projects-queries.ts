@@ -2,7 +2,7 @@
  * React Query hooks for projects
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type {
   Project,
@@ -24,14 +24,43 @@ export const projectKeys = {
 };
 
 /**
+ * Query options for all projects - use this in loaders
+ */
+export const projectsQueryOptions = () =>
+  queryOptions({
+    queryKey: projectKeys.lists(),
+    queryFn: projectsApi.getAllProjects,
+    staleTime: 5 * 1000,
+  });
+
+/**
+ * Query options for a specific project - use this in loaders
+ */
+export const projectQueryOptions = (projectId: string) =>
+  queryOptions({
+    queryKey: projectKeys.detail(projectId),
+    queryFn: async () => {
+      const project = await projectsApi.getProject(projectId);
+      if (!project) {
+        throw new Error(`Project with ID "${projectId}" not found`);
+      }
+      return project;
+    },
+    staleTime: 5 * 1000,
+  });
+
+/**
  * Get all projects
  */
 export function useProjects() {
-  return useQuery({
-    queryKey: projectKeys.lists(),
-    queryFn: projectsApi.getAllProjects,
-    refetchOnWindowFocus: true,
-  });
+  return useQuery(projectsQueryOptions());
+}
+
+/**
+ * Get all projects with suspense (preferred when using loaders)
+ */
+export function useSuspenseProjects() {
+  return useSuspenseQuery(projectsQueryOptions());
 }
 
 /**
@@ -39,10 +68,16 @@ export function useProjects() {
  */
 export function useProject(projectId: string | undefined) {
   return useQuery({
-    queryKey: projectKeys.detail(projectId || ''),
-    queryFn: () => projectsApi.getProject(projectId!),
+    ...projectQueryOptions(projectId || ''),
     enabled: !!projectId,
   });
+}
+
+/**
+ * Get a specific project with suspense (preferred when using loaders)
+ */
+export function useSuspenseProject(projectId: string) {
+  return useSuspenseQuery(projectQueryOptions(projectId));
 }
 
 /**

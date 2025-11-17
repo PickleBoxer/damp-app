@@ -3,17 +3,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import {
-  useProject,
+  useSuspenseProject,
   useDeleteProject,
   useCopyProjectToVolume,
+  projectQueryOptions,
 } from '@/api/projects/projects-queries';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { ProjectActions } from '@/components/ProjectActions';
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
-  const { data: project, isLoading } = useProject(projectId);
+  const { data: project } = useSuspenseProject(projectId);
   const deleteProjectMutation = useDeleteProject();
   const copyToVolumeMutation = useCopyProjectToVolume();
 
@@ -41,24 +41,7 @@ function ProjectDetailPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex h-full flex-col p-6">
-        <Skeleton className="mb-4 h-8 w-64" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="mt-2 h-4 w-3/4" />
-      </div>
-    );
-  }
-
-  if (!project) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-6">
-        <p>Select a project to view details</p>
-      </div>
-    );
-  }
-
+  // Suspense handles loading state, project is guaranteed to exist
   return (
     <ScrollArea className="h-full">
       <div className="flex flex-col gap-6 p-6">
@@ -190,5 +173,9 @@ function ProjectDetailPage() {
 }
 
 export const Route = createFileRoute('/projects/$projectId')({
+  loader: ({ context, params }) => {
+    // Prefetch project data in the loader for instant rendering
+    return context.queryClient.ensureQueryData(projectQueryOptions(params.projectId));
+  },
   component: ProjectDetailPage,
 });

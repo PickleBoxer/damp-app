@@ -18,7 +18,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useServices } from '@/api/services/services-queries';
+import { useServices, servicesQueryOptions } from '@/api/services/services-queries';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ServiceType } from '@/types/service';
 import { Badge } from '@/components/ui/badge';
@@ -195,5 +195,9 @@ function ServicesPage() {
 }
 
 export const Route = createFileRoute('/services')({
+  loader: ({ context }) => {
+    // Prefetch services in the loader for instant rendering
+    return context.queryClient.ensureQueryData(servicesQueryOptions());
+  },
   component: ServicesPage,
 });

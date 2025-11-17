@@ -1,16 +1,15 @@
 import { createFileRoute, Outlet, useNavigate, useMatches } from '@tanstack/react-router';
 import { useState } from 'react';
-import { ArrowUpRightIcon, Plus, RefreshCw } from 'lucide-react';
+import { ArrowUpRightIcon, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@/components/ui/item';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useProjects } from '@/api/projects/projects-queries';
+import { useSuspenseProjects, projectsQueryOptions } from '@/api/projects/projects-queries';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { CreateProjectWizard } from '@/components/CreateProjectWizard';
 import type { Project } from '@/types/project';
-import { TbFolderCode, TbAlertTriangle } from 'react-icons/tb';
+import { TbFolderCode } from 'react-icons/tb';
 import {
   Empty,
   EmptyContent,
@@ -19,19 +18,17 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import { useQueryClient } from '@tanstack/react-query';
 
 function ProjectsPage() {
   const navigate = useNavigate();
   const matches = useMatches();
-  const queryClient = useQueryClient();
   const projectMatch = matches.find(match => match.id === '/projects/$projectId');
   const selectedProjectId = projectMatch?.params
     ? (projectMatch.params as { projectId: string }).projectId
     : undefined;
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
-  const { data: projects, isLoading, isError } = useProjects();
+  const { data: projects } = useSuspenseProjects();
 
   const handleSelectProject = (project: Project) => {
     navigate({
@@ -40,91 +37,7 @@ function ProjectsPage() {
     });
   };
 
-  const handleRetry = () => {
-    queryClient.invalidateQueries({ queryKey: ['projects'] });
-  };
-
-  const renderProjectList = () => {
-    if (isLoading) {
-      return (
-        <>
-          {[0, 1, 2, 3].map(index => (
-            <Item variant="outline" key={`skeleton-${index}`} className="bg-muted/30">
-              <ItemMedia variant="icon">
-                <Skeleton className="h-6 w-6 rounded" />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>
-                  <Skeleton className="h-4 w-32" />
-                </ItemTitle>
-                <Skeleton className="mt-2 h-3 w-48" />
-              </ItemContent>
-            </Item>
-          ))}
-        </>
-      );
-    }
-
-    if (projects && projects.length > 0) {
-      return projects.map(project => (
-        <Item
-          variant="outline"
-          key={project.id}
-          onClick={() => handleSelectProject(project)}
-          className={`bg-muted/30 hover:bg-accent cursor-pointer p-2.5 transition-colors ${
-            selectedProjectId === project.id ? 'ring-primary ring-2' : ''
-          }`}
-        >
-          <ItemMedia className="bg-primary/10 rounded-md p-2">
-            <ProjectIcon projectType={project.type} className="h-6 w-6" />
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle>{project.name}</ItemTitle>
-            <ItemDescription className="line-clamp-1">{project.domain}</ItemDescription>
-          </ItemContent>
-          <div className="flex flex-col gap-1">
-            {project.devcontainerCreated && (
-              <Badge variant="secondary" className="text-xs">
-                Devcontainer
-              </Badge>
-            )}
-            {project.volumeCopied && (
-              <Badge variant="default" className="text-xs">
-                Volume Ready
-              </Badge>
-            )}
-          </div>
-        </Item>
-      ));
-    }
-  };
-
-  if (isError) {
-    return (
-      <div className="flex h-full">
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <TbAlertTriangle />
-            </EmptyMedia>
-            <EmptyTitle>Error Loading Projects</EmptyTitle>
-            <EmptyDescription>There was an error loading your projects.</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <div className="flex gap-2">
-              <Button onClick={handleRetry} variant="default">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Retry
-              </Button>
-              <Button variant="outline" onClick={() => navigate({ to: '/' })}>
-                Go Home
-              </Button>
-            </div>
-          </EmptyContent>
-        </Empty>
-      </div>
-    );
-  }
+  // No need for retry handler or renderProjectList - suspense handles loading/errors
 
   if (!projects || projects.length === 0) {
     return (
@@ -171,7 +84,38 @@ function ProjectsPage() {
           {/* Left side - Project List (50%) */}
           <div className="flex w-1/2 flex-col border-r p-4">
             <ScrollArea className="flex-1">
-              <div className="space-y-2">{renderProjectList()}</div>
+              <div className="space-y-2">
+                {projects.map(project => (
+                  <Item
+                    variant="outline"
+                    key={project.id}
+                    onClick={() => handleSelectProject(project)}
+                    className={`bg-muted/30 hover:bg-accent cursor-pointer p-2.5 transition-colors ${
+                      selectedProjectId === project.id ? 'ring-primary ring-2' : ''
+                    }`}
+                  >
+                    <ItemMedia className="bg-primary/10 rounded-md p-2">
+                      <ProjectIcon projectType={project.type} className="h-6 w-6" />
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle>{project.name}</ItemTitle>
+                      <ItemDescription className="line-clamp-1">{project.domain}</ItemDescription>
+                    </ItemContent>
+                    <div className="flex flex-col gap-1">
+                      {project.devcontainerCreated && (
+                        <Badge variant="secondary" className="text-xs">
+                          Devcontainer
+                        </Badge>
+                      )}
+                      {project.volumeCopied && (
+                        <Badge variant="default" className="text-xs">
+                          Volume Ready
+                        </Badge>
+                      )}
+                    </div>
+                  </Item>
+                ))}
+              </div>
             </ScrollArea>
           </div>
 
@@ -188,5 +132,9 @@ function ProjectsPage() {
 }
 
 export const Route = createFileRoute('/projects')({
+  loader: ({ context }) => {
+    // Prefetch projects in the loader for instant rendering
+    return context.queryClient.ensureQueryData(projectsQueryOptions());
+  },
   component: ProjectsPage,
 });
