@@ -12,44 +12,62 @@ import { ProjectPreview } from '@/components/ProjectPreview';
 import { Globe, FolderOpen, Terminal, Sparkles, Code, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+import {
+  openProjectFolder,
+  openProjectInBrowser,
+  openProjectInEditor,
+  openProjectTerminal,
+  openProjectTinker,
+} from '@/helpers/shell_helpers';
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
   const { data: project } = useSuspenseProject(projectId);
   const deleteProjectMutation = useDeleteProject();
 
-  const handleOpenVSCode = () => {
-    if (project) {
-      console.log('Opening VS Code for project:', project.path);
-      // TODO: Implement via IPC call
+  const handleOpenVSCode = async () => {
+    const result = await openProjectInEditor(project.id);
+    if (result.success) {
+      toast.success('Opening in VS Code...');
+    } else {
+      toast.error(result.error || 'Failed to open VS Code');
     }
   };
 
-  const handleOpenBrowser = () => {
-    if (project) {
-      console.log('Opening browser for:', project.domain);
-      // TODO: Implement via IPC call
+  const handleOpenBrowser = async () => {
+    const result = await openProjectInBrowser(project.id);
+    if (result.success) {
+      toast.success('Opening in browser...');
+    } else {
+      toast.error(result.error || 'Failed to open browser');
     }
   };
 
-  const handleOpenFolder = () => {
-    if (project) {
-      console.log('Opening folder:', project.path);
-      // TODO: Implement via IPC call
+  const handleOpenFolder = async () => {
+    const result = await openProjectFolder(project.id);
+    if (result.success) {
+      toast.success('Opening folder...');
+    } else {
+      toast.error(result.error || 'Failed to open folder');
     }
   };
 
-  const handleOpenTerminal = () => {
-    if (project) {
-      console.log('Opening terminal for:', project.name);
-      // TODO: Implement via IPC call
+  const handleOpenTerminal = async () => {
+    const result = await openProjectTerminal(project.id);
+    if (result.success) {
+      toast.success('Opening terminal...');
+    } else {
+      toast.error(result.error || 'Failed to open terminal');
     }
   };
 
-  const handleOpenTinker = () => {
-    if (project) {
-      console.log('Opening Tinker for:', project.name);
-      // TODO: Implement via IPC call
+  const handleOpenTinker = async () => {
+    const result = await openProjectTinker(project.id);
+    if (result.success) {
+      toast.success('Opening Tinker...');
+    } else {
+      toast.error(result.error || 'Failed to open Tinker');
     }
   };
 

@@ -15,9 +15,9 @@ interface ProjectIconProps {
 export function ProjectIcon({ projectType, className = 'h-6 w-6' }: Readonly<ProjectIconProps>) {
   switch (projectType) {
     case 'laravel':
-      return <SiLaravel className={className} />;
+      return <SiLaravel className={`${className} text-[#FF2D20]`} />;
     case 'basic-php':
-      return <SiPhp className={className} />;
+      return <SiPhp className={`${className} text-[#777BB4]`} />;
     case 'existing':
       return <Code2 className={className} />;
     default:

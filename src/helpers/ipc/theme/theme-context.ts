@@ -5,6 +5,7 @@ import {
   THEME_MODE_LIGHT_CHANNEL,
   THEME_MODE_SYSTEM_CHANNEL,
   THEME_MODE_TOGGLE_CHANNEL,
+  THEME_MODE_UPDATED_CHANNEL,
 } from './theme-channels';
 
 export function exposeThemeContext() {
@@ -14,5 +15,15 @@ export function exposeThemeContext() {
     dark: () => ipcRenderer.invoke(THEME_MODE_DARK_CHANNEL),
     light: () => ipcRenderer.invoke(THEME_MODE_LIGHT_CHANNEL),
     system: () => ipcRenderer.invoke(THEME_MODE_SYSTEM_CHANNEL),
+    onUpdated: (callback: (isDark: boolean) => void) => {
+      const listener = (_event: unknown, data: { shouldUseDarkColors: boolean }) => {
+        callback(data.shouldUseDarkColors);
+      };
+      ipcRenderer.on(THEME_MODE_UPDATED_CHANNEL, listener);
+      // Return cleanup function
+      return () => {
+        ipcRenderer.removeListener(THEME_MODE_UPDATED_CHANNEL, listener);
+      };
+    },
   });
 }

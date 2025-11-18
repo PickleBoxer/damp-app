@@ -25,6 +25,24 @@ export default function App() {
   useEffect(() => {
     syncThemeWithLocal();
     updateAppLanguage(i18n);
+
+    // Listen for system theme changes from Electron
+    if (window.themeMode?.onUpdated) {
+      const cleanup = window.themeMode.onUpdated((isDark: boolean) => {
+        // Check if user is using system theme
+        const localTheme = localStorage.getItem('theme');
+        if (localTheme === 'system') {
+          // Update document theme class when system theme changes
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }
+      });
+
+      return cleanup;
+    }
   }, [i18n]);
 
   return (

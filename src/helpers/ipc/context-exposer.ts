@@ -3,6 +3,7 @@ import { exposeWindowContext } from './window/window-context';
 import { exposeDockerContext } from './docker/docker-context';
 import { exposeServicesContext } from './services/services-context';
 import { exposeProjectsContext } from './projects/projects-context';
+import { exposeShellContext } from './shell/shell-context';
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -10,4 +11,5 @@ export default function exposeContexts() {
   exposeDockerContext();
   exposeServicesContext();
   exposeProjectsContext();
+  exposeShellContext();
 }

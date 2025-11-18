@@ -11,6 +11,7 @@ interface ThemeModeContext {
   light: () => Promise<void>;
   system: () => Promise<boolean>;
   current: () => Promise<'dark' | 'light' | 'system'>;
+  onUpdated: (callback: (isDark: boolean) => void) => () => void;
 }
 interface ElectronWindow {
   minimize: () => Promise<void>;
@@ -57,10 +58,28 @@ interface ProjectsContext {
   onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
 }
 
+interface ShellContext {
+  openFolder: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  openBrowser: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  openEditor: (
+    projectId: string,
+    settings?: { defaultEditor: string; defaultTerminal: string }
+  ) => Promise<{ success: boolean; error?: string }>;
+  openTerminal: (
+    projectId: string,
+    settings?: { defaultEditor: string; defaultTerminal: string }
+  ) => Promise<{ success: boolean; error?: string }>;
+  openTinker: (
+    projectId: string,
+    settings?: { defaultEditor: string; defaultTerminal: string }
+  ) => Promise<{ success: boolean; error?: string }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
   docker: DockerContext;
   services: ServicesContext;
   projects: ProjectsContext;
+  shell: ShellContext;
 }

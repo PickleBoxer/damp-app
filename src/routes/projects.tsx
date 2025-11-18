@@ -65,7 +65,7 @@ function SortableProjectItem({ project, isSelected }: SortableProjectItemProps) 
       ref={setNodeRef}
       style={style}
       className={`relative border-b ${
-        isSelected ? 'border-r-primary bg-primary/5 border-r-4' : ''
+        isSelected ? 'border-r-primary -bg-primary/5 border-r-2' : ''
       }`}
     >
       <div className="absolute top-0 left-0 flex h-full w-8 cursor-grab items-center justify-center opacity-40 transition-opacity hover:opacity-100 active:cursor-grabbing">
