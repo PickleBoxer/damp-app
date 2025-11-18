@@ -15,7 +15,6 @@ declare module '@tanstack/react-router' {
 export const router = createRouter({
   defaultPendingMinMs: 0, // Show pending state immediately
   defaultPreload: 'intent', // Preload on hover/focus
-  defaultPreloadDelay: 100, // Start preloading after 100ms hover
   routeTree,
   history: createMemoryHistory({
     initialEntries: ['/'],

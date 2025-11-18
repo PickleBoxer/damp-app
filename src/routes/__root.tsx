@@ -9,9 +9,9 @@ function Root() {
     <BaseLayout>
       <Outlet />
       {/* Uncomment the following line to enable the router devtools */}
-      <TanStackRouterDevtools />
+      <TanStackRouterDevtools position="bottom-right" />
       {/* Uncomment the following line to enable the React Query devtools */}
-      <ReactQueryDevtools initialIsOpen={false} />
+      <ReactQueryDevtools buttonPosition="top-right" />
     </BaseLayout>
   );
 }
