@@ -14,7 +14,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, ArrowRight, Check, FolderOpen } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, ArrowRight, Check, FolderOpen, Info, ChevronDown } from 'lucide-react';
 import { useCreateProject } from '@/api/projects/projects-queries';
 import { selectFolder as selectProjectFolder } from '@/api/projects/projects-api';
 import { ProjectType } from '@/types/project';
@@ -79,27 +80,44 @@ const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: str
 const PHP_VERSIONS: PhpVersion[] = ['7.4', '8.1', '8.2', '8.3', '8.4'];
 const NODE_VERSIONS: NodeVersion[] = ['none', 'lts', 'latest', '20', '22'];
 
-const DEFAULT_PHP_EXTENSIONS = [
-  'pdo_mysql',
-  'mysqli',
-  'mbstring',
-  'xml',
+// Extensions that come pre-installed with the container (always included)
+const PREINSTALLED_PHP_EXTENSIONS = [
+  'ctype',
   'curl',
+  'dom',
+  'fileinfo',
+  'filter',
+  'hash',
+  'mbstring',
+  'openssl',
+  'pcre',
+  'session',
+  'tokenizer',
+  'xdebug',
+  'xml',
+  'opcache',
+  'mysqli',
+  'pcntl',
+  'pdo_mysql',
+  'pdo_pgsql',
+  'redis',
   'zip',
-  'gd',
-  'intl',
-  'bcmath',
 ];
 
-const OPTIONAL_PHP_EXTENSIONS = [
-  'redis',
+// Additional extensions users can optionally install
+const ADDITIONAL_PHP_EXTENSIONS = [
+  'bcmath',
+  'gd',
+  'intl',
   'memcached',
   'imagick',
   'soap',
   'xsl',
-  'opcache',
   'apcu',
-  'xdebug',
+  'sodium',
+  'exif',
+  'ldap',
+  'pgsql',
 ];
 
 export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProjectWizardProps>) {
@@ -109,9 +127,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     phpVersion: '8.3',
     nodeVersion: 'none',
     enableClaudeAi: false,
-    phpExtensions: [...DEFAULT_PHP_EXTENSIONS],
+    phpExtensions: ['bcmath', 'gd', 'intl'], // Only additional extensions (pre-installed are always included)
   });
   const [nameError, setNameError] = useState<string | undefined>();
+  const [extensionsExpanded, setExtensionsExpanded] = useState(false);
 
   const createProjectMutation = useCreateProject();
 
@@ -148,7 +167,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       phpVersion: formData.phpVersion || '8.3',
       nodeVersion: formData.nodeVersion || 'none',
       enableClaudeAi: formData.enableClaudeAi || false,
-      phpExtensions: formData.phpExtensions || DEFAULT_PHP_EXTENSIONS,
+      phpExtensions: formData.phpExtensions || [], // Only send additional extensions
     });
 
     // Reset and close
@@ -159,7 +178,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       phpVersion: '8.3',
       nodeVersion: 'none',
       enableClaudeAi: false,
-      phpExtensions: [...DEFAULT_PHP_EXTENSIONS],
+      phpExtensions: ['bcmath', 'gd', 'intl'],
     });
   };
 
@@ -377,110 +396,216 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
 
       case 'extensions':
         return (
-          <div className="space-y-4">
-            <ScrollArea className="h-[300px]">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="mb-2 text-sm font-medium">Default Extensions</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {DEFAULT_PHP_EXTENSIONS.map(ext => (
-                      <Badge
-                        key={ext}
-                        variant={formData.phpExtensions?.includes(ext) ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() => toggleExtension(ext)}
-                      >
-                        {ext}
-                      </Badge>
-                    ))}
-                  </div>
+          <div className="space-y-6">
+            {/* Pre-installed Extensions */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                  <Check className="text-primary h-4 w-4" />
                 </div>
-
-                <Separator />
-
                 <div>
-                  <h4 className="mb-2 text-sm font-medium">Optional Extensions</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {OPTIONAL_PHP_EXTENSIONS.map(ext => (
-                      <Badge
-                        key={ext}
-                        variant={formData.phpExtensions?.includes(ext) ? 'default' : 'outline'}
-                        className="cursor-pointer"
-                        onClick={() => toggleExtension(ext)}
-                      >
-                        {ext}
-                      </Badge>
-                    ))}
-                  </div>
+                  <h4 className="text-sm font-semibold">Pre-installed Extensions</h4>
+                  <p className="text-muted-foreground text-xs">
+                    Included by default • {PREINSTALLED_PHP_EXTENSIONS.length} extensions
+                  </p>
                 </div>
               </div>
-            </ScrollArea>
+              <div className="bg-muted/30 rounded-lg border p-4">
+                <div className="flex flex-wrap gap-1.5">
+                  {PREINSTALLED_PHP_EXTENSIONS.map(ext => (
+                    <Badge
+                      key={ext}
+                      variant="outline"
+                      className="bg-background rounded-md font-mono text-xs"
+                    >
+                      {ext}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Additional Extensions */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+                  <Info className="h-4 w-4 text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold">Additional Extensions</h4>
+                  <p className="text-muted-foreground text-xs">
+                    Optional • {formData.phpExtensions?.length || 0} selected
+                  </p>
+                </div>
+              </div>
+              <ScrollArea>
+                <div className="flex flex-wrap gap-2 pr-4">
+                  {ADDITIONAL_PHP_EXTENSIONS.map(ext => {
+                    const isChecked = formData.phpExtensions?.includes(ext);
+                    return (
+                      <label
+                        key={ext}
+                        htmlFor={`ext-${ext}`}
+                        className={`group/ext flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-md border px-3 py-1.5 transition-all duration-100 ease-linear ${
+                          isChecked
+                            ? 'border-primary bg-primary/5 dark:bg-primary/10 px-2'
+                            : 'hover:bg-accent'
+                        }`}
+                      >
+                        <Checkbox
+                          id={`ext-${ext}`}
+                          checked={isChecked}
+                          onCheckedChange={() => toggleExtension(ext)}
+                          className={`size-4 shrink-0 rounded-full border shadow-sm transition-all duration-100 ease-linear ${
+                            isChecked
+                              ? 'ml-0 translate-x-0'
+                              : 'border-input dark:bg-input/30 -ml-6 -translate-x-1'
+                          }`}
+                        />
+                        <span className="font-mono text-sm leading-snug">{ext}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
           </div>
         );
 
       case 'review':
         return (
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Project Details</h4>
-                <div className="bg-muted space-y-2 rounded-lg p-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Name:</span>
-                    <span className="font-medium">{formData.name}</span>
+          <ScrollArea className="h-[420px]">
+            <div className="space-y-4 pr-4">
+              {/* Project Overview Card */}
+              <div className="from-background to-muted/20 rounded-lg border bg-gradient-to-br p-4">
+                <div className="mb-4 flex items-center gap-3">
+                  <ProjectIcon projectType={formData.type!} className="h-10 w-10" />
+                  <div>
+                    <h3 className="text-lg font-semibold">{formData.name}</h3>
+                    <p className="text-muted-foreground text-xs">{formData.name}.local</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Type:</span>
+                </div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Project Type</span>
                     <span className="font-medium capitalize">
                       {formData.type?.replace('-', ' ')}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Domain:</span>
-                    <span className="font-medium">{formData.name}.local</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Parent Path:</span>
+                  <Separator className="bg-border/50" />
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Location</span>
                     <span className="font-mono text-xs">{formData.path}</span>
                   </div>
                 </div>
               </div>
 
-              <Separator />
+              {/* Runtime Configuration */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-3.5 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <SiPhp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium">PHP</span>
+                      </div>
+                      <Badge variant="secondary" className="bg-background rounded-md font-mono">
+                        {formData.phpVersion}
+                      </Badge>
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Configuration</h4>
-                <div className="bg-muted space-y-2 rounded-lg p-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">PHP Version:</span>
-                    <span className="font-medium">{formData.phpVersion}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Node Version:</span>
-                    <span className="font-medium capitalize">{formData.nodeVersion}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Claude AI:</span>
-                    <span className="font-medium">
-                      {formData.enableClaudeAi ? 'Enabled' : 'Disabled'}
-                    </span>
+                  <div className="rounded-lg border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-3.5 dark:border-green-800 dark:from-green-950/30 dark:to-emerald-950/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <SiNodedotjs className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium">Node.js</span>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="bg-background rounded-md font-mono capitalize"
+                      >
+                        {formData.nodeVersion}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
+
+                {formData.enableClaudeAi && (
+                  <div className="rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-3.5 dark:border-orange-800 dark:from-orange-950/30 dark:to-amber-950/30">
+                    <div className="flex items-center gap-2">
+                      <SiClaude className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      <span className="text-sm font-medium">Claude Code CLI</span>
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        Enabled
+                      </Badge>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <Separator />
-
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">
-                  PHP Extensions ({formData.phpExtensions?.length || 0})
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {formData.phpExtensions?.map(ext => (
-                    <Badge key={ext} variant="secondary">
-                      {ext}
+              {/* Extensions Summary */}
+              <div className="rounded-lg border">
+                <button
+                  type="button"
+                  onClick={() => setExtensionsExpanded(!extensionsExpanded)}
+                  className="hover:bg-muted/50 flex w-full items-center justify-between p-4 text-left transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <h4 className="text-sm font-semibold">PHP Extensions</h4>
+                    <Badge variant="outline" className="bg-background rounded-md text-xs">
+                      {PREINSTALLED_PHP_EXTENSIONS.length + (formData.phpExtensions?.length || 0)}{' '}
+                      total
                     </Badge>
-                  ))}
-                </div>
+                  </div>
+                  <ChevronDown
+                    className={`text-muted-foreground h-4 w-4 transition-transform ${
+                      extensionsExpanded ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {extensionsExpanded && (
+                  <div className="space-y-3 border-t px-4 pt-3 pb-4">
+                    <div className="bg-muted/30 rounded-md p-3">
+                      <p className="text-muted-foreground mb-2 text-xs font-medium">
+                        Pre-installed ({PREINSTALLED_PHP_EXTENSIONS.length})
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {PREINSTALLED_PHP_EXTENSIONS.slice(0, 8).map(ext => (
+                          <Badge
+                            key={ext}
+                            variant="outline"
+                            className="bg-background rounded-md font-mono text-xs"
+                          >
+                            {ext}
+                          </Badge>
+                        ))}
+                        {PREINSTALLED_PHP_EXTENSIONS.length > 8 && (
+                          <Badge variant="outline" className="bg-background rounded-md text-xs">
+                            +{PREINSTALLED_PHP_EXTENSIONS.length - 8} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {formData.phpExtensions && formData.phpExtensions.length > 0 && (
+                      <div className="bg-primary/5 rounded-md p-3">
+                        <p className="text-muted-foreground mb-2 text-xs font-medium">
+                          Additional ({formData.phpExtensions.length})
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {formData.phpExtensions.map(ext => (
+                            <Badge key={ext} className="rounded-md font-mono text-xs">
+                              {ext}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </ScrollArea>

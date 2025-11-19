@@ -21,6 +21,17 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
     await initPromise;
   };
 
+  // Lazy-load docker manager only when needed (not on app startup)
+  let dockerManagerPromise: Promise<
+    typeof import('../../../services/docker/docker-manager')
+  > | null = null;
+  const getDockerManager = async () => {
+    if (!dockerManagerPromise) {
+      dockerManagerPromise = import('../../../services/docker/docker-manager');
+    }
+    return dockerManagerPromise;
+  };
+
   /**
    * Get all projects
    */
@@ -163,6 +174,34 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
     } catch (error) {
       console.error(`Failed to check devcontainer existence in ${folderPath}:`, error);
       throw error;
+    }
+  });
+
+  /**
+   * Get container status for a project
+   */
+  ipcMain.handle(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, async (_event, projectId: string) => {
+    try {
+      await ensureInitialized();
+      const projects = await projectStateManager.getAllProjects();
+      const project = projects.find(p => p.id === projectId);
+
+      if (!project) {
+        return { running: false, exists: false };
+      }
+
+      // Generate container name from project name
+      const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
+      const dockerModule = await getDockerManager();
+      const status = await dockerModule.dockerManager.getContainerStatus(containerName);
+
+      return {
+        running: status?.running || false,
+        exists: status?.exists || false,
+      };
+    } catch (error) {
+      console.error('Failed to get container status:', error);
+      return { running: false, exists: false };
     }
   });
 }

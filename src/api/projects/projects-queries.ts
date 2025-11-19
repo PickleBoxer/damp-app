@@ -2,7 +2,13 @@
  * React Query hooks for projects
  */
 
-import { useQuery, useMutation, useQueryClient, queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  queryOptions,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type {
   Project,
@@ -21,6 +27,7 @@ export const projectKeys = {
   list: (filters?: unknown) => [...projectKeys.lists(), { filters }] as const,
   details: () => [...projectKeys.all, 'detail'] as const,
   detail: (id: string) => [...projectKeys.details(), id] as const,
+  containerStatus: (id: string) => [...projectKeys.all, 'container-status', id] as const,
 };
 
 /**
@@ -78,6 +85,34 @@ export function useProject(projectId: string | undefined) {
  */
 export function useSuspenseProject(projectId: string) {
   return useSuspenseQuery(projectQueryOptions(projectId));
+}
+
+/**
+ * Get container status for a project
+ *
+ * Performance notes:
+ * - Lazy initialization: Docker manager is only loaded on first status check
+ * - Non-blocking: IPC calls are async and don't block app startup
+ * - Configurable polling: Can disable polling entirely or adjust interval per use case
+ * - Cached results: Uses React Query cache to minimize redundant checks
+ *
+ * @param projectId - Project ID to check status for
+ * @param options.enabled - Whether to actively fetch status (default: true)
+ * @param options.pollingInterval - How often to poll in ms (default: 10000, 0 = no polling)
+ */
+export function useProjectContainerStatus(
+  projectId: string | undefined,
+  options?: { enabled?: boolean; pollingInterval?: number }
+) {
+  return useQuery({
+    queryKey: projectKeys.containerStatus(projectId || ''),
+    queryFn: () => projectsApi.getContainerStatus(projectId || ''),
+    enabled: options?.enabled !== false && !!projectId,
+    refetchInterval: options?.pollingInterval ?? 10000, // Poll every 10 seconds by default
+    staleTime: 8000, // Consider data fresh for 8 seconds
+    gcTime: 30000, // Keep in cache for 30 seconds
+    refetchOnWindowFocus: true, // Refetch on window focus to keep data fresh
+  });
 }
 
 /**

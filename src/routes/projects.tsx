@@ -9,6 +9,7 @@ import {
   useSuspenseProjects,
   projectsQueryOptions,
   useReorderProjects,
+  useProjectContainerStatus,
 } from '@/api/projects/projects-queries';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { CreateProjectWizard } from '@/components/CreateProjectWizard';
@@ -57,8 +58,12 @@ function SortableProjectItem({ project, isSelected }: SortableProjectItemProps) 
     opacity: isDragging ? 0.5 : 1,
   };
 
-  // Mock status - you can replace this with actual project status from your data
-  const isRunning = false; // TODO: Add actual running status to Project type
+  // Get container status with polling for list view
+  const { data: containerStatus } = useProjectContainerStatus(project.id, {
+    enabled: true,
+    pollingInterval: 10000, // Poll every 10 seconds
+  });
+  const isRunning = containerStatus?.running || false;
 
   return (
     <div

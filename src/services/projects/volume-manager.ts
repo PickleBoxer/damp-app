@@ -151,9 +151,9 @@ class VolumeManager {
             `cd /source && ` +
             `tar --exclude='node_modules' ` +
             `--exclude='vendor' ` +
-            `--exclude='.git' ` +
-            `--exclude='.devcontainer' ` +
-            `--exclude='.vscode' ` +
+            //`--exclude='.git' ` +
+            //`--exclude='.devcontainer' ` +
+            //`--exclude='.vscode' ` +
             `-cf - . | ` +
             `tar -xf - -C /volume/${targetSubPath} && ` +
             `chown -R ${uidGid} /volume/${targetSubPath}`,

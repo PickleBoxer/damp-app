@@ -21,14 +21,13 @@ import type {
   PhpVersion,
   TemplateContext,
 } from '../../types/project';
-import { DEFAULT_PHP_INI, DEFAULT_XDEBUG_INI } from '../../types/project';
 import { projectStorage } from './project-storage';
 import { volumeManager } from './volume-manager';
 import {
+  generateIndexPhp,
   generateProjectTemplates,
-  getPostStartCommand,
   getPostCreateCommand,
-  getDefaultPhpExtensions,
+  getPostStartCommand,
 } from './project-templates';
 
 const DOCKER_NETWORK = 'damp-network';
@@ -187,7 +186,7 @@ class ProjectStateManager {
    * Generate volume name from project name
    */
   private generateVolumeName(projectName: string): string {
-    return `damp_site_${projectName.toLowerCase().replace(/\s+/g, '_')}`;
+    return `damp_project_${projectName.toLowerCase().replace(/\s+/g, '_')}`;
   }
 
   /**
@@ -235,14 +234,6 @@ class ProjectStateManager {
       await fs.mkdir(vscodePath, { recursive: true });
 
       // Build template context
-      const phpIniString = Object.entries(project.customPhpIni)
-        .map(([key, value]) => `${key} = ${value}`)
-        .join('\n');
-
-      const xdebugIniString = Object.entries(project.customXdebugIni)
-        .map(([key, value]) => `${key} = ${value}`)
-        .join('\n');
-
       const context: TemplateContext = {
         projectName: project.name,
         volumeName: project.volumeName,
@@ -253,11 +244,10 @@ class ProjectStateManager {
         containerName: this.generateContainerName(project.name),
         forwardedPort: project.forwardedPort,
         enableClaudeAi: project.enableClaudeAi,
-        phpIniSettings: phpIniString,
-        xdebugIniSettings: xdebugIniString,
         postStartCommand: project.postStartCommand,
         postCreateCommand: project.postCreateCommand,
         workspaceFolderName: path.basename(project.path),
+        launchIndexPath: project.type === 'laravel' ? 'public/' : '',
       };
 
       // Generate templates
@@ -270,9 +260,22 @@ class ProjectStateManager {
         'utf-8'
       );
       await fs.writeFile(path.join(devcontainerPath, 'Dockerfile'), templates.dockerfile, 'utf-8');
-      await fs.writeFile(path.join(devcontainerPath, 'php.ini'), templates.phpIni, 'utf-8');
-      await fs.writeFile(path.join(devcontainerPath, 'xdebug.ini'), templates.xdebugIni, 'utf-8');
       await fs.writeFile(path.join(vscodePath, 'launch.json'), templates.launchJson, 'utf-8');
+
+      // Create index.php for basic-php projects if it doesn't exist
+      if (project.type === 'basic-php') {
+        const indexPath = path.join(project.path, 'index.php');
+        const indexExists = await fs
+          .access(indexPath)
+          .then(() => true)
+          .catch(() => false);
+
+        if (!indexExists) {
+          const indexContent = generateIndexPhp(project.name, project.phpVersion);
+          await fs.writeFile(indexPath, indexContent, 'utf-8');
+          console.log(`Created index.php for project ${project.name}`);
+        }
+      }
 
       console.log(`Created devcontainer files for project ${project.name}`);
 
@@ -413,17 +416,12 @@ class ProjectStateManager {
         domain: this.generateDomain(sanitizedName),
         phpVersion: input.phpVersion,
         nodeVersion: input.nodeVersion,
-        phpExtensions:
-          input.phpExtensions.length > 0
-            ? input.phpExtensions
-            : getDefaultPhpExtensions(projectType),
+        phpExtensions: input.phpExtensions,
         enableClaudeAi: input.enableClaudeAi,
         forwardedPort: FORWARDED_PORT,
         networkName: DOCKER_NETWORK,
-        customPhpIni: input.customPhpIni || DEFAULT_PHP_INI,
-        customXdebugIni: input.customXdebugIni || DEFAULT_XDEBUG_INI,
         postStartCommand: getPostStartCommand(projectType),
-        postCreateCommand: getPostCreateCommand(projectType),
+        postCreateCommand: getPostCreateCommand(),
         order: projectStorage.getNextOrder(),
         createdAt: Date.now(),
         updatedAt: Date.now(),

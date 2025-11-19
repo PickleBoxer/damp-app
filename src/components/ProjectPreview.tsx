@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Globe } from 'lucide-react';
 import { Safari } from '@/components/ui/safari';
 import type { Project } from '@/types/project';
+import { useProjectContainerStatus } from '@/api/projects/projects-queries';
 
 interface ProjectPreviewProps {
   project: Project;
@@ -26,8 +27,11 @@ export function ProjectPreview({ project }: ProjectPreviewProps) {
     return () => ro.disconnect();
   }, []);
 
-  // TODO: Replace with actual running status when available
-  const isRunning = false;
+  // Get container status from cache (shared with list view)
+  const { data: containerStatus } = useProjectContainerStatus(project.id, {
+    enabled: false, // Don't poll here, use cached data from list view
+  });
+  const isRunning = containerStatus?.running || false;
 
   return (
     <div className="h-36 max-h-max overflow-hidden rounded duration-700 hover:h-96 hover:transition-[height] hover:duration-800">
@@ -42,24 +46,31 @@ export function ProjectPreview({ project }: ProjectPreviewProps) {
             >
               {isRunning ? (
                 <div
-                  className="origin-top-left"
+                  className="relative h-full w-full overflow-hidden"
                   style={{
                     pointerEvents: 'none',
-                    transform: `scale(${scale})`,
-                    width: '400%',
-                    height: '400%',
                   }}
                 >
-                  <iframe
-                    src={`https://${project.domain}`}
-                    title={project.name}
-                    width={1920}
-                    height={1080}
-                    className="rounded-md border-0"
-                    style={{ pointerEvents: 'none' }}
-                    sandbox="allow-scripts allow-same-origin"
-                    loading="lazy"
-                  />
+                  <div
+                    className="absolute top-0 left-0 origin-top-left"
+                    style={{
+                      transform: `scale(${scale})`,
+                      width: '1920px',
+                      height: '1080px',
+                    }}
+                  >
+                    <iframe
+                      //src={`https://${project.domain}`}
+                      src={`http://localhost:8080/`}
+                      title={project.name}
+                      width="1920"
+                      height="1080"
+                      className="rounded-md border-0"
+                      style={{ pointerEvents: 'none' }}
+                      sandbox="allow-scripts allow-same-origin"
+                      loading="lazy"
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="text-muted-foreground flex flex-col items-center gap-2">

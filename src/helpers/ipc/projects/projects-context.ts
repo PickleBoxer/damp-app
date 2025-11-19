@@ -63,6 +63,11 @@ export interface ProjectsContext {
   devcontainerExists: (folderPath: string) => Promise<unknown>;
 
   /**
+   * Get container status for a project
+   */
+  getContainerStatus: (projectId: string) => Promise<{ running: boolean; exists: boolean }>;
+
+  /**
    * Subscribe to volume copy progress events
    */
   onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
@@ -100,6 +105,9 @@ export function exposeProjectsContext(): void {
 
     devcontainerExists: (folderPath: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_DEVCONTAINER_EXISTS, folderPath),
+
+    getContainerStatus: (projectId: string) =>
+      ipcRenderer.invoke(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, projectId),
 
     onCopyProgress: callback => {
       const listener = (_event: unknown, projectId: string, progress: unknown) => {

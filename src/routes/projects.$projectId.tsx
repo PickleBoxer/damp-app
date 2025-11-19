@@ -20,11 +20,26 @@ import {
   openProjectTerminal,
   openProjectTinker,
 } from '@/helpers/shell_helpers';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useState } from 'react';
 
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
   const { data: project } = useSuspenseProject(projectId);
   const deleteProjectMutation = useDeleteProject();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [removeFolder, setRemoveFolder] = useState(false);
 
   const handleOpenVSCode = async () => {
     const result = await openProjectInEditor(project.id);
@@ -72,17 +87,14 @@ function ProjectDetailPage() {
   };
 
   const handleDelete = () => {
-    if (project && confirm(`Delete project "${project.name}"?`)) {
-      deleteProjectMutation.mutate({
-        projectId: project.id,
-        removeVolume: false,
-        removeFolder: false,
-      });
-    }
+    deleteProjectMutation.mutate({
+      projectId: project.id,
+      removeVolume: false,
+      removeFolder,
+    });
+    setShowDeleteDialog(false);
+    setRemoveFolder(false);
   };
-
-  // Mock status - replace with actual status
-  const isRunning = false;
 
   // Suspense handles loading state, project is guaranteed to exist
   return (
@@ -178,7 +190,7 @@ function ProjectDetailPage() {
                   variant="destructive"
                   className="col-span-1 h-8.5"
                   aria-label="Remove Site"
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteDialog(true)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -194,19 +206,6 @@ function ProjectDetailPage() {
                   </Badge>
                   <Badge variant="secondary">PHP {project.phpVersion}</Badge>
                   <Badge variant="secondary">Node {project.nodeVersion}</Badge>
-                  <div className="border-input flex items-center gap-1.5 rounded-md border px-2 py-0.5">
-                    {isRunning ? (
-                      <>
-                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                        <span className="text-xs">Running</span>
-                      </>
-                    ) : (
-                      <>
-                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
-                        <span className="text-xs">Ready to start</span>
-                      </>
-                    )}
-                  </div>
                 </div>
               </div>
 
@@ -310,6 +309,36 @@ function ProjectDetailPage() {
           </Tabs>
         </div>
       </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project "{project.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. Choose what to delete:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="removeFolder"
+              checked={removeFolder}
+              onCheckedChange={checked => setRemoveFolder(checked === true)}
+            />
+            <Label htmlFor="removeFolder" className="cursor-pointer text-sm font-normal">
+              Delete project folder
+            </Label>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ScrollArea>
   );
 }

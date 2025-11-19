@@ -55,6 +55,7 @@ interface ProjectsContext {
   selectFolder: (defaultPath?: string) => Promise<unknown>;
   detectLaravel: (folderPath: string) => Promise<unknown>;
   devcontainerExists: (folderPath: string) => Promise<unknown>;
+  getContainerStatus: (projectId: string) => Promise<{ running: boolean; exists: boolean }>;
   onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
 }
 

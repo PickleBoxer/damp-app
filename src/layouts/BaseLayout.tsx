@@ -7,12 +7,14 @@ import { Toaster } from 'sonner';
 import { useRouterState, useMatches } from '@tanstack/react-router';
 import { useProjects } from '@/api/projects/projects-queries';
 import { useServices } from '@/api/services/services-queries';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function BaseLayout({ children }: { children: React.ReactNode }) {
   const { location } = useRouterState();
   const matches = useMatches();
   const { data: projects } = useProjects();
   const { data: services } = useServices();
+  const { resolvedTheme } = useTheme();
 
   // Compute breadcrumb based on current route
   const breadcrumb = React.useMemo(() => {
@@ -66,6 +68,7 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
       </SidebarInset>
       <Toaster
         position="bottom-right"
+        theme={resolvedTheme}
         richColors
         closeButton
         expand={false}

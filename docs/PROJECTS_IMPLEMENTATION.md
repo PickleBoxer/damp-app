@@ -15,7 +15,6 @@ The Projects feature enables users to create and manage PHP development projects
 - **NodeVersion**: `'none' | 'lts' | 'latest' | '20' | '22'`
 - **Project interface**: Complete project structure with metadata
 - **CreateProjectInput**: Input validation schema
-- Template constants: `DEFAULT_PHP_INI`, `DEFAULT_XDEBUG_INI`
 
 #### 2. Project Templates (`src/services/projects/project-templates.ts`)
 
@@ -23,8 +22,6 @@ Generates devcontainer configuration files:
 
 - `devcontainer.json` - VS Code devcontainer configuration
 - `Dockerfile` - Custom PHP + Apache + Node.js image
-- `php.ini` - PHP configuration
-- `xdebug.ini` - Xdebug configuration
 - `.vscode/launch.json` - Debug configuration for VS Code
 
 #### 3. Project Storage (`src/services/projects/project-storage.ts`)
@@ -39,7 +36,7 @@ JSON-based persistence layer:
 
 Docker volume operations:
 
-- Creates Docker volumes with `damp_site_{name}` naming convention
+- Creates Docker volumes with `damp_project_{name}` naming convention
 - Copies project files to volume using tar-stream
 - Progress tracking for large file copies
 - Excludes `.git`, `node_modules`, and other ignored directories
@@ -240,9 +237,9 @@ All projects use `.local` TLD with sanitized name:
 
 ### 4. Volume Naming
 
-Consistent naming: `damp_site_{sanitized-name}`
+Consistent naming: `damp_project_{sanitized-name}`
 
-- Example: `damp_site_my-awesome-project`
+- Example: `damp_project_my-awesome-project`
 
 ### 5. Network Integration
 

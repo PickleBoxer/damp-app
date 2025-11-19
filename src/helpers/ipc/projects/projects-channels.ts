@@ -24,3 +24,6 @@ export const PROJECTS_DEVCONTAINER_EXISTS = 'projects:devcontainer-exists';
 
 // Progress events (for volume copy)
 export const PROJECTS_COPY_PROGRESS = 'projects:copy-progress';
+
+// Container status
+export const PROJECTS_GET_CONTAINER_STATUS = 'projects:get-container-status';

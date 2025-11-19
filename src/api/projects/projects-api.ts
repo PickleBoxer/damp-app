@@ -122,6 +122,17 @@ export async function devcontainerExists(folderPath: string): Promise<boolean> {
 }
 
 /**
+ * Get container status for a project
+ */
+export async function getContainerStatus(
+  projectId: string
+): Promise<{ running: boolean; exists: boolean }> {
+  ensureProjectsApi();
+  const result = await projectsApi.getContainerStatus(projectId);
+  return result as { running: boolean; exists: boolean };
+}
+
+/**
  * Subscribe to volume copy progress events
  */
 export function subscribeToCopyProgress(

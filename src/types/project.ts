@@ -50,7 +50,7 @@ export interface Project {
   type: ProjectType;
   /** Absolute path to project folder */
   path: string;
-  /** Docker volume name (damp_site_{name}) */
+  /** Docker volume name (damp_project_{name}) */
   volumeName: string;
   /** Local domain (e.g., myproject.local) */
   domain: string;
@@ -66,10 +66,6 @@ export interface Project {
   forwardedPort: number;
   /** Docker network name (damp-network) */
   networkName: string;
-  /** Custom php.ini settings */
-  customPhpIni: Record<string, string>;
-  /** Custom xdebug.ini settings */
-  customXdebugIni: Record<string, string>;
   /** Post-start command (type-specific, read-only) */
   postStartCommand: string;
   /** Post-create command (Laravel only) */
@@ -104,10 +100,6 @@ export interface CreateProjectInput {
   phpExtensions: string[];
   /** Enable Claude AI */
   enableClaudeAi: boolean;
-  /** Custom php.ini overrides */
-  customPhpIni?: Record<string, string>;
-  /** Custom xdebug.ini overrides */
-  customXdebugIni?: Record<string, string>;
   /** Override existing devcontainer files */
   overwriteExisting?: boolean;
 }
@@ -130,10 +122,6 @@ export interface UpdateProjectInput {
   phpExtensions?: string[];
   /** Updated Claude AI setting */
   enableClaudeAi?: boolean;
-  /** Updated php.ini settings */
-  customPhpIni?: Record<string, string>;
-  /** Updated xdebug.ini settings */
-  customXdebugIni?: Record<string, string>;
   /** Regenerate devcontainer files after update */
   regenerateFiles?: boolean;
 }
@@ -147,15 +135,15 @@ export interface TemplateContext {
   phpVersion: PhpVersion;
   nodeVersion: NodeVersion;
   phpExtensions: string;
+  phpVariant?: string;
   networkName: string;
   containerName: string;
   forwardedPort: number;
   enableClaudeAi: boolean;
-  phpIniSettings: string;
-  xdebugIniSettings: string;
   postStartCommand: string;
   postCreateCommand: string | null;
   workspaceFolderName: string;
+  launchIndexPath: string;
 }
 
 /**
@@ -164,8 +152,6 @@ export interface TemplateContext {
 export interface ProjectTemplate {
   devcontainerJson: string;
   dockerfile: string;
-  phpIni: string;
-  xdebugIni: string;
   launchJson: string;
 }
 
@@ -230,26 +216,3 @@ export interface ProjectStorageData {
   /** Last updated timestamp */
   lastUpdated: number;
 }
-
-/**
- * Default php.ini settings
- */
-export const DEFAULT_PHP_INI = {
-  memory_limit: '512M',
-  upload_max_filesize: '100M',
-  post_max_size: '100M',
-  'pcov.directory': '.',
-  display_errors: 'Off',
-  display_startup_errors: 'Off',
-  log_errors: 'On',
-  error_log: 'error_log.log',
-};
-
-/**
- * Default xdebug.ini settings
- */
-export const DEFAULT_XDEBUG_INI = {
-  'xdebug.mode': 'develop,debug,trace,coverage,profile',
-  'xdebug.start_with_request': 'trigger',
-  'xdebug.client_port': '9003',
-};
