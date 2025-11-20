@@ -5,6 +5,7 @@ import { addDockerListeners } from './docker/docker-listeners';
 import { addServicesListeners } from './services/services-listeners';
 import { addProjectsListeners } from './projects/projects-listeners';
 import { addShellEventListeners } from './shell/shell-listeners';
+import { addLogsEventListeners } from './logs/logs-listeners';
 
 export default function registerListeners(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow);
@@ -13,4 +14,5 @@ export default function registerListeners(mainWindow: BrowserWindow) {
   addServicesListeners(mainWindow);
   addProjectsListeners(mainWindow);
   addShellEventListeners();
+  addLogsEventListeners();
 }

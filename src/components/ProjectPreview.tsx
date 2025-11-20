@@ -60,8 +60,7 @@ export function ProjectPreview({ project }: ProjectPreviewProps) {
                     }}
                   >
                     <iframe
-                      //src={`https://${project.domain}`}
-                      src={`http://localhost:8080/`}
+                      src={`https://${project.domain}`}
                       title={project.name}
                       width="1920"
                       height="1080"

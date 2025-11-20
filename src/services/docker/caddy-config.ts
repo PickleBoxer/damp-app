@@ -36,7 +36,7 @@ function generateCaddyfile(projects: Project[]): string {
   // Add reverse proxy rules for each project
   for (const project of projects) {
     const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
-    
+
     lines.push(`# Project: ${project.name}`);
     lines.push(`https://${project.domain} {`);
     lines.push('    tls internal');
@@ -51,14 +51,14 @@ function generateCaddyfile(projects: Project[]): string {
 /**
  * Synchronize all projects to Caddy configuration
  * This function is idempotent and can be called multiple times safely
- * 
+ *
  * @returns Promise resolving to success status
  */
 export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if Caddy container is running
     const containerStatus = await dockerManager.getContainerStatus(CADDY_CONTAINER_NAME);
-    
+
     if (!containerStatus?.running) {
       console.log('[Caddy Sync] Skipping - Caddy container not running');
       return { success: true }; // Not an error - just skip
@@ -76,7 +76,7 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
     // Write Caddyfile to container
     const escapedContent = caddyfileContent.replaceAll("'", String.raw`'\''`);
     const writeCmd = ['sh', '-c', `echo '${escapedContent}' > ${CADDYFILE_PATH}`];
-    
+
     const writeResult = await dockerManager.execCommand(CADDY_CONTAINER_NAME, writeCmd);
     if (writeResult.exitCode !== 0) {
       throw new Error(`Failed to write Caddyfile: ${writeResult.stderr}`);
@@ -101,11 +101,11 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.warn('[Caddy Sync] Failed to sync projects to Caddy:', errorMessage);
-    
+
     // Don't throw - just return error for logging
-    return { 
-      success: false, 
-      error: errorMessage 
+    return {
+      success: false,
+      error: errorMessage,
     };
   }
 }

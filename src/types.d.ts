@@ -76,6 +76,19 @@ interface ShellContext {
   ) => Promise<{ success: boolean; error?: string }>;
 }
 
+interface LogLine {
+  projectId: string;
+  line: string;
+  stream: 'stdout' | 'stderr';
+  timestamp: number;
+}
+
+interface ProjectLogsContext {
+  start: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  stop: (projectId: string) => Promise<void>;
+  onLine: (callback: (log: LogLine) => void) => () => void;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
@@ -83,4 +96,5 @@ declare interface Window {
   services: ServicesContext;
   projects: ProjectsContext;
   shell: ShellContext;
+  projectLogs: ProjectLogsContext;
 }

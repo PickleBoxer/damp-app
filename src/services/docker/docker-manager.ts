@@ -706,6 +706,76 @@ class DockerManager {
       );
     }
   }
+
+  /**
+   * Stream container logs in real-time
+   * @param containerIdOrName Container ID or name
+   * @param onLog Callback for each log line
+   * @param tail Number of historical lines to include (default: 100)
+   * @returns Function to stop streaming
+   */
+  async streamContainerLogs(
+    containerIdOrName: string,
+    onLog: (line: string, stream: 'stdout' | 'stderr') => void,
+    tail = 100
+  ): Promise<() => void> {
+    try {
+      const container = this.docker.getContainer(containerIdOrName);
+
+      // Get log stream
+      const stream = await container.logs({
+        follow: true,
+        stdout: true,
+        stderr: true,
+        tail,
+        timestamps: true,
+      });
+
+      // Demultiplex stdout and stderr
+      const stdoutStream = {
+        write: (chunk: Buffer): boolean => {
+          const lines = chunk.toString().split('\n').filter(Boolean);
+          for (const line of lines) {
+            onLog(line.trim(), 'stdout');
+          }
+          return true;
+        },
+      };
+
+      const stderrStream = {
+        write: (chunk: Buffer): boolean => {
+          const lines = chunk.toString().split('\n').filter(Boolean);
+          for (const line of lines) {
+            onLog(line.trim(), 'stderr');
+          }
+          return true;
+        },
+      };
+
+      this.docker.modem.demuxStream(
+        stream,
+        stdoutStream as NodeJS.WritableStream,
+        stderrStream as NodeJS.WritableStream
+      );
+
+      // Return cleanup function
+      return () => {
+        try {
+          if ('destroy' in stream && typeof stream.destroy === 'function') {
+            stream.destroy();
+          } else if ('end' in stream && typeof stream.end === 'function') {
+            (stream as unknown as NodeJS.WritableStream).end();
+          }
+        } catch (error) {
+          console.warn('Failed to close log stream:', error);
+        }
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to stream logs from container ${containerIdOrName}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
 }
 
 // Export singleton instance

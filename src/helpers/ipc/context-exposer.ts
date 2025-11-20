@@ -4,6 +4,7 @@ import { exposeDockerContext } from './docker/docker-context';
 import { exposeServicesContext } from './services/services-context';
 import { exposeProjectsContext } from './projects/projects-context';
 import { exposeShellContext } from './shell/shell-context';
+import { exposeLogsContext } from './logs/logs-context';
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -12,4 +13,5 @@ export default function exposeContexts() {
   exposeServicesContext();
   exposeProjectsContext();
   exposeShellContext();
+  exposeLogsContext();
 }

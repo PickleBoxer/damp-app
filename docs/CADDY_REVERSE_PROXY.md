@@ -107,10 +107,10 @@ syncProjectsToCaddy().catch(error => {
 // service-definitions.ts - POST_INSTALL_HOOKS
 [ServiceId.Caddy]: async context => {
   const result = await setupCaddySSL(context.containerName);
-  
+
   // Sync all existing projects to Caddy
   const syncResult = await syncProjectsToCaddy();
-  
+
   return {
     success: result.success,
     message: result.message,
@@ -148,12 +148,12 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
   try {
     // Check if Caddy is running
     const containerStatus = await dockerManager.getContainerStatus(CADDY_CONTAINER_NAME);
-    
+
     if (!containerStatus?.running) {
       console.log('[Caddy Sync] Skipping - Caddy container not running');
       return { success: true }; // Not an error
     }
-    
+
     // Generate and apply configuration...
     return { success: true };
   } catch (error) {
@@ -224,11 +224,13 @@ if (!result.success) {
 ### Container Name Format
 
 Container names follow the pattern:
+
 ```
 {sanitized_project_name}_devcontainer
 ```
 
 Where `sanitized_project_name` is:
+
 - Lowercase
 - Spaces replaced with underscores
 - Special characters removed
