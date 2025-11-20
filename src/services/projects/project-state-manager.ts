@@ -7,8 +7,8 @@ import { dialog } from 'electron';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import hostile from 'hostile';
 import semver from 'semver';
+import { addHostEntry, removeHostEntry } from '../../helpers/hosts_helpers';
 import type {
   Project,
   ProjectType,
@@ -289,37 +289,23 @@ class ProjectStateManager {
   }
 
   /**
-   * Add domain to hosts file
+   * Add domain to hosts file via sudo-prompt elevation
    */
   private async addDomainToHosts(domain: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      hostile.set('127.0.0.1', domain, (error: Error | null) => {
-        if (error) {
-          console.error(`Failed to add domain ${domain} to hosts file:`, error);
-          reject(error);
-        } else {
-          console.log(`Added domain ${domain} to hosts file`);
-          resolve();
-        }
-      });
-    });
+    const result = await addHostEntry('127.0.0.1', domain);
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to add domain to hosts file');
+    }
   }
 
   /**
-   * Remove domain from hosts file
+   * Remove domain from hosts file via sudo-prompt elevation
    */
   private async removeDomainFromHosts(domain: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      hostile.remove('127.0.0.1', domain, (error: Error | null) => {
-        if (error) {
-          console.error(`Failed to remove domain ${domain} from hosts file:`, error);
-          reject(error);
-        } else {
-          console.log(`Removed domain ${domain} from hosts file`);
-          resolve();
-        }
-      });
-    });
+    const result = await removeHostEntry('127.0.0.1', domain);
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to remove domain from hosts file');
+    }
   }
 
   /**
@@ -453,6 +439,7 @@ class ProjectStateManager {
       try {
         await this.addDomainToHosts(project.domain);
         domainAdded = true;
+        console.log(`Added domain ${project.domain} to hosts file`);
       } catch (error) {
         console.warn('Failed to update hosts file (may require admin privileges):', error);
         // Continue anyway - not critical

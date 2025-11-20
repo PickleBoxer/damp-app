@@ -66,7 +66,9 @@ app.whenReady().then(async () => {
       console.error('Failed to load React DevTools:', err);
     }
   }
+
   createWindow();
+
   // Use TrayMenu class for tray setup
   new TrayMenu();
 });
