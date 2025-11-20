@@ -32,7 +32,7 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -260,7 +260,7 @@ function ProjectsPage() {
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
-                  modifiers={[restrictToVerticalAxis]}
+                  modifiers={[restrictToVerticalAxis, restrictToParentElement]}
                 >
                   <SortableContext
                     items={filteredProjects.map(p => p.id)}

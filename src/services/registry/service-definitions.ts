@@ -4,6 +4,7 @@
 
 import { ServiceDefinition, ServiceId, PostInstallHook } from '../../types/service';
 import { setupCaddySSL } from '../docker/caddy-setup';
+import { syncProjectsToCaddy } from '../docker/caddy-config';
 
 /**
  * Post-install hooks for services (backend only - not serialized)
@@ -14,6 +15,15 @@ import { setupCaddySSL } from '../docker/caddy-setup';
 export const POST_INSTALL_HOOKS: Partial<Record<ServiceId, PostInstallHook>> = {
   [ServiceId.Caddy]: async context => {
     const result = await setupCaddySSL(context.containerName);
+
+    // Sync all existing projects to Caddy
+    const syncResult = await syncProjectsToCaddy();
+    if (syncResult.success) {
+      console.log('[Caddy Post-Install] Projects synchronized to reverse proxy');
+    } else {
+      console.warn('[Caddy Post-Install] Failed to sync projects:', syncResult.error);
+    }
+
     return {
       success: result.success,
       message: result.message,

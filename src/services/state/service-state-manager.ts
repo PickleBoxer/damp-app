@@ -4,7 +4,6 @@
  */
 
 import type {
-  ServiceId,
   ServiceState,
   ServiceInfo,
   CustomConfig,
@@ -12,6 +11,7 @@ import type {
   ServiceOperationResult,
   PullProgress,
 } from '../../types/service';
+import { ServiceId } from '../../types/service';
 import {
   getServiceDefinition,
   getAllServiceDefinitions,
@@ -19,6 +19,7 @@ import {
 } from '../registry/service-definitions';
 import { dockerManager } from '../docker/docker-manager';
 import { serviceStorage } from './service-storage';
+import { syncProjectsToCaddy } from '../docker/caddy-config';
 
 /**
  * Service state manager class
@@ -427,6 +428,13 @@ class ServiceStateManager {
       await serviceStorage.updateServiceState(serviceId, {
         enabled: true,
       });
+
+      // If Caddy was started, sync all projects
+      if (serviceId === ServiceId.Caddy) {
+        syncProjectsToCaddy().catch(error => {
+          console.warn('Failed to sync projects to Caddy on startup:', error);
+        });
+      }
 
       console.log(`Service ${serviceId} started successfully`);
 

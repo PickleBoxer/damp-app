@@ -29,6 +29,7 @@ import {
   getPostCreateCommand,
   getPostStartCommand,
 } from './project-templates';
+import { syncProjectsToCaddy } from '../docker/caddy-config';
 
 const DOCKER_NETWORK = 'damp-network';
 const FORWARDED_PORT = 8080;
@@ -448,6 +449,11 @@ class ProjectStateManager {
       // Step 11: Save project to storage
       await projectStorage.setProject(project);
 
+      // Step 12: Sync project to Caddy (non-blocking)
+      syncProjectsToCaddy().catch(error => {
+        console.warn('Failed to sync project to Caddy:', error);
+      });
+
       console.log(`Project ${project.name} created successfully`);
 
       return {
@@ -618,6 +624,11 @@ class ProjectStateManager {
 
       // Remove from storage
       await projectStorage.deleteProject(projectId);
+
+      // Sync Caddy to remove project (non-blocking)
+      syncProjectsToCaddy().catch(error => {
+        console.warn('Failed to sync Caddy after project deletion:', error);
+      });
 
       console.log(`Project ${project.name} deleted successfully`);
 
