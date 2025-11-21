@@ -59,15 +59,10 @@ export function ProjectPreview({ project }: ProjectPreviewProps) {
                       height: '1080px',
                     }}
                   >
-                    <iframe
+                    <webview
                       src={`https://${project.domain}`}
-                      title={project.name}
-                      width="1920"
-                      height="1080"
-                      className="rounded-md border-0"
-                      style={{ pointerEvents: 'none' }}
-                      sandbox="allow-scripts allow-same-origin"
-                      loading="lazy"
+                      style={{ width: '1920px', height: '1080px', pointerEvents: 'none' }}
+                      className="rounded-md"
                     />
                   </div>
                 </div>

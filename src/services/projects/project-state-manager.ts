@@ -239,8 +239,10 @@ class ProjectStateManager {
         projectName: project.name,
         volumeName: project.volumeName,
         phpVersion: project.phpVersion,
+        phpVariant: project.phpVariant,
         nodeVersion: project.nodeVersion,
         phpExtensions: project.phpExtensions.join(' '),
+        documentRoot: project.type === 'existing' ? '/var/www/html' : '/var/www/html/public',
         networkName: project.networkName,
         containerName: this.generateContainerName(project.name),
         forwardedPort: project.forwardedPort,
@@ -265,16 +267,21 @@ class ProjectStateManager {
 
       // Create index.php for basic-php projects if it doesn't exist
       if (project.type === 'basic-php') {
-        const indexPath = path.join(project.path, 'index.php');
+        // Create index.php in public/ folder if needed
+        const publicPath = path.join(project.path, 'public');
+        const indexPath = path.join(publicPath, 'index.php');
         const indexExists = await fs
           .access(indexPath)
           .then(() => true)
           .catch(() => false);
 
         if (!indexExists) {
+          // Ensure public directory exists
+          await fs.mkdir(publicPath, { recursive: true });
+
           const indexContent = generateIndexPhp(project.name, project.phpVersion);
           await fs.writeFile(indexPath, indexContent, 'utf-8');
-          console.log(`Created index.php for project ${project.name}`);
+          console.log(`Created public/index.php for project ${project.name}`);
         }
       }
 
@@ -402,12 +409,13 @@ class ProjectStateManager {
         volumeName: this.generateVolumeName(sanitizedName),
         domain: this.generateDomain(sanitizedName),
         phpVersion: input.phpVersion,
+        phpVariant: input.phpVariant,
         nodeVersion: input.nodeVersion,
         phpExtensions: input.phpExtensions,
         enableClaudeAi: input.enableClaudeAi,
         forwardedPort: FORWARDED_PORT,
         networkName: DOCKER_NETWORK,
-        postStartCommand: getPostStartCommand(projectType),
+        postStartCommand: getPostStartCommand(),
         postCreateCommand: getPostCreateCommand(),
         order: projectStorage.getNextOrder(),
         createdAt: Date.now(),
@@ -427,13 +435,8 @@ class ProjectStateManager {
       }
       project.devcontainerCreated = true;
 
-      // Step 9: Copy local files to volume
-      await volumeManager.copyToVolume(
-        projectPath,
-        project.volumeName,
-        path.basename(projectPath),
-        onProgress
-      );
+      // Step 9: Copy local files to volume (directly to root, not in subfolder)
+      await volumeManager.copyToVolume(projectPath, project.volumeName, '.', onProgress);
       project.volumeCopied = true;
 
       // Step 10: Update hosts file
@@ -687,12 +690,7 @@ class ProjectStateManager {
         };
       }
 
-      await volumeManager.copyToVolume(
-        project.path,
-        project.volumeName,
-        path.basename(project.path),
-        onProgress
-      );
+      await volumeManager.copyToVolume(project.path, project.volumeName, '.', onProgress);
 
       // Update volumeCopied flag
       await projectStorage.updateProject(projectId, { volumeCopied: true });

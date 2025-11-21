@@ -25,7 +25,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       nodeIntegrationInSubFrames: false,
-
+      webviewTag: true,
       preload: preload,
     },
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',

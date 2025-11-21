@@ -198,6 +198,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       return {
         running: status?.running || false,
         exists: status?.exists || false,
+        ports: status?.ports || [],
       };
     } catch (error) {
       console.error('Failed to get container status:', error);

@@ -65,7 +65,11 @@ export interface ProjectsContext {
   /**
    * Get container status for a project
    */
-  getContainerStatus: (projectId: string) => Promise<{ running: boolean; exists: boolean }>;
+  getContainerStatus: (projectId: string) => Promise<{
+    running: boolean;
+    exists: boolean;
+    ports: Array<[string, string]>;
+  }>;
 
   /**
    * Subscribe to volume copy progress events

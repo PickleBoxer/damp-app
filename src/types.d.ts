@@ -17,6 +17,7 @@ interface ElectronWindow {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
+  openExternal: (url: string) => Promise<void>;
 }
 
 interface DockerContext {
@@ -55,7 +56,11 @@ interface ProjectsContext {
   selectFolder: (defaultPath?: string) => Promise<unknown>;
   detectLaravel: (folderPath: string) => Promise<unknown>;
   devcontainerExists: (folderPath: string) => Promise<unknown>;
-  getContainerStatus: (projectId: string) => Promise<{ running: boolean; exists: boolean }>;
+  getContainerStatus: (projectId: string) => Promise<{
+    running: boolean;
+    exists: boolean;
+    ports: Array<[string, string]>;
+  }>;
   onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
 }
 

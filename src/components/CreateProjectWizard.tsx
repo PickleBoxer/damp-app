@@ -19,7 +19,7 @@ import { ArrowLeft, ArrowRight, Check, FolderOpen, Info, ChevronDown } from 'luc
 import { useCreateProject } from '@/api/projects/projects-queries';
 import { selectFolder as selectProjectFolder } from '@/api/projects/projects-api';
 import { ProjectType } from '@/types/project';
-import type { CreateProjectInput, PhpVersion, NodeVersion } from '@/types/project';
+import type { CreateProjectInput, PhpVersion, NodeVersion, PhpVariant } from '@/types/project';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
 import {
@@ -57,7 +57,7 @@ interface CreateProjectWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type WizardStep = 'type' | 'basic' | 'configuration' | 'extensions' | 'review';
+type WizardStep = 'type' | 'basic' | 'variant' | 'runtime' | 'extensions' | 'review';
 
 const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: string }> = [
   {
@@ -78,7 +78,30 @@ const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: str
 ];
 
 const PHP_VERSIONS: PhpVersion[] = ['7.4', '8.1', '8.2', '8.3', '8.4'];
-const NODE_VERSIONS: NodeVersion[] = ['none', 'lts', 'latest', '20', '22'];
+const NODE_VERSIONS: NodeVersion[] = ['none', 'lts', 'latest', '20', '22', '24', '25'];
+
+const PHP_VARIANTS: Array<{ value: PhpVariant; label: string; description: string }> = [
+  {
+    value: 'fpm-apache',
+    label: 'FPM-Apache',
+    description: 'Apache + PHP-FPM (WordPress, .htaccess support)',
+  },
+  {
+    value: 'fpm-nginx',
+    label: 'FPM-NGINX',
+    description: 'NGINX + PHP-FPM (better performance)',
+  },
+  {
+    value: 'frankenphp',
+    label: 'FrankenPHP',
+    description: 'Modern high-performance (HTTP/2, HTTP/3)',
+  },
+  {
+    value: 'fpm',
+    label: 'FPM Only',
+    description: 'PHP-FPM only (requires external web server)',
+  },
+];
 
 // Extensions that come pre-installed with the container (always included)
 const PREINSTALLED_PHP_EXTENSIONS = [
@@ -125,6 +148,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   const [formData, setFormData] = useState<Partial<CreateProjectInput>>({
     type: ProjectType.BasicPhp,
     phpVersion: '8.3',
+    phpVariant: 'fpm-apache',
     nodeVersion: 'none',
     enableClaudeAi: false,
     phpExtensions: ['bcmath', 'gd', 'intl'], // Only additional extensions (pre-installed are always included)
@@ -142,7 +166,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   };
 
   const handleNext = () => {
-    const steps: WizardStep[] = ['type', 'basic', 'configuration', 'extensions', 'review'];
+    const steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
     const currentIndex = steps.indexOf(step);
     if (currentIndex < steps.length - 1) {
       setStep(steps[currentIndex + 1]);
@@ -150,7 +174,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   };
 
   const handleBack = () => {
-    const steps: WizardStep[] = ['type', 'basic', 'configuration', 'extensions', 'review'];
+    const steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
     const currentIndex = steps.indexOf(step);
     if (currentIndex > 0) {
       setStep(steps[currentIndex - 1]);
@@ -165,6 +189,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       path: formData.path,
       type: formData.type || ProjectType.BasicPhp,
       phpVersion: formData.phpVersion || '8.3',
+      phpVariant: formData.phpVariant || 'fpm-apache',
       nodeVersion: formData.nodeVersion || 'none',
       enableClaudeAi: formData.enableClaudeAi || false,
       phpExtensions: formData.phpExtensions || [], // Only send additional extensions
@@ -176,6 +201,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     setFormData({
       type: ProjectType.BasicPhp,
       phpVersion: '8.3',
+      phpVariant: 'fpm-apache',
       nodeVersion: 'none',
       enableClaudeAi: false,
       phpExtensions: ['bcmath', 'gd', 'intl'],
@@ -207,7 +233,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         const validation = validateSiteName(formData.name || '');
         return validation.isValid && !!formData.path;
       }
-      case 'configuration':
+      case 'variant':
+        return !!formData.phpVariant;
+      case 'runtime':
         return !!formData.phpVersion && !!formData.nodeVersion;
       case 'extensions':
         return true;
@@ -228,7 +256,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
               {PROJECT_TYPES.map(type => (
                 <div
                   key={type.value}
-                  onClick={() => setFormData(prev => ({ ...prev, type: type.value }))}
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, type: type.value }));
+                  }}
                   className={`border-input hover:border-primary flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors ${
                     formData.type === type.value ? 'border-primary bg-primary/5' : ''
                   }`}
@@ -293,7 +323,79 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           </div>
         );
 
-      case 'configuration':
+      case 'variant':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 p-4 dark:border-purple-800 dark:from-purple-950/30 dark:to-violet-950/30">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-purple-600/10">
+                    <SiPhp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="phpVariant" className="cursor-pointer text-sm font-medium">
+                      PHP Variant
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      Choose web server and runtime configuration
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {PHP_VARIANTS.map(variant => (
+                    <div
+                      key={variant.value}
+                      onClick={() => {
+                        setFormData(prev => {
+                          const newData = { ...prev, phpVariant: variant.value };
+                          // Auto-upgrade PHP version if FrankenPHP selected and version is < 8.3
+                          if (
+                            variant.value === 'frankenphp' &&
+                            prev.phpVersion &&
+                            ['7.4', '8.1', '8.2'].includes(prev.phpVersion)
+                          ) {
+                            newData.phpVersion = '8.3';
+                          }
+                          return newData;
+                        });
+                      }}
+                      className={`border-input hover:border-primary flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                        formData.phpVariant === variant.value ? 'border-primary bg-primary/5' : ''
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <div className="text-sm font-medium">{variant.label}</div>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          {variant.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-muted/30 rounded-lg border p-3">
+              <p className="text-muted-foreground text-xs">
+                Powered by{' '}
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.electronWindow.openExternal(
+                      'https://serversideup.net/open-source/docker-php/docs/getting-started'
+                    )
+                  }
+                  className="text-primary cursor-pointer font-medium hover:underline"
+                >
+                  ServerSideUp Docker PHP
+                </button>{' '}
+                images
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'runtime':
         return (
           <div className="space-y-6">
             <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
@@ -307,7 +409,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                     <p className="text-muted-foreground text-xs">
                       {formData.type === ProjectType.Laravel
                         ? 'Laravel requires PHP 8.2 or higher'
-                        : 'Select the PHP runtime version for your project'}
+                        : formData.phpVariant === 'frankenphp'
+                          ? 'FrankenPHP requires PHP 8.3 or higher'
+                          : 'Select the PHP runtime version for your project'}
                     </p>
                   </div>
                 </div>
@@ -326,7 +430,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                         key={version}
                         value={version}
                         disabled={
-                          formData.type === ProjectType.Laravel && ['7.4', '8.1'].includes(version)
+                          (formData.type === ProjectType.Laravel &&
+                            ['7.4', '8.1'].includes(version)) ||
+                          (formData.phpVariant === 'frankenphp' &&
+                            ['7.4', '8.1', '8.2'].includes(version))
                         }
                       >
                         {version}
@@ -476,7 +583,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
 
       case 'review':
         return (
-          <ScrollArea className="h-[420px]">
+          <ScrollArea>
             <div className="space-y-4 pr-4">
               {/* Project Overview Card */}
               <div className="from-background to-muted/20 rounded-lg border bg-gradient-to-br p-4">
@@ -504,6 +611,21 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
 
               {/* Runtime Configuration */}
               <div className="space-y-3">
+                <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 p-3.5 dark:border-purple-800 dark:from-purple-950/30 dark:to-violet-950/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <SiPhp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      <span className="text-sm font-medium">PHP Variant</span>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className="bg-background rounded-md text-xs capitalize"
+                    >
+                      {PHP_VARIANTS.find(v => v.value === formData.phpVariant)?.label}
+                    </Badge>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-3.5 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
                     <div className="flex items-center justify-between">
@@ -622,8 +744,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         return 'Choose Project Type';
       case 'basic':
         return 'Basic Information';
-      case 'configuration':
-        return 'Configuration';
+      case 'variant':
+        return 'PHP Variant';
+      case 'runtime':
+        return 'Runtime Configuration';
       case 'extensions':
         return 'PHP Extensions';
       case 'review':
@@ -641,7 +765,8 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           <DialogDescription>
             {step === 'type' && 'Select the type of project you want to create'}
             {step === 'basic' && 'Enter the basic details for your project'}
-            {step === 'configuration' && 'Configure PHP, Node.js, and other options'}
+            {step === 'variant' && 'Choose the web server and PHP runtime variant'}
+            {step === 'runtime' && 'Configure PHP, Node.js, and other options'}
             {step === 'extensions' && 'Choose the PHP extensions you need'}
             {step === 'review' && 'Review your project configuration before creating'}
           </DialogDescription>

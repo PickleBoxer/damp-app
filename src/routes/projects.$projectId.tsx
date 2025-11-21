@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useSuspenseProject,
   useDeleteProject,
+  useProjectContainerStatus,
   projectQueryOptions,
 } from '@/api/projects/projects-queries';
 import { ProjectIcon } from '@/components/ProjectIcon';
@@ -47,10 +48,15 @@ import { useState } from 'react';
 function ProjectDetailPage() {
   const { projectId } = Route.useParams();
   const { data: project } = useSuspenseProject(projectId);
+  const { data: containerStatus } = useProjectContainerStatus(projectId);
   const deleteProjectMutation = useDeleteProject();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [removeFolder, setRemoveFolder] = useState(false);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
+
+  // Get the forwarded localhost port (VS Code auto-forwards 8080 to different localhost ports)
+  const forwardedLocalhostPort =
+    containerStatus?.ports?.find(([, priv]) => priv === '8080')?.[0] || null;
 
   const handleOpenVSCode = async () => {
     const result = await openProjectInEditor(project.id);
@@ -217,6 +223,9 @@ function ProjectDetailPage() {
                       {project.type.replaceAll('-', ' ')}
                     </Badge>
                     <Badge variant="secondary">PHP {project.phpVersion}</Badge>
+                    <Badge variant="secondary" className="capitalize">
+                      {project.phpVariant}
+                    </Badge>
                     <Badge variant="secondary">Node {project.nodeVersion}</Badge>
                   </div>
                 </div>
@@ -244,9 +253,20 @@ function ProjectDetailPage() {
                       <span className="font-mono">{project.networkName}</span>
                     </div>
                     <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <span className="text-muted-foreground">Forwarded Port</span>
+                      <span className="text-muted-foreground">Container Port</span>
                       <span>{project.forwardedPort}</span>
                     </div>
+                    {forwardedLocalhostPort && (
+                      <div className="grid grid-cols-[140px_1fr] gap-2">
+                        <span className="text-muted-foreground">Localhost Port</span>
+                        <span className="font-mono">
+                          localhost:{forwardedLocalhostPort}
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            VS Code forwarded
+                          </Badge>
+                        </span>
+                      </div>
+                    )}
                     <div className="grid grid-cols-[140px_1fr] gap-2">
                       <span className="text-muted-foreground">Claude AI</span>
                       <span>{project.enableClaudeAi ? 'Enabled' : 'Disabled'}</span>

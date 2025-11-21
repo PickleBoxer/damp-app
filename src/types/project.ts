@@ -19,7 +19,12 @@ export type PhpVersion = '7.4' | '8.1' | '8.2' | '8.3' | '8.4';
 /**
  * Node version options
  */
-export type NodeVersion = 'none' | 'lts' | 'latest' | '20' | '22';
+export type NodeVersion = 'none' | 'lts' | 'latest' | '20' | '22' | '24' | '25';
+
+/**
+ * PHP variant options
+ */
+export type PhpVariant = 'fpm-apache' | 'fpm-nginx' | 'frankenphp' | 'fpm';
 
 /**
  * Common PHP extensions
@@ -58,6 +63,8 @@ export interface Project {
   phpVersion: PhpVersion;
   /** Node version */
   nodeVersion: NodeVersion;
+  /** PHP variant (image type) */
+  phpVariant: PhpVariant;
   /** PHP extensions to install */
   phpExtensions: string[];
   /** Enable Claude AI devcontainer feature */
@@ -96,6 +103,8 @@ export interface CreateProjectInput {
   phpVersion: PhpVersion;
   /** Node version */
   nodeVersion: NodeVersion;
+  /** PHP variant */
+  phpVariant: PhpVariant;
   /** PHP extensions */
   phpExtensions: string[];
   /** Enable Claude AI */
@@ -118,6 +127,8 @@ export interface UpdateProjectInput {
   phpVersion?: PhpVersion;
   /** Updated Node version */
   nodeVersion?: NodeVersion;
+  /** Updated PHP variant */
+  phpVariant?: PhpVariant;
   /** Updated PHP extensions */
   phpExtensions?: string[];
   /** Updated Claude AI setting */
@@ -135,7 +146,8 @@ export interface TemplateContext {
   phpVersion: PhpVersion;
   nodeVersion: NodeVersion;
   phpExtensions: string;
-  phpVariant?: string;
+  phpVariant: PhpVariant;
+  documentRoot: string;
   networkName: string;
   containerName: string;
   forwardedPort: number;

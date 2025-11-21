@@ -3,41 +3,96 @@
  * Generates devcontainer files from templates with dynamic placeholders
  */
 
-import type { TemplateContext, ProjectTemplate, ProjectType } from '../../types/project';
+import type { TemplateContext, ProjectTemplate } from '../../types/project';
+
+/**
+ * Map Node.js versions to specific releases for better Docker layer caching
+ */
+const NODE_VERSION_MAP: Record<string, string> = {
+  lts: '24',
+  latest: '25',
+  '20': '20',
+  '22': '22',
+  '24': '24',
+  '25': '25',
+};
 
 /**
  * Replace template placeholders with actual values
  */
 function renderTemplate(template: string, context: TemplateContext): string {
+  const hasPhpExtensions = context.phpExtensions && context.phpExtensions.trim().length > 0;
+  const hasNodeVersion = context.nodeVersion && context.nodeVersion !== 'none';
+  const nodeVersionMapped = hasNodeVersion
+    ? NODE_VERSION_MAP[context.nodeVersion] || context.nodeVersion
+    : '';
+
+  // Prepare Node.js installation blocks
+  const nodeSetup = hasNodeVersion
+    ? {
+        comment: ` and Node.js ${nodeVersionMapped}`,
+        cacheMount: `--mount=type=cache,target=/root/.npm,sharing=locked \\
+    `,
+        setupCommands: `curl -fsSL https://deb.nodesource.com/setup_${nodeVersionMapped}.x | bash - \\
+    && apt-get install -y --no-install-recommends \\
+        git \\
+        zsh \\
+        nodejs \\
+    && npm install -g npm@latest`,
+      }
+    : {
+        comment: '',
+        cacheMount: '',
+        setupCommands: `apt-get update \\
+    && apt-get install -y --no-install-recommends \\
+        git \\
+        zsh`,
+      };
+
   return template
     .replaceAll('{{PROJECT_NAME}}', context.projectName)
     .replaceAll('{{VOLUME_NAME}}', context.volumeName)
     .replaceAll('{{PHP_VERSION}}', context.phpVersion)
     .replaceAll('{{NODE_VERSION}}', context.nodeVersion)
+    .replaceAll('{{NODE_VERSION_MAPPED}}', nodeVersionMapped)
     .replaceAll('{{PHP_EXTENSIONS}}', context.phpExtensions)
+    .replaceAll('{{PHP_VARIANT}}', context.phpVariant)
+    .replaceAll('{{DOCUMENT_ROOT}}', context.documentRoot)
     .replaceAll('{{NETWORK_NAME}}', context.networkName)
     .replaceAll('{{CONTAINER_NAME}}', context.containerName)
     .replaceAll('{{FORWARDED_PORT}}', context.forwardedPort.toString())
-    .replaceAll('{{WORKSPACE_FOLDER_NAME}}', context.workspaceFolderName)
-    .replaceAll('{{PHP_VARIANT}}', context.phpVariant || 'cli')
     .replaceAll('{{POST_START_COMMAND}}', context.postStartCommand)
     .replaceAll('{{POST_CREATE_COMMAND}}', context.postCreateCommand || '')
     .replaceAll('{{LAUNCH_INDEX_PATH}}', context.launchIndexPath || '')
     .replaceAll(
+      '{{PHP_EXTENSIONS_DOCKERFILE}}',
+      hasPhpExtensions ? ` ${context.phpExtensions}` : ''
+    )
+    .replaceAll('{{NODE_INSTALL_COMMENT}}', nodeSetup.comment)
+    .replaceAll('{{NODE_CACHE_MOUNT}}', nodeSetup.cacheMount)
+    .replaceAll('{{NODE_SETUP_COMMANDS}}', nodeSetup.setupCommands)
+    .replaceAll(
       '{{CLAUDE_AI_FEATURE}}',
-      context.enableClaudeAi
-        ? ',\n        "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}'
-        : ''
+      context.enableClaudeAi ? '"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}' : ''
     );
 }
 
 /**
  * Unified devcontainer.json template
+ *
+ * Configuration:
+ * - remoteUser: vscode (connects as vscode user)
+ * - workspaceMount: Docker volume for performance
+ * - overrideCommand: false (S6 Overlay auto-starts services)
+ * - Minimal features (only Claude AI if enabled)
  */
 const DEVCONTAINER_JSON_TEMPLATE = `{
     "name": "{{PROJECT_NAME}}",
-    "workspaceMount": "source={{VOLUME_NAME}},target=/workspace,type=volume",
-    "workspaceFolder": "/workspace/{{WORKSPACE_FOLDER_NAME}}",
+
+    // Docker volume for better performance and persistent storage
+    "workspaceMount": "source={{VOLUME_NAME}},target=/var/www/html,type=volume",
+    "workspaceFolder": "/var/www/html",
+
     "build": {
         "dockerfile": "./Dockerfile",
         "context": ".",
@@ -47,34 +102,25 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
             "GROUP_ID": "1000"
         }
     },
-    "features": {
-        "ghcr.io/devcontainers/features/common-utils:2": {
-            "installZsh": "true",
-            "configureZshAsDefaultShell": "true",
-            "installOhMyZsh": "true",
-            "installOhMyZshConfig": "true",
-            "upgradePackages": "true"
-        },
-        "ghcr.io/devcontainers/features/git:1": {
-            "version": "latest",
-            "ppa": "false"
-        },
-        "ghcr.io/devcontainers/features/node:1": {
-            "version": "{{NODE_VERSION}}"
-        },
-        "ghcr.io/opencodeco/devcontainers/install-php-extensions:0": {
-            "extensions": "{{PHP_EXTENSIONS}}"
-        }{{CLAUDE_AI_FEATURE}}
+
+    "remoteUser": "vscode",
+    "overrideCommand": false,
+
+    "containerEnv": {
+        "SSL_MODE": "off",
+        "PHP_OPCACHE_ENABLE": "0"
     },
-    "overrideFeatureInstallOrder": [
-        "ghcr.io/devcontainers/features/common-utils"
-    ],
+
+    "features": {
+        {{CLAUDE_AI_FEATURE}}
+    },
+
     "customizations": {
         "vscode": {
             "settings": {
                 "github.copilot.chat.codeGeneration.instructions": [
                     {
-                        "text": "This dev container includes \`php\` (with \`xdebug\`), \`pecl\`, \`composer\` pre-installed and available on the \`PATH\`, along with PHP language extensions for PHP development."
+                        "text": "This dev container includes php (with xdebug), pecl, composer pre-installed and available on the PATH, along with PHP language extensions for PHP development."
                     }
                 ],
                 "php.validate.executablePath": "/usr/local/bin/php"
@@ -86,64 +132,90 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
             ]
         }
     },
+
     "runArgs": [
         "--network={{NETWORK_NAME}}",
-        "--name",
-        "{{CONTAINER_NAME}}"
+        "--name={{CONTAINER_NAME}}"
     ],
+
     "forwardPorts": [{{FORWARDED_PORT}}],
+
     "postCreateCommand": "{{POST_CREATE_COMMAND}}",
     "postStartCommand": "{{POST_START_COMMAND}}"
 }`;
 
 /**
  * Dockerfile template
+ *
+ * Architecture: vscode user (1000:1000) owns files, www-data (33:33) reads via group
+ * Pattern: vscode:www-data ownership with 775/664 permissions
  */
-const DOCKERFILE_TEMPLATE = `############################################
+const DOCKERFILE_TEMPLATE = `# syntax=docker/dockerfile:1.4
+
+############################################
+# Build Arguments
+############################################
+ARG PHP_VERSION={{PHP_VERSION}}
+ARG PHP_VARIANT={{PHP_VARIANT}}
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+############################################
 # Base Image
 ############################################
-FROM serversideup/php:{{PHP_VERSION}}-{{PHP_VARIANT}} AS base
+FROM serversideup/php:\${PHP_VERSION}-\${PHP_VARIANT} AS base
 
 ############################################
 # Development Image
 ############################################
 FROM base AS development
 
-# Switch to root so we can do root things
 USER root
 
-# Install xdebug
-RUN install-php-extensions xdebug \\
-    && echo "zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)" > /usr/local/etc/php/conf.d/xdebug.ini \\
-    && echo "xdebug.mode = develop,debug,trace,coverage,profile" >> /usr/local/etc/php/conf.d/xdebug.ini \\
-    && echo "xdebug.start_with_request = trigger" >> /usr/local/etc/php/conf.d/xdebug.ini \\
-    && echo "xdebug.client_port = 9003" >> /usr/local/etc/php/conf.d/xdebug.ini \\
-    && rm -rf /tmp/pear
+# Install development tools{{NODE_INSTALL_COMMENT}}
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \\
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \\
+    {{NODE_CACHE_MOUNT}}{{NODE_SETUP_COMMANDS}} \\
+    && apt-get clean \\
+    && rm -rf /var/lib/apt/lists/*
 
-# Save the build arguments as a variable
+# Install Xdebug and additional PHP extensions
+RUN install-php-extensions xdebug{{PHP_EXTENSIONS_DOCKERFILE}} \\
+    && cat > /usr/local/etc/php/conf.d/xdebug.ini <<'EOF'
+zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)
+xdebug.mode = develop,debug,trace,coverage,profile
+xdebug.start_with_request = trigger
+xdebug.client_port = 9003
+EOF
+
+# Create vscode user with zsh shell
 ARG USER_ID
 ARG GROUP_ID
+RUN groupadd --gid \${GROUP_ID} vscode \\
+    && useradd --uid \${USER_ID} --gid \${GROUP_ID} -m vscode -s /usr/bin/zsh \\
+    && usermod -aG www-data vscode
 
-# Use the build arguments to change the UID
-# and GID of www-data while also changing
-# the file permissions for NGINX
-RUN docker-php-serversideup-set-id www-data $USER_ID:$GROUP_ID
+# Configure vscode user environment
+RUN mkdir -p /etc/sudoers.d \\
+    && echo "vscode ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/vscode \\
+    && chmod 0440 /etc/sudoers.d/vscode \\
+    && echo "umask 002" >> /home/vscode/.zshrc \\
+    && echo "umask 002" >> /home/vscode/.profile
 
-# Update the file permissions for our NGINX service to match the new UID/GID
-# RUN docker-php-serversideup-set-file-permissions --owner $USER_ID:$GROUP_ID --service nginx
+# Set workspace permissions (vscode:www-data with 775/664)
+RUN chown -R vscode:www-data /var/www/html \\
+    && chmod -R 775 /var/www/html
 
-# Drop back to our unprivileged user
+# Switch to www-data user (S6 Overlay runs services as www-data)
+# VS Code connects as vscode via remoteUser
 USER www-data
 
 ############################################
 # Production Image
 ############################################
-
-# Since we're calling "base", production isn't
-# calling any of that permission stuff
 FROM base AS production
 
-# Copy our app files as www-data (33:33)
+# Copy application files
 COPY --chown=www-data:www-data . /var/www/html
 `;
 
@@ -180,22 +252,16 @@ const LAUNCH_JSON_TEMPLATE = `{
 
 /**
  * Get post-start command based on project type
+ * With fpm-apache, Apache and PHP-FPM auto-start via S6 Overlay
  */
-export function getPostStartCommand(type: ProjectType): string {
-  switch (type) {
-    case 'basic-php':
-    case 'existing': // Existing defaults to basic-php behavior
-      return 'php -S 0.0.0.0:8080';
-    case 'laravel':
-      return 'composer run devcontainer';
-    default:
-      return 'php -S 0.0.0.0:8080';
-  }
+export function getPostStartCommand(): string {
+  // Apache/NGINX/FrankenPHP auto-start, no command needed
+  return '';
 }
 
 /**
- * Get post-create command (same for all project types)
- * Conditionally installs composer and npm dependencies if files exist
+ * Get post-create command (runs after container is created)
+ * Conditionally installs composer and npm dependencies if lock files exist
  */
 export function getPostCreateCommand(): string {
   return '[ -f composer.json ] && composer install || true; [ -f package.json ] && npm install && npm run build || true';
@@ -214,6 +280,7 @@ export function generateProjectTemplates(context: TemplateContext): ProjectTempl
 
 /**
  * Generate index.php content for basic PHP projects
+ * Should be created in public/ folder
  */
 export function generateIndexPhp(projectName: string, phpVersion: string): string {
   return `<?php

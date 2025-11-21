@@ -112,11 +112,19 @@ class VolumeManager {
     targetSubPath: string,
     onProgress?: (progress: VolumeCopyProgress) => void
   ): Promise<void> {
-    if (!/^[a-zA-Z0-9_\-/]+$/.test(targetSubPath)) {
-      throw new Error(
-        'Invalid targetSubPath: must contain only alphanumeric, underscore, dash, and forward slash characters'
-      );
+    // Only validate for path traversal - allow all other characters
+    // This supports special filenames like: (parens), [brackets], @symbols, spaces, etc.
+    if (targetSubPath.includes('..')) {
+      throw new Error('Invalid targetSubPath: path traversal (..) not allowed');
     }
+
+    // Don't allow absolute paths (should be relative within volume)
+    if (targetSubPath.startsWith('/') && targetSubPath !== '/') {
+      throw new Error('Invalid targetSubPath: absolute paths not allowed (use relative paths)');
+    }
+
+    // Normalize path (trim leading/trailing slashes, except for root '.')
+    const normalizedPath = targetSubPath === '.' ? '.' : targetSubPath.replace(/^\/+|\/+$/g, '');
 
     try {
       // Ensure volume exists
@@ -147,7 +155,7 @@ class VolumeManager {
           'sh',
           '-c',
           // Use tar to copy files with exclusions and set proper permissions
-          `mkdir -p /volume/${targetSubPath} && ` +
+          `mkdir -p /volume/${normalizedPath} && ` +
             `cd /source && ` +
             `tar --exclude='node_modules' ` +
             `--exclude='vendor' ` +
@@ -155,8 +163,8 @@ class VolumeManager {
             //`--exclude='.devcontainer' ` +
             //`--exclude='.vscode' ` +
             `-cf - . | ` +
-            `tar -xf - -C /volume/${targetSubPath} && ` +
-            `chown -R ${uidGid} /volume/${targetSubPath}`,
+            `tar -xf - -C /volume/${normalizedPath} && ` +
+            `chown -R ${uidGid} /volume/${normalizedPath}`,
         ],
         HostConfig: {
           Binds: [
