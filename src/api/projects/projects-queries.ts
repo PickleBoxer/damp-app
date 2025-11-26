@@ -16,6 +16,7 @@ import type {
   UpdateProjectInput,
   ProjectOperationResult,
 } from '../../types/project';
+import type { ProjectsContext } from '@/helpers/ipc/projects/projects-context';
 import * as projectsApi from './projects-api';
 
 /**
@@ -106,11 +107,29 @@ export function useProjectContainerStatus(
 ) {
   return useQuery({
     queryKey: projectKeys.containerStatus(projectId || ''),
-    queryFn: () => projectsApi.getContainerStatus(projectId || ''),
+    queryFn: async () => {
+      const status = await projectsApi.getContainerStatus(projectId || '');
+
+      // If container is running, discover the forwarded localhost port via IPC
+      let forwardedLocalhostPort: number | null = null;
+      if (status.running && projectId) {
+        const project = await projectsApi.getProject(projectId);
+        if (project) {
+          // Construct container name from project name
+          const containerName = `${project.name.toLowerCase().replaceAll(/[^a-z0-9_.-]/g, '_')}_devcontainer`;
+          // Call IPC to discover port in main process (no CORS restrictions)
+          forwardedLocalhostPort = await (
+            globalThis as typeof globalThis & { projects: ProjectsContext }
+          ).projects.discoverPort(containerName);
+        }
+      }
+
+      return { ...status, forwardedLocalhostPort };
+    },
     enabled: options?.enabled !== false && !!projectId,
     refetchInterval: options?.pollingInterval ?? 10000, // Poll every 10 seconds by default
-    staleTime: 8000, // Consider data fresh for 8 seconds
-    gcTime: 30000, // Keep in cache for 30 seconds
+    staleTime: 30000, // Consider data fresh for 30 seconds (port won't change often)
+    gcTime: 60000, // Keep in cache for 60 seconds
     refetchOnWindowFocus: true, // Refetch on window focus to keep data fresh
   });
 }

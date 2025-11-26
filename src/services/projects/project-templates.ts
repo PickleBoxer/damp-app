@@ -108,7 +108,8 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
 
     "containerEnv": {
         "SSL_MODE": "off",
-        "PHP_OPCACHE_ENABLE": "0"
+        "PHP_OPCACHE_ENABLE": "0",
+        "CONTAINER_NAME": "{{CONTAINER_NAME}}"
     },
 
     "features": {
@@ -182,7 +183,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \\
 # Install Xdebug and additional PHP extensions
 RUN install-php-extensions xdebug{{PHP_EXTENSIONS_DOCKERFILE}} \\
     && cat > /usr/local/etc/php/conf.d/xdebug.ini <<'EOF'
-zend_extension=$(find /usr/local/lib/php/extensions/ -name xdebug.so)
 xdebug.mode = develop,debug,trace,coverage,profile
 xdebug.start_with_request = trigger
 xdebug.client_port = 9003
@@ -195,12 +195,36 @@ RUN groupadd --gid \${GROUP_ID} vscode \\
     && useradd --uid \${USER_ID} --gid \${GROUP_ID} -m vscode -s /usr/bin/zsh \\
     && usermod -aG www-data vscode
 
+# Install Oh My Zsh for vscode user
+USER vscode
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \\
+    && git clone https://github.com/zsh-users/zsh-autosuggestions \${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions \\
+    && git clone https://github.com/zsh-users/zsh-syntax-highlighting \${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \\
+    && git clone https://github.com/zsh-users/zsh-completions \${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-completions \\
+    && sed -i 's/plugins=(git)/plugins=(git node npm composer sudo command-not-found zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' ~/.zshrc
+
+USER root
+
 # Configure vscode user environment
 RUN mkdir -p /etc/sudoers.d \\
     && echo "vscode ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/vscode \\
     && chmod 0440 /etc/sudoers.d/vscode \\
     && echo "umask 002" >> /home/vscode/.zshrc \\
     && echo "umask 002" >> /home/vscode/.profile
+
+# Add custom Apache/Nginx configuration to inject container identification headers
+# Apache: Use environment variable with expr for dynamic header
+RUN if [ -d /etc/apache2/conf-enabled ]; then \\
+        echo '# Container identification header' > /etc/apache2/conf-enabled/container-headers.conf && \\
+        echo 'PassEnv CONTAINER_NAME' >> /etc/apache2/conf-enabled/container-headers.conf && \\
+        echo 'Header set X-Container-Name "expr=%{env:CONTAINER_NAME}"' >> /etc/apache2/conf-enabled/container-headers.conf; \\
+    fi
+
+# Nginx: Create template that will be processed with envsubst at startup
+RUN if [ -d /etc/nginx ]; then \\
+        mkdir -p /etc/nginx/templates && \\
+        echo 'add_header X-Container-Name \${CONTAINER_NAME} always;' > /etc/nginx/templates/container-headers.conf.template; \\
+    fi
 
 # Set workspace permissions (vscode:www-data with 775/664)
 RUN chown -R vscode:www-data /var/www/html \\

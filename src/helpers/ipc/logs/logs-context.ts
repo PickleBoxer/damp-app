@@ -65,7 +65,7 @@ export function exposeLogsContext(): void {
       const listener = (_event: Electron.IpcRendererEvent, log: LogLine) => callback(log);
       ipcRenderer.on(LOGS_LINE_CHANNEL, listener);
       return () => {
-        ipcRenderer.removeListener(LOGS_LINE_CHANNEL, listener);
+        ipcRenderer.off(LOGS_LINE_CHANNEL, listener);
       };
     },
   };

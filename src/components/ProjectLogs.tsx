@@ -37,6 +37,7 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
   // Start/stop streaming on mount/unmount
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
+    let mounted = true;
 
     const startStreaming = async () => {
       setIsStreaming(true);
@@ -45,6 +46,8 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
       try {
         // Start log streaming
         const result = await window.projectLogs.start(projectId);
+
+        if (!mounted) return; // Component unmounted during async call
 
         if (!result.success) {
           setError(result.error || 'Failed to start log streaming');
@@ -66,6 +69,7 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
           }
         });
       } catch (err) {
+        if (!mounted) return;
         setError(err instanceof Error ? err.message : 'Unknown error');
         setIsStreaming(false);
       }
@@ -75,6 +79,7 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
 
     // Cleanup on unmount
     return () => {
+      mounted = false;
       if (unsubscribe) {
         unsubscribe();
       }
@@ -179,7 +184,7 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
             logs.map((log, index) => (
               <div
                 key={`${log.timestamp}-${index}`}
-                className={`break-all whitespace-pre-wrap ${
+                className={`break-all whitespace-pre-wrap select-text ${
                   log.stream === 'stderr' ? 'text-red-400' : 'text-green-400'
                 }`}
               >

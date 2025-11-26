@@ -72,6 +72,12 @@ export interface ProjectsContext {
   }>;
 
   /**
+   * Discover the forwarded localhost port for a container
+   * Scans ports 8080-8090 and checks X-Container-Name header
+   */
+  discoverPort: (containerName: string) => Promise<number | null>;
+
+  /**
    * Subscribe to volume copy progress events
    */
   onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
@@ -113,6 +119,9 @@ export function exposeProjectsContext(): void {
     getContainerStatus: (projectId: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, projectId),
 
+    discoverPort: (containerName: string) =>
+      ipcRenderer.invoke(CHANNELS.PROJECTS_DISCOVER_PORT, containerName),
+
     onCopyProgress: callback => {
       const listener = (_event: unknown, projectId: string, progress: unknown) => {
         callback(projectId, progress);
@@ -121,7 +130,7 @@ export function exposeProjectsContext(): void {
 
       // Return cleanup function
       return () => {
-        ipcRenderer.removeListener(CHANNELS.PROJECTS_COPY_PROGRESS, listener);
+        ipcRenderer.off(CHANNELS.PROJECTS_COPY_PROGRESS, listener);
       };
     },
   };

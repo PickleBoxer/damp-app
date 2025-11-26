@@ -728,7 +728,7 @@ class DockerManager {
         stdout: true,
         stderr: true,
         tail,
-        timestamps: true,
+        timestamps: false, // Don't include Docker timestamps - cleaner output
       });
 
       // Demultiplex stdout and stderr

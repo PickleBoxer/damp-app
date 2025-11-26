@@ -54,9 +54,8 @@ function ProjectDetailPage() {
   const [removeFolder, setRemoveFolder] = useState(false);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
 
-  // Get the forwarded localhost port (VS Code auto-forwards 8080 to different localhost ports)
-  const forwardedLocalhostPort =
-    containerStatus?.ports?.find(([, priv]) => priv === '8080')?.[0] || null;
+  // Get the forwarded localhost port from container status (discovered via X-Container-Name header)
+  const forwardedLocalhostPort = containerStatus?.forwardedLocalhostPort || null;
 
   const handleOpenVSCode = async () => {
     const result = await openProjectInEditor(project.id);
@@ -119,7 +118,7 @@ function ProjectDetailPage() {
       <ScrollArea className={`${consoleExpanded ? 'h-1/2' : 'flex-1'} transition-all`}>
         <div className="space-y-4 p-2">
           {/* Safari Preview with Hover Expansion */}
-          <ProjectPreview project={project} />
+          <ProjectPreview project={project} forwardedLocalhostPort={forwardedLocalhostPort} />
           {/* Compact Project Header */}
           <div className="z-10 -mt-7 mb-0 flex items-baseline justify-between px-2">
             <div className="bg-background z-10 flex items-center rounded-md p-2">

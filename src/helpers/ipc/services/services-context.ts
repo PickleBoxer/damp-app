@@ -94,7 +94,7 @@ export function exposeServicesContext(): void {
 
       // Return cleanup function
       return () => {
-        ipcRenderer.removeListener(CHANNELS.SERVICES_INSTALL_PROGRESS, listener);
+        ipcRenderer.off(CHANNELS.SERVICES_INSTALL_PROGRESS, listener);
       };
     },
   };

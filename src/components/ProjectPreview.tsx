@@ -6,11 +6,21 @@ import { useProjectContainerStatus } from '@/api/projects/projects-queries';
 
 interface ProjectPreviewProps {
   project: Project;
+  forwardedLocalhostPort?: number | null;
 }
 
-export function ProjectPreview({ project }: ProjectPreviewProps) {
+export function ProjectPreview({ project, forwardedLocalhostPort }: Readonly<ProjectPreviewProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+
+  // Determine preview URL: prefer localhost port if discovered, fallback to Caddy domain
+  const previewUrl = forwardedLocalhostPort
+    ? `http://localhost:${forwardedLocalhostPort}`
+    : `https://${project.domain}`;
+
+  const displayUrl = forwardedLocalhostPort
+    ? `localhost:${forwardedLocalhostPort}`
+    : project.domain;
 
   useEffect(() => {
     const updateScale = () => {
@@ -22,7 +32,7 @@ export function ProjectPreview({ project }: ProjectPreviewProps) {
       setScale(Math.min(scaleW, scaleH));
     };
     updateScale();
-    const ro = new window.ResizeObserver(updateScale);
+    const ro = new globalThis.ResizeObserver(updateScale);
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
@@ -36,7 +46,7 @@ export function ProjectPreview({ project }: ProjectPreviewProps) {
   return (
     <div className="h-36 max-h-max overflow-hidden rounded duration-700 hover:h-96 hover:transition-[height] hover:duration-800">
       <div className="relative mx-auto w-full max-w-2xl">
-        <Safari url={project.domain} className="h-auto w-full" />
+        <Safari url={displayUrl} className="h-auto w-full" />
         {/* Overlay the preview in the content area */}
         <div className="pointer-event-none absolute inset-0 top-[6.9%] right-[0.08%] bottom-[1.6%] left-[0.08%] overflow-hidden">
           <div className="h-full w-full overflow-hidden">
@@ -60,7 +70,8 @@ export function ProjectPreview({ project }: ProjectPreviewProps) {
                     }}
                   >
                     <webview
-                      src={`https://${project.domain}`}
+                      key={previewUrl}
+                      src={previewUrl}
                       style={{ width: '1920px', height: '1080px', pointerEvents: 'none' }}
                       className="rounded-md"
                     />

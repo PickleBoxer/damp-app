@@ -61,6 +61,7 @@ interface ProjectsContext {
     exists: boolean;
     ports: Array<[string, string]>;
   }>;
+  discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
 }
 

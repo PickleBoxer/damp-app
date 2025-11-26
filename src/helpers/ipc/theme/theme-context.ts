@@ -22,7 +22,7 @@ export function exposeThemeContext() {
       ipcRenderer.on(THEME_MODE_UPDATED_CHANNEL, listener);
       // Return cleanup function
       return () => {
-        ipcRenderer.removeListener(THEME_MODE_UPDATED_CHANNEL, listener);
+        ipcRenderer.off(THEME_MODE_UPDATED_CHANNEL, listener);
       };
     },
   });

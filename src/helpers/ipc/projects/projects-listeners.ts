@@ -15,9 +15,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   // Initialize project manager on first use
   let initPromise: Promise<void> | null = null;
   const ensureInitialized = async () => {
-    if (!initPromise) {
-      initPromise = projectStateManager.initialize();
-    }
+    initPromise ??= projectStateManager.initialize();
     await initPromise;
   };
 
@@ -26,9 +24,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
     typeof import('../../../services/docker/docker-manager')
   > | null = null;
   const getDockerManager = async () => {
-    if (!dockerManagerPromise) {
-      dockerManagerPromise = import('../../../services/docker/docker-manager');
-    }
+    dockerManagerPromise ??= import('../../../services/docker/docker-manager');
     return dockerManagerPromise;
   };
 
@@ -203,6 +199,49 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
     } catch (error) {
       console.error('Failed to get container status:', error);
       return { running: false, exists: false };
+    }
+  });
+
+  /**
+   * Discover forwarded localhost port for a container
+   * Scans ports 8080-8090 and checks X-Container-Name header
+   */
+  ipcMain.handle(CHANNELS.PROJECTS_DISCOVER_PORT, async (_event, containerName: string) => {
+    try {
+      console.log(`[Main] Discovering port for container: ${containerName}`);
+
+      // Scan ports 8080-8090
+      for (let port = 8080; port <= 8090; port++) {
+        try {
+          // Use native fetch with timeout (Node.js 18+)
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 2000);
+
+          try {
+            const response = await fetch(`http://localhost:${port}`, {
+              method: 'HEAD',
+              signal: controller.signal,
+            });
+
+            // Check X-Container-Name header
+            const headerValue = response.headers.get('x-container-name');
+
+            if (headerValue === containerName) {
+              return port;
+            }
+          } finally {
+            clearTimeout(timeout);
+          }
+        } catch {
+          // Timeout, connection refused, or other error - continue to next port
+          continue;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[Main] Port discovery error:', error);
+      return null;
     }
   });
 }
