@@ -63,13 +63,16 @@ export interface ProjectsContext {
   devcontainerExists: (folderPath: string) => Promise<unknown>;
 
   /**
-   * Get container status for a project
+   * Get container status for multiple projects in a single call (optimized)
    */
-  getContainerStatus: (projectId: string) => Promise<{
-    running: boolean;
-    exists: boolean;
-    ports: Array<[string, string]>;
-  }>;
+  getBatchContainerStatus: (projectIds: string[]) => Promise<
+    Array<{
+      projectId: string;
+      running: boolean;
+      exists: boolean;
+      ports: Array<[string, string]>;
+    }>
+  >;
 
   /**
    * Discover the forwarded localhost port for a container
@@ -116,8 +119,8 @@ export function exposeProjectsContext(): void {
     devcontainerExists: (folderPath: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_DEVCONTAINER_EXISTS, folderPath),
 
-    getContainerStatus: (projectId: string) =>
-      ipcRenderer.invoke(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, projectId),
+    getBatchContainerStatus: (projectIds: string[]) =>
+      ipcRenderer.invoke(CHANNELS.PROJECTS_GET_BATCH_STATUS, projectIds),
 
     discoverPort: (containerName: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_DISCOVER_PORT, containerName),

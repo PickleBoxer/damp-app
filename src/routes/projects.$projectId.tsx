@@ -1,13 +1,15 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useSuspenseProject,
   useDeleteProject,
-  useProjectContainerStatus,
+  useProjectsBatchStatus,
+  useProjectPort,
   projectQueryOptions,
 } from '@/api/projects/projects-queries';
+import { useDocumentVisibility } from '@/hooks/use-document-visibility';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { ProjectPreview } from '@/components/ProjectPreview';
 import { ProjectLogs } from '@/components/ProjectLogs';
@@ -46,16 +48,28 @@ import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 
 function ProjectDetailPage() {
+  const navigate = useNavigate();
   const { projectId } = Route.useParams();
   const { data: project } = useSuspenseProject(projectId);
-  const { data: containerStatus } = useProjectContainerStatus(projectId);
   const deleteProjectMutation = useDeleteProject();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [removeFolder, setRemoveFolder] = useState(false);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
+  const isVisible = useDocumentVisibility();
 
-  // Get the forwarded localhost port from container status (discovered via X-Container-Name header)
-  const forwardedLocalhostPort = containerStatus?.forwardedLocalhostPort || null;
+  // Use batch status (same as list view) - non-blocking, shares cache
+  const { data: batchStatus } = useProjectsBatchStatus([projectId], {
+    enabled: isVisible,
+    pollingInterval: isVisible ? 10000 : 0, // 0 disables polling when not visible
+  });
+  const containerStatus = batchStatus?.[0];
+  const isRunning = containerStatus?.running || false;
+
+  // Lazy load port discovery - only when container is running (OPTIMIZED)
+  // This is the ONLY potentially slow operation, but it's lazy and non-blocking
+  const { data: forwardedLocalhostPort } = useProjectPort(projectId, {
+    enabled: isRunning, // Only discover port when container is actually running
+  });
 
   const handleOpenVSCode = async () => {
     const result = await openProjectInEditor(project.id);
@@ -103,11 +117,21 @@ function ProjectDetailPage() {
   };
 
   const handleDelete = () => {
-    deleteProjectMutation.mutate({
-      projectId: project.id,
-      removeVolume: false,
-      removeFolder,
-    });
+    deleteProjectMutation.mutate(
+      {
+        projectId: project.id,
+        removeVolume: false,
+        removeFolder,
+      },
+      {
+        onSuccess: data => {
+          if (data.success) {
+            // Navigate to projects list after successful deletion
+            navigate({ to: '/projects' });
+          }
+        },
+      }
+    );
     setShowDeleteDialog(false);
     setRemoveFolder(false);
   };
@@ -115,10 +139,14 @@ function ProjectDetailPage() {
   // Suspense handles loading state, project is guaranteed to exist
   return (
     <div className="flex h-full flex-col">
-      <ScrollArea className={`${consoleExpanded ? 'h-1/2' : 'flex-1'} transition-all`}>
+      <ScrollArea className={`${consoleExpanded ? 'h-1/2' : 'flex-1'} min-h-1/2 transition-all`}>
         <div className="space-y-4 p-2">
           {/* Safari Preview with Hover Expansion */}
-          <ProjectPreview project={project} forwardedLocalhostPort={forwardedLocalhostPort} />
+          <ProjectPreview
+            project={project}
+            forwardedLocalhostPort={forwardedLocalhostPort}
+            isRunning={isRunning}
+          />
           {/* Compact Project Header */}
           <div className="z-10 -mt-7 mb-0 flex items-baseline justify-between px-2">
             <div className="bg-background z-10 flex items-center rounded-md p-2">
@@ -292,31 +320,6 @@ function ProjectDetailPage() {
 
                 <Separator />
 
-                {/* Commands */}
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Commands</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-muted-foreground mb-1 text-xs">Post-Start Command</div>
-                      <div className="bg-muted rounded-md p-3 font-mono text-sm break-all">
-                        {project.postStartCommand}
-                      </div>
-                    </div>
-                    {project.postCreateCommand && (
-                      <div>
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Post-Create Command
-                        </div>
-                        <div className="bg-muted rounded-md p-3 font-mono text-sm break-all">
-                          {project.postCreateCommand}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <Separator />
-
                 {/* Timestamps */}
                 <div className="text-muted-foreground space-y-1 text-xs">
                   <div>Created: {new Date(project.createdAt).toLocaleString()}</div>
@@ -346,7 +349,7 @@ function ProjectDetailPage() {
 
       {/* Expandable Console Panel */}
       <div
-        className={`border-t ${consoleExpanded ? 'h-1/2' : 'h-10'} flex flex-col transition-all`}
+        className={`border-t ${consoleExpanded ? 'h-1/2' : 'h-10'} flex max-h-1/2 flex-col transition-all`}
       >
         {/* Console Header */}
         <button
@@ -367,7 +370,7 @@ function ProjectDetailPage() {
         {/* Console Content */}
         {consoleExpanded && (
           <div className="flex-1 overflow-hidden">
-            <ProjectLogs projectId={project.id} />
+            <ProjectLogs key={project.id} projectId={project.id} />
           </div>
         )}
       </div>

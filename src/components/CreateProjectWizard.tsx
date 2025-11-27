@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Dialog,
   DialogContent,
@@ -144,6 +145,7 @@ const ADDITIONAL_PHP_EXTENSIONS = [
 ];
 
 export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProjectWizardProps>) {
+  const navigate = useNavigate();
   const [step, setStep] = useState<WizardStep>('type');
   const [formData, setFormData] = useState<Partial<CreateProjectInput>>({
     type: ProjectType.BasicPhp,
@@ -206,6 +208,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       enableClaudeAi: false,
       phpExtensions: ['bcmath', 'gd', 'intl'],
     });
+
+    // Navigate to projects list
+    navigate({ to: '/projects' });
   };
 
   const toggleExtension = (extension: string) => {

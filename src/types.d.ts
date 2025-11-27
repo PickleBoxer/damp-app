@@ -56,11 +56,14 @@ interface ProjectsContext {
   selectFolder: (defaultPath?: string) => Promise<unknown>;
   detectLaravel: (folderPath: string) => Promise<unknown>;
   devcontainerExists: (folderPath: string) => Promise<unknown>;
-  getContainerStatus: (projectId: string) => Promise<{
-    running: boolean;
-    exists: boolean;
-    ports: Array<[string, string]>;
-  }>;
+  getBatchContainerStatus: (projectIds: string[]) => Promise<
+    Array<{
+      projectId: string;
+      running: boolean;
+      exists: boolean;
+      ports: Array<[string, string]>;
+    }>
+  >;
   discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
 }

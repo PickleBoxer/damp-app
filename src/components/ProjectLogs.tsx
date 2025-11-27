@@ -119,8 +119,8 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
           <Terminal className="h-4 w-4" />
           <span className="text-sm font-medium">Console Output</span>
           {isStreaming && (
-            <Badge variant="outline" className="animate-pulse">
-              <span className="mr-1 inline-block h-2 w-2 rounded-full bg-green-500" />
+            <Badge variant="outline">
+              <span className="mr-1 inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />
               Live
             </Badge>
           )}
@@ -163,7 +163,7 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
       {/* Log Output */}
       <ScrollArea
         ref={scrollAreaRef}
-        className="flex-1 rounded-md border bg-black/95 font-mono text-xs"
+        className="flex-1 bg-black/95 font-mono text-xs"
         onScrollCapture={handleScrollChange}
       >
         <div ref={scrollViewportRef} className="p-4">
@@ -194,25 +194,6 @@ export function ProjectLogs({ projectId, maxLines = 1000 }: ProjectLogsProps) {
           )}
         </div>
       </ScrollArea>
-
-      {/* Auto-scroll indicator */}
-      {!autoScroll && logs.length > 0 && (
-        <div className="px-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (scrollViewportRef.current) {
-                scrollViewportRef.current.scrollTop = scrollViewportRef.current.scrollHeight;
-                setAutoScroll(true);
-              }
-            }}
-            className="w-full"
-          >
-            Scroll to bottom
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

@@ -122,14 +122,23 @@ export async function devcontainerExists(folderPath: string): Promise<boolean> {
 }
 
 /**
- * Get container status for a project
+ * Get container status for multiple projects in a single batch call (optimized)
  */
-export async function getContainerStatus(
-  projectId: string
-): Promise<{ running: boolean; exists: boolean }> {
+export async function getBatchContainerStatus(
+  projectIds: string[]
+): Promise<Array<{ projectId: string; running: boolean; exists: boolean }>> {
   ensureProjectsApi();
-  const result = await projectsApi.getContainerStatus(projectId);
-  return result as { running: boolean; exists: boolean };
+  const result = await projectsApi.getBatchContainerStatus(projectIds);
+  return result as Array<{ projectId: string; running: boolean; exists: boolean }>;
+}
+
+/**
+ * Discover the forwarded localhost port for a container
+ */
+export async function discoverPort(containerName: string): Promise<number | null> {
+  ensureProjectsApi();
+  const result = await projectsApi.discoverPort(containerName);
+  return result as number | null;
 }
 
 /**

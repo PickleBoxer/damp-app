@@ -174,31 +174,52 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * Get container status for a project
+   * Get container status for multiple projects in a single call (optimized)
+   * This reduces IPC overhead by batching status checks
    */
-  ipcMain.handle(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, async (_event, projectId: string) => {
+  ipcMain.handle(CHANNELS.PROJECTS_GET_BATCH_STATUS, async (_event, projectIds: string[]) => {
     try {
       await ensureInitialized();
       const projects = await projectStateManager.getAllProjects();
-      const project = projects.find(p => p.id === projectId);
-
-      if (!project) {
-        return { running: false, exists: false };
-      }
-
-      // Generate container name from project name
-      const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
       const dockerModule = await getDockerManager();
-      const status = await dockerModule.dockerManager.getContainerStatus(containerName);
 
-      return {
-        running: status?.running || false,
-        exists: status?.exists || false,
-        ports: status?.ports || [],
-      };
+      // Batch check all container statuses
+      const results = await Promise.all(
+        projectIds.map(async projectId => {
+          const project = projects.find(p => p.id === projectId);
+
+          if (!project) {
+            return {
+              projectId,
+              running: false,
+              exists: false,
+              ports: [],
+            };
+          }
+
+          // Generate container name from project name
+          const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
+          const status = await dockerModule.dockerManager.getContainerStatus(containerName);
+
+          return {
+            projectId,
+            running: status?.running || false,
+            exists: status?.exists || false,
+            ports: status?.ports || [],
+          };
+        })
+      );
+
+      return results;
     } catch (error) {
-      console.error('Failed to get container status:', error);
-      return { running: false, exists: false };
+      console.error('Failed to get batch container status:', error);
+      // Return default status for all projects on error
+      return projectIds.map(projectId => ({
+        projectId,
+        running: false,
+        exists: false,
+        ports: [],
+      }));
     }
   });
 
@@ -229,11 +250,14 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
             if (headerValue === containerName) {
               return port;
             }
+          } catch {
+            // Timeout, connection refused, or other error - continue to next port
+            continue;
           } finally {
             clearTimeout(timeout);
           }
         } catch {
-          // Timeout, connection refused, or other error - continue to next port
+          // Outer catch for any unexpected errors in the port check
           continue;
         }
       }

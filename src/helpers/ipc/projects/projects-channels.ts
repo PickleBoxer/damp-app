@@ -26,7 +26,7 @@ export const PROJECTS_DEVCONTAINER_EXISTS = 'projects:devcontainer-exists';
 export const PROJECTS_COPY_PROGRESS = 'projects:copy-progress';
 
 // Container status
-export const PROJECTS_GET_CONTAINER_STATUS = 'projects:get-container-status';
+export const PROJECTS_GET_BATCH_STATUS = 'projects:get-batch-status';
 
 // Port discovery
 export const PROJECTS_DISCOVER_PORT = 'projects:discover-port';

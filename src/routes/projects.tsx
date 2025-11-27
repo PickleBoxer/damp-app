@@ -6,11 +6,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import {
-  useSuspenseProjects,
-  projectsQueryOptions,
+  useProjects,
   useReorderProjects,
-  useProjectContainerStatus,
+  useProjectsBatchStatus,
 } from '@/api/projects/projects-queries';
+import { useDocumentVisibility } from '@/hooks/use-document-visibility';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { CreateProjectWizard } from '@/components/CreateProjectWizard';
 import type { Project } from '@/types/project';
@@ -45,9 +45,16 @@ import { CSS } from '@dnd-kit/utilities';
 interface SortableProjectItemProps {
   project: Project;
   isSelected: boolean;
+  isRunning?: boolean;
+  isLoading?: boolean;
 }
 
-function SortableProjectItem({ project, isSelected }: SortableProjectItemProps) {
+function SortableProjectItem({
+  project,
+  isSelected,
+  isRunning,
+  isLoading,
+}: Readonly<SortableProjectItemProps>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
   });
@@ -57,13 +64,6 @@ function SortableProjectItem({ project, isSelected }: SortableProjectItemProps) 
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
-
-  // Get container status with polling for list view
-  const { data: containerStatus } = useProjectContainerStatus(project.id, {
-    enabled: true,
-    pollingInterval: 10000, // Poll every 10 seconds
-  });
-  const isRunning = containerStatus?.running || false;
 
   return (
     <div
@@ -87,29 +87,32 @@ function SortableProjectItem({ project, isSelected }: SortableProjectItemProps) 
               <ProjectIcon projectType={project.type} className="h-8 w-8" />
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold capitalize">{project.name}</span>
-                <Badge variant="secondary" className="text-xs">
-                  PHP {project.phpVersion}
-                </Badge>
+                {(() => {
+                  if (isLoading) {
+                    return (
+                      <div className="bg-muted/50 inline-flex h-5 w-16 animate-pulse rounded-md" />
+                    );
+                  }
+                  if (isRunning) {
+                    return (
+                      <Badge variant="outline">
+                        <span className="mr-1 inline-block h-2 w-2 animate-pulse rounded-full bg-green-500" />{' '}
+                        Live
+                      </Badge>
+                    );
+                  }
+                  return (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      <span className="mr-1 inline-block h-2 w-2 rounded-full bg-red-500" /> Stopped
+                    </Badge>
+                  );
+                })()}
               </div>
               <p className="text-muted-foreground flex items-center gap-1 truncate text-xs">
-                <Globe className="h-3 w-3" />
-                {project.domain}
+                <Globe className="h-3 w-3" /> {project.domain}
               </p>
-              <div className="mt-1 flex items-center gap-1">
-                {isRunning ? (
-                  <>
-                    <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                    <span className="text-xs text-green-600 dark:text-green-400">Running</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
-                    <span className="text-xs text-blue-600 dark:text-blue-400">Ready to start</span>
-                  </>
-                )}
-              </div>
             </div>
           </div>
         </Link>
@@ -131,9 +134,26 @@ function ProjectsPage() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data: projects } = useSuspenseProjects();
+  const { data: projects, isLoading: isProjectsLoading } = useProjects();
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
+  const isVisible = useDocumentVisibility();
+
+  // Get all project IDs for batch status check
+  const projectIds = useMemo(() => projects?.map(p => p.id) || [], [projects]);
+
+  // Fetch all container statuses in a single batch call (OPTIMIZED)
+  // Only polls when page is visible to save resources
+  const { data: batchStatus, isLoading: isStatusLoading } = useProjectsBatchStatus(projectIds, {
+    enabled: projectIds.length > 0 && isVisible,
+    pollingInterval: isVisible ? 10000 : 0, // Only poll when visible, 0 disables polling
+  });
+
+  // Create a map for quick lookup of status by project ID
+  const statusMap = useMemo(() => {
+    if (!batchStatus) return new Map();
+    return new Map(batchStatus.map(status => [status.projectId, status]));
+  }, [batchStatus]);
 
   // Initialize or update project order when projects change
   const sortedProjects = useMemo(() => {
@@ -195,6 +215,57 @@ function ProjectsPage() {
     );
   }, [sortedProjects, searchQuery]);
 
+  // Show loading skeleton while projects are being fetched
+  if (isProjectsLoading) {
+    return (
+      <div className="flex h-full">
+        <div className="flex w-80 flex-col border-r">
+          <div className="relative border-b">
+            <Input
+              className="bg-background dark:bg-background flex h-10 w-full min-w-0 border-0 px-3 py-1 pt-4 pr-2 pb-4 pl-12 text-xs shadow-xs outline-none focus-visible:ring-0"
+              placeholder="Search sites..."
+              disabled
+            />
+            <Search className="pointer-events-none absolute top-1/2 left-6 size-4 -translate-y-1/2 opacity-50 select-none" />
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="flex flex-col">
+              {/* Loading skeletons for projects */}
+              {[1, 2, 3].map(i => (
+                <div key={i} className="border-b p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-muted h-12 w-12 animate-pulse rounded-md" />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+                        <div className="bg-muted/50 h-5 w-16 animate-pulse rounded-md" />
+                      </div>
+                      <div className="bg-muted h-3 w-32 animate-pulse rounded" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <div className="flex h-full items-center justify-center">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <TbFolderCode />
+                </EmptyMedia>
+                <EmptyTitle>Loading Projects...</EmptyTitle>
+                <EmptyDescription>Please wait while we load your projects.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        </div>
+        <CreateProjectWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} />
+      </div>
+    );
+  }
+
   if (!projects || projects.length === 0) {
     return (
       <div className="flex h-full">
@@ -227,7 +298,7 @@ function ProjectsPage() {
     <>
       <div className="flex h-full flex-col">
         {/* Search Bar */}
-        <div className="relative border-y">
+        <div className="relative border-b">
           <Input
             className="bg-background dark:bg-background flex h-10 w-full min-w-0 border-0 px-3 py-1 pt-4 pr-2 pb-4 pl-12 text-xs shadow-xs outline-none focus-visible:ring-0"
             placeholder="Search sites..."
@@ -266,13 +337,18 @@ function ProjectsPage() {
                     items={filteredProjects.map(p => p.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {filteredProjects.map(project => (
-                      <SortableProjectItem
-                        key={project.id}
-                        project={project}
-                        isSelected={selectedProjectId === project.id}
-                      />
-                    ))}
+                    {filteredProjects.map(project => {
+                      const projectStatus = statusMap.get(project.id);
+                      return (
+                        <SortableProjectItem
+                          key={project.id}
+                          project={project}
+                          isSelected={selectedProjectId === project.id}
+                          isRunning={projectStatus?.running || false}
+                          isLoading={isStatusLoading}
+                        />
+                      );
+                    })}
                   </SortableContext>
                 </DndContext>
               </div>
@@ -309,9 +385,6 @@ function ProjectsPage() {
 }
 
 export const Route = createFileRoute('/projects')({
-  loader: ({ context }) => {
-    // Prefetch projects in the loader for instant rendering
-    return context.queryClient.ensureQueryData(projectsQueryOptions());
-  },
+  // No loader - projects load in background with skeleton UI
   component: ProjectsPage,
 });

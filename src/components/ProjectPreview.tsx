@@ -2,14 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import { Globe } from 'lucide-react';
 import { Safari } from '@/components/ui/safari';
 import type { Project } from '@/types/project';
-import { useProjectContainerStatus } from '@/api/projects/projects-queries';
 
 interface ProjectPreviewProps {
   project: Project;
   forwardedLocalhostPort?: number | null;
+  isRunning?: boolean; // Passed from parent (detail view has batch status)
 }
 
-export function ProjectPreview({ project, forwardedLocalhostPort }: Readonly<ProjectPreviewProps>) {
+export function ProjectPreview({
+  project,
+  forwardedLocalhostPort,
+  isRunning = false,
+}: Readonly<ProjectPreviewProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -36,12 +40,6 @@ export function ProjectPreview({ project, forwardedLocalhostPort }: Readonly<Pro
     if (containerRef.current) ro.observe(containerRef.current);
     return () => ro.disconnect();
   }, []);
-
-  // Get container status from cache (shared with list view)
-  const { data: containerStatus } = useProjectContainerStatus(project.id, {
-    enabled: false, // Don't poll here, use cached data from list view
-  });
-  const isRunning = containerStatus?.running || false;
 
   return (
     <div className="h-36 max-h-max overflow-hidden rounded duration-700 hover:h-96 hover:transition-[height] hover:duration-800">

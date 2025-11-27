@@ -16,7 +16,6 @@ import type {
   UpdateProjectInput,
   ProjectOperationResult,
 } from '../../types/project';
-import type { ProjectsContext } from '@/helpers/ipc/projects/projects-context';
 import * as projectsApi from './projects-api';
 
 /**
@@ -25,10 +24,10 @@ import * as projectsApi from './projects-api';
 export const projectKeys = {
   all: ['projects'] as const,
   lists: () => [...projectKeys.all, 'list'] as const,
-  list: (filters?: unknown) => [...projectKeys.lists(), { filters }] as const,
   details: () => [...projectKeys.all, 'detail'] as const,
   detail: (id: string) => [...projectKeys.details(), id] as const,
-  containerStatus: (id: string) => [...projectKeys.all, 'container-status', id] as const,
+  batchStatus: (ids: string[]) => [...projectKeys.all, 'batch-status', ids] as const,
+  port: (id: string) => [...projectKeys.all, 'port', id] as const,
 };
 
 /**
@@ -65,23 +64,6 @@ export function useProjects() {
 }
 
 /**
- * Get all projects with suspense (preferred when using loaders)
- */
-export function useSuspenseProjects() {
-  return useSuspenseQuery(projectsQueryOptions());
-}
-
-/**
- * Get a specific project
- */
-export function useProject(projectId: string | undefined) {
-  return useQuery({
-    ...projectQueryOptions(projectId || ''),
-    enabled: !!projectId,
-  });
-}
-
-/**
  * Get a specific project with suspense (preferred when using loaders)
  */
 export function useSuspenseProject(projectId: string) {
@@ -89,48 +71,70 @@ export function useSuspenseProject(projectId: string) {
 }
 
 /**
- * Get container status for a project
+ * Get container status for multiple projects in a single batch call (OPTIMIZED)
  *
- * Performance notes:
- * - Lazy initialization: Docker manager is only loaded on first status check
- * - Non-blocking: IPC calls are async and don't block app startup
- * - Configurable polling: Can disable polling entirely or adjust interval per use case
- * - Cached results: Uses React Query cache to minimize redundant checks
+ * This is a major performance optimization that reduces IPC overhead:
+ * - Instead of N IPC calls (one per project), makes only 1 batch IPC call
+ * - Reduces polling frequency from N×interval to 1×interval
+ * - Automatically pauses polling when page is not visible
  *
- * @param projectId - Project ID to check status for
+ * @param projectIds - Array of project IDs to check status for
  * @param options.enabled - Whether to actively fetch status (default: true)
  * @param options.pollingInterval - How often to poll in ms (default: 10000, 0 = no polling)
  */
-export function useProjectContainerStatus(
-  projectId: string | undefined,
+export function useProjectsBatchStatus(
+  projectIds: string[],
   options?: { enabled?: boolean; pollingInterval?: number }
 ) {
   return useQuery({
-    queryKey: projectKeys.containerStatus(projectId || ''),
+    queryKey: projectKeys.batchStatus(projectIds),
     queryFn: async () => {
-      const status = await projectsApi.getContainerStatus(projectId || '');
-
-      // If container is running, discover the forwarded localhost port via IPC
-      let forwardedLocalhostPort: number | null = null;
-      if (status.running && projectId) {
-        const project = await projectsApi.getProject(projectId);
-        if (project) {
-          // Construct container name from project name
-          const containerName = `${project.name.toLowerCase().replaceAll(/[^a-z0-9_.-]/g, '_')}_devcontainer`;
-          // Call IPC to discover port in main process (no CORS restrictions)
-          forwardedLocalhostPort = await (
-            globalThis as typeof globalThis & { projects: ProjectsContext }
-          ).projects.discoverPort(containerName);
-        }
-      }
-
-      return { ...status, forwardedLocalhostPort };
+      if (projectIds.length === 0) return [];
+      return await projectsApi.getBatchContainerStatus(projectIds);
     },
-    enabled: options?.enabled !== false && !!projectId,
+    enabled: options?.enabled !== false && projectIds.length > 0,
     refetchInterval: options?.pollingInterval ?? 10000, // Poll every 10 seconds by default
-    staleTime: 30000, // Consider data fresh for 30 seconds (port won't change often)
+    staleTime: 5000, // Consider data fresh for 5 seconds
     gcTime: 60000, // Keep in cache for 60 seconds
-    refetchOnWindowFocus: true, // Refetch on window focus to keep data fresh
+    refetchOnWindowFocus: true, // Refetch when returning to app
+  });
+}
+
+/**
+ * Discover forwarded localhost port for a project's container (LAZY LOADED)
+ *
+ * This is separated from status check for performance:
+ * - Only runs when explicitly enabled (e.g., when user opens Preview tab)
+ * - Port discovery is expensive (~2s to scan ports 8080-8090)
+ * - List views don't need ports, only detail view preview needs it
+ * - Long cache time since port rarely changes once container is running
+ *
+ * @param projectId - Project ID to discover port for
+ * @param options.enabled - Whether to actively discover port (default: false)
+ */
+export function useProjectPort(projectId: string | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: projectKeys.port(projectId || ''),
+    queryFn: async () => {
+      if (!projectId) return null;
+
+      const project = await projectsApi.getProject(projectId);
+      if (!project) return null;
+
+      // Construct container name from project name
+      const sanitized = project.name
+        .toLowerCase()
+        .replaceAll(/[^a-z0-9_.-]/g, '_')
+        .replace(/^[^a-z0-9]+/, '');
+      const containerName = `${sanitized || 'project'}_devcontainer`;
+
+      // Call IPC to discover port in main process (no CORS restrictions)
+      return await projectsApi.discoverPort(containerName);
+    },
+    enabled: options?.enabled === true && !!projectId,
+    staleTime: 5 * 60 * 1000, // Port rarely changes, cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch port on focus (it's stable)
   });
 }
 
@@ -332,32 +336,5 @@ export function useCopyProjectToVolume() {
         description: error.message || 'An unexpected error occurred',
       });
     },
-  });
-}
-
-/**
- * Select folder dialog
- */
-export function useSelectFolder() {
-  return useMutation({
-    mutationFn: (defaultPath?: string) => projectsApi.selectFolder(defaultPath),
-  });
-}
-
-/**
- * Detect Laravel in folder
- */
-export function useDetectLaravel() {
-  return useMutation({
-    mutationFn: (folderPath: string) => projectsApi.detectLaravel(folderPath),
-  });
-}
-
-/**
- * Check if devcontainer exists
- */
-export function useDevcontainerExists() {
-  return useMutation({
-    mutationFn: (folderPath: string) => projectsApi.devcontainerExists(folderPath),
   });
 }
