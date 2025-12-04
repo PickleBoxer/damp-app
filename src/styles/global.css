@@ -256,11 +256,22 @@
     @apply overflow-hidden;
   }
   .draglayer {
-    @apply bg-background;
     -webkit-app-region: drag;
   }
   button {
     @apply cursor-pointer;
+    -webkit-app-region: no-drag;
+  }
+
+  /* VS Code-style title bar hover states */
+  :root {
+    --titlebar-hover: rgba(0, 0, 0, 0.05);
+    --titlebar-active: rgba(0, 0, 0, 0.1);
+  }
+
+  .dark {
+    --titlebar-hover: rgba(255, 255, 255, 0.1);
+    --titlebar-active: rgba(255, 255, 255, 0.15);
   }
 }
 

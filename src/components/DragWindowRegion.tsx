@@ -1,72 +1,76 @@
 import { closeWindow, maximizeWindow, minimizeWindow } from '@/helpers/window_helpers';
 import { isMacOS } from '@/utils/platform';
-import { type ReactNode } from 'react';
+import { Command } from 'lucide-react';
+import { QuickSearch } from './QuickSearch';
 
-interface DragWindowRegionProps {
-  title?: ReactNode;
-  breadcrumb?: string;
-}
-
-export default function DragWindowRegion({ title, breadcrumb }: DragWindowRegionProps) {
+export default function DragWindowRegion() {
   return (
-    <div className="bg-background sticky top-0 flex h-[calc(var(--sidebar-width-icon)+1px)]! shrink-0 items-center gap-2 border-b px-4">
-      <div className="draglayer w-full">
-        {title && !isMacOS() && (
-          <div className="flex items-center gap-2">
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">{title}</span>
-              {breadcrumb && (
-                <small className="text-muted-foreground truncate text-xs">{breadcrumb}</small>
-              )}
-            </div>
+    <div className="bg-background relative sticky top-0 h-[35px] shrink-0 border-b">
+      {/* Draggable layer for empty spaces */}
+      <div className="draglayer absolute inset-0" />
+
+      <div className="relative z-10 flex h-full items-center justify-center">
+        {/* Left section - App icon (draggable) */}
+        <div className="absolute left-0 flex items-center gap-2 pl-3">
+          {!isMacOS() && <Command className="text-foreground h-4 w-4" />}
+        </div>
+
+        {/* Center section - Search on Windows/Linux, Title on macOS */}
+        {!isMacOS() ? (
+          <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+            <QuickSearch />
           </div>
+        ) : (
+          <div className="text-sm font-medium">DAMP</div>
         )}
-        {isMacOS() && (
-          <div className="flex flex-1 p-2">
-            {/* Maintain the same height but do not display content */}
+
+        {/* Right section - Window controls (Windows/Linux only) */}
+        {!isMacOS() && (
+          <div className="absolute right-0">
+            <WindowButtons />
           </div>
         )}
       </div>
-      {!isMacOS() && <WindowButtons />}
     </div>
   );
 }
 
 function WindowButtons() {
   return (
-    <div className="flex">
+    <div className="ml-auto flex" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <button
         title="Minimize"
         type="button"
-        className="hover:bg-muted/80 rounded-md p-2"
+        className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-white/10 dark:hover:bg-white/10"
         onClick={minimizeWindow}
       >
-        <svg aria-hidden="true" role="img" width="12" height="12" viewBox="0 0 12 12">
-          <rect fill="currentColor" width="10" height="1" x="1" y="6"></rect>
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <rect fill="currentColor" width="10" height="1" y="5" />
         </svg>
       </button>
       <button
         title="Maximize"
         type="button"
-        className="hover:bg-muted/80 rounded-md p-2"
+        className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-white/10 dark:hover:bg-white/10"
         onClick={maximizeWindow}
       >
-        <svg aria-hidden="true" role="img" width="12" height="12" viewBox="0 0 12 12">
-          <rect width="9" height="9" x="1.5" y="1.5" fill="none" stroke="currentColor"></rect>
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <rect width="9" height="9" x="0.5" y="0.5" fill="none" stroke="currentColor" />
         </svg>
       </button>
       <button
         type="button"
         title="Close"
-        className="rounded-md p-2 hover:bg-red-500"
+        className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-[#E81123] hover:text-white"
         onClick={closeWindow}
       >
-        <svg aria-hidden="true" role="img" width="12" height="12" viewBox="0 0 12 12">
-          <polygon
+        <svg width="10" height="10" viewBox="0 0 10 10">
+          <path
             fill="currentColor"
-            fillRule="evenodd"
-            points="11 1.576 6.583 6 11 10.424 10.424 11 6 6.583 1.576 11 1 10.424 5.417 6 1 1.576 1.576 1 6 5.417 10.424 1"
-          ></polygon>
+            d="M 0.7,0 L 10,9.3 M 10,0.7 L 0.7,10"
+            stroke="currentColor"
+            strokeWidth="1.4"
+          />
         </svg>
       </button>
     </div>
