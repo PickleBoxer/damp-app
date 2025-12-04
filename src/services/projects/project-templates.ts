@@ -27,6 +27,15 @@ function renderTemplate(template: string, context: TemplateContext): string {
     ? NODE_VERSION_MAP[context.nodeVersion] || context.nodeVersion
     : '';
 
+  // Map PHP variant to service type for ServerSideUp set-file-permissions command
+  const serviceType = context.phpVariant.includes('apache')
+    ? 'apache'
+    : context.phpVariant.includes('nginx')
+      ? 'nginx'
+      : context.phpVariant.includes('frankenphp')
+        ? 'frankenphp'
+        : 'fpm';
+
   // Prepare Node.js installation blocks
   const nodeSetup = hasNodeVersion
     ? {
@@ -37,6 +46,7 @@ function renderTemplate(template: string, context: TemplateContext): string {
     && apt-get install -y --no-install-recommends \\
         git \\
         zsh \\
+        sudo \\
         nodejs \\
     && npm install -g npm@latest`,
       }
@@ -46,6 +56,7 @@ function renderTemplate(template: string, context: TemplateContext): string {
         setupCommands: `apt-get update \\
     && apt-get install -y --no-install-recommends \\
         git \\
+        sudo \\
         zsh`,
       };
 
@@ -57,6 +68,7 @@ function renderTemplate(template: string, context: TemplateContext): string {
     .replaceAll('{{NODE_VERSION_MAPPED}}', nodeVersionMapped)
     .replaceAll('{{PHP_EXTENSIONS}}', context.phpExtensions)
     .replaceAll('{{PHP_VARIANT}}', context.phpVariant)
+    .replaceAll('{{SERVICE_TYPE}}', serviceType)
     .replaceAll('{{DOCUMENT_ROOT}}', context.documentRoot)
     .replaceAll('{{NETWORK_NAME}}', context.networkName)
     .replaceAll('{{CONTAINER_NAME}}', context.containerName)
@@ -98,18 +110,18 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
         "context": ".",
         "target": "development",
         "args": {
-            "USER_ID": "1000",
-            "GROUP_ID": "1000"
+            "USER_ID": "\${localEnv:UID:1000}",
+            "GROUP_ID": "\${localEnv:GID:1000}",
+            "CONTAINER_NAME": "{{CONTAINER_NAME}}"
         }
     },
 
-    "remoteUser": "vscode",
+    "remoteUser": "www-data",
     "overrideCommand": false,
 
     "containerEnv": {
         "SSL_MODE": "off",
-        "PHP_OPCACHE_ENABLE": "0",
-        "CONTAINER_NAME": "{{CONTAINER_NAME}}"
+        "PHP_OPCACHE_ENABLE": "0"
     },
 
     "features": {
@@ -173,6 +185,12 @@ FROM base AS development
 
 USER root
 
+# Change www-data UID/GID to match host user (ServerSideUp's recommended approach)
+ARG USER_ID
+ARG GROUP_ID
+RUN docker-php-serversideup-set-id www-data \${USER_ID}:\${GROUP_ID} && \\
+    docker-php-serversideup-set-file-permissions --owner \${USER_ID}:\${GROUP_ID} --service {{SERVICE_TYPE}}
+
 # Install development tools{{NODE_INSTALL_COMMENT}}
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \\
     --mount=type=cache,target=/var/lib/apt,sharing=locked \\
@@ -188,15 +206,15 @@ xdebug.start_with_request = trigger
 xdebug.client_port = 9003
 EOF
 
-# Create vscode user with zsh shell
-ARG USER_ID
-ARG GROUP_ID
-RUN groupadd --gid \${GROUP_ID} vscode \\
-    && useradd --uid \${USER_ID} --gid \${GROUP_ID} -m vscode -s /usr/bin/zsh \\
-    && usermod -aG www-data vscode
+# Configure www-data user for development
+RUN usermod -s /usr/bin/zsh www-data && \\
+    mkdir -p /var/www && \\
+    chown www-data:www-data /var/www && \\
+    echo "www-data ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/www-data && \\
+    chmod 0440 /etc/sudoers.d/www-data
 
-# Install Oh My Zsh for vscode user
-USER vscode
+# Install Oh My Zsh for www-data
+USER www-data
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \\
     && git clone https://github.com/zsh-users/zsh-autosuggestions \${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions \\
     && git clone https://github.com/zsh-users/zsh-syntax-highlighting \${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting \\
@@ -205,33 +223,21 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
 
 USER root
 
-# Configure vscode user environment
-RUN mkdir -p /etc/sudoers.d \\
-    && echo "vscode ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/vscode \\
-    && chmod 0440 /etc/sudoers.d/vscode \\
-    && echo "umask 002" >> /home/vscode/.zshrc \\
-    && echo "umask 002" >> /home/vscode/.profile
-
 # Add custom Apache/Nginx configuration to inject container identification headers
-# Apache: Use environment variable with expr for dynamic header
+ARG CONTAINER_NAME
+# Apache: Use static header with build-time value
 RUN if [ -d /etc/apache2/conf-enabled ]; then \\
         echo '# Container identification header' > /etc/apache2/conf-enabled/container-headers.conf && \\
-        echo 'PassEnv CONTAINER_NAME' >> /etc/apache2/conf-enabled/container-headers.conf && \\
-        echo 'Header set X-Container-Name "expr=%{env:CONTAINER_NAME}"' >> /etc/apache2/conf-enabled/container-headers.conf; \\
+        echo "Header set X-Container-Name \\"\${CONTAINER_NAME}\\"" >> /etc/apache2/conf-enabled/container-headers.conf; \\
     fi
 
-# Nginx: Create template that will be processed with envsubst at startup
-RUN if [ -d /etc/nginx ]; then \\
-        mkdir -p /etc/nginx/templates && \\
-        echo 'add_header X-Container-Name \${CONTAINER_NAME} always;' > /etc/nginx/templates/container-headers.conf.template; \\
+# Nginx: Use static header with build-time value
+RUN if [ -d /etc/nginx/server-opts.d ]; then \\
+        echo "add_header X-Container-Name \${CONTAINER_NAME} always;" > /etc/nginx/server-opts.d/container-headers.conf; \\
     fi
-
-# Set workspace permissions (vscode:www-data with 775/664)
-RUN chown -R vscode:www-data /var/www/html \\
-    && chmod -R 775 /var/www/html
 
 # Switch to www-data user (S6 Overlay runs services as www-data)
-# VS Code connects as vscode via remoteUser
+# VS Code connects as www-data via remoteUser
 USER www-data
 
 ############################################

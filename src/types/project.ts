@@ -27,6 +27,18 @@ export type NodeVersion = 'none' | 'lts' | 'latest' | '20' | '22' | '24' | '25';
 export type PhpVariant = 'fpm-apache' | 'fpm-nginx' | 'frankenphp' | 'fpm';
 
 /**
+ * Laravel installer options
+ */
+export interface LaravelInstallerOptions {
+  starterKit: 'none' | 'react' | 'vue' | 'livewire' | 'custom';
+  customStarterKitUrl?: string;
+  authentication: 'laravel' | 'workos' | 'none';
+  useVolt: boolean;
+  testingFramework: 'pest' | 'phpunit';
+  installBoost: boolean;
+}
+
+/**
  * Common PHP extensions
  */
 export const COMMON_PHP_EXTENSIONS = [
@@ -57,6 +69,8 @@ export interface Project {
   path: string;
   /** Docker volume name (damp_project_{name}) */
   volumeName: string;
+  /** Docker container name ({name}_devcontainer) */
+  containerName: string;
   /** Local domain (e.g., myproject.local) */
   domain: string;
   /** PHP version */
@@ -77,6 +91,8 @@ export interface Project {
   postStartCommand: string;
   /** Post-create command (Laravel only) */
   postCreateCommand: string | null;
+  /** Laravel installer options (for fresh Laravel projects) */
+  laravelOptions?: LaravelInstallerOptions;
   /** Display order */
   order: number;
   /** Creation timestamp */
@@ -111,6 +127,8 @@ export interface CreateProjectInput {
   enableClaudeAi: boolean;
   /** Override existing devcontainer files */
   overwriteExisting?: boolean;
+  /** Laravel installer options (for fresh Laravel projects) */
+  laravelOptions?: LaravelInstallerOptions;
 }
 
 /**
@@ -215,6 +233,8 @@ export interface VolumeCopyProgress {
   totalSteps: number;
   /** Percentage complete (0-100) */
   percentage: number;
+  /** Optional stage identifier */
+  stage?: string;
 }
 
 /**

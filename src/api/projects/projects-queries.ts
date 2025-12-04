@@ -121,15 +121,8 @@ export function useProjectPort(projectId: string | undefined, options?: { enable
       const project = await projectsApi.getProject(projectId);
       if (!project) return null;
 
-      // Construct container name from project name
-      const sanitized = project.name
-        .toLowerCase()
-        .replaceAll(/[^a-z0-9_.-]/g, '_')
-        .replace(/^[^a-z0-9]+/, '');
-      const containerName = `${sanitized || 'project'}_devcontainer`;
-
       // Call IPC to discover port in main process (no CORS restrictions)
-      return await projectsApi.discoverPort(containerName);
+      return await projectsApi.discoverPort(project.containerName);
     },
     enabled: options?.enabled === true && !!projectId,
     staleTime: 5 * 60 * 1000, // Port rarely changes, cache for 5 minutes

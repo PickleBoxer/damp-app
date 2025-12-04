@@ -197,9 +197,8 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
             };
           }
 
-          // Generate container name from project name
-          const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
-          const status = await dockerModule.dockerManager.getContainerStatus(containerName);
+          // Use stored container name
+          const status = await dockerModule.dockerManager.getContainerStatus(project.containerName);
 
           return {
             projectId,

@@ -43,11 +43,8 @@ async function handleStartLogs(
       };
     }
 
-    // Generate container name
-    const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
-
     // Check if container exists
-    const containerStatus = await dockerManager.getContainerStatus(containerName);
+    const containerStatus = await dockerManager.getContainerStatus(project.containerName);
     if (!containerStatus?.exists) {
       return {
         success: false,
@@ -57,7 +54,7 @@ async function handleStartLogs(
 
     // Start streaming
     const stopFn = await dockerManager.streamContainerLogs(
-      containerName,
+      project.containerName,
       (line: string, stream: 'stdout' | 'stderr') => {
         // Send log line to renderer
         event.sender.send(LOGS_LINE_CHANNEL, {
@@ -112,8 +109,7 @@ async function handleReadFile(
       return { success: false, error: `Project ${projectId} not found` };
     }
 
-    const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
-    const content = await dockerManager.readFileFromContainer(containerName, filePath);
+    const content = await dockerManager.readFileFromContainer(project.containerName, filePath);
 
     return { success: true, content };
   } catch (error) {
@@ -138,8 +134,11 @@ async function handleTailFile(
       return { success: false, error: `Project ${projectId} not found` };
     }
 
-    const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
-    const content = await dockerManager.tailFileFromContainer(containerName, filePath, lines);
+    const content = await dockerManager.tailFileFromContainer(
+      project.containerName,
+      filePath,
+      lines
+    );
 
     return { success: true, content };
   } catch (error) {

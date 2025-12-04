@@ -103,28 +103,15 @@ class VolumeManager {
   }
 
   /**
-   * Copy local folder contents to Docker volume using tar
+   * Copy local folder contents to Docker volume root using tar
    * Binds both source folder and volume to an Alpine container and uses tar to copy files
    */
   async copyToVolume(
     sourcePath: string,
     volumeName: string,
-    targetSubPath: string,
     onProgress?: (progress: VolumeCopyProgress) => void
   ): Promise<void> {
-    // Only validate for path traversal - allow all other characters
-    // This supports special filenames like: (parens), [brackets], @symbols, spaces, etc.
-    if (targetSubPath.includes('..')) {
-      throw new Error('Invalid targetSubPath: path traversal (..) not allowed');
-    }
-
-    // Don't allow absolute paths (should be relative within volume)
-    if (targetSubPath.startsWith('/') && targetSubPath !== '/') {
-      throw new Error('Invalid targetSubPath: absolute paths not allowed (use relative paths)');
-    }
-
-    // Normalize path (trim leading/trailing slashes, except for root '.')
-    const normalizedPath = targetSubPath === '.' ? '.' : targetSubPath.replace(/^\/+|\/+$/g, '');
+    // Always copy to volume root (flat structure)
 
     try {
       // Ensure volume exists
@@ -155,16 +142,15 @@ class VolumeManager {
           'sh',
           '-c',
           // Use tar to copy files with exclusions and set proper permissions
-          `mkdir -p /volume/${normalizedPath} && ` +
-            `cd /source && ` +
+          `cd /source && ` +
             `tar --exclude='node_modules' ` +
             `--exclude='vendor' ` +
             //`--exclude='.git' ` +
             //`--exclude='.devcontainer' ` +
             //`--exclude='.vscode' ` +
             `-cf - . | ` +
-            `tar -xf - -C /volume/${normalizedPath} && ` +
-            `chown -R ${uidGid} /volume/${normalizedPath}`,
+            `tar -xf - -C /volume && ` +
+            `chown -R ${uidGid} /volume`,
         ],
         HostConfig: {
           Binds: [

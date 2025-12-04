@@ -35,12 +35,10 @@ function generateCaddyfile(projects: Project[]): string {
 
   // Add reverse proxy rules for each project
   for (const project of projects) {
-    const containerName = `${project.name.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
-
     lines.push(`# Project: ${project.name}`);
     lines.push(`https://${project.domain} {`);
     lines.push('    tls internal');
-    lines.push(`    reverse_proxy ${containerName}:${project.forwardedPort}`);
+    lines.push(`    reverse_proxy ${project.containerName}:${project.forwardedPort}`);
     lines.push('}');
     lines.push('');
   }

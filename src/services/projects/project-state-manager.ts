@@ -30,6 +30,7 @@ import {
   getPostStartCommand,
 } from './project-templates';
 import { syncProjectsToCaddy } from '../docker/caddy-config';
+import { installLaravelToVolume } from './laravel-installer';
 
 const DOCKER_NETWORK = 'damp-network';
 const FORWARDED_PORT = 8080;
@@ -177,35 +178,46 @@ class ProjectStateManager {
   }
 
   /**
-   * Generate domain name from project name
+   * Generate domain name from project name (expects pre-sanitized name)
    */
   private generateDomain(projectName: string): string {
-    return `${projectName.toLowerCase().replaceAll(/\s+/g, '-')}.local`;
+    return `${projectName}.local`;
   }
 
   /**
-   * Generate volume name from project name
+   * Generate volume name from project name (expects pre-sanitized name)
    */
   private generateVolumeName(projectName: string): string {
-    return `damp_project_${projectName.toLowerCase().replace(/\s+/g, '_')}`;
+    return `damp_project_${projectName}`;
   }
 
   /**
-   * Generate container name from project name
+   * Generate container name from project name (expects pre-sanitized name)
    */
   private generateContainerName(projectName: string): string {
-    return `${projectName.toLowerCase().replaceAll(/\s+/g, '_')}_devcontainer`;
+    return `${projectName}_container`;
   }
 
   /**
    * Validate PHP version for Laravel projects
    */
   private validatePhpVersion(type: ProjectType, phpVersion: PhpVersion): ProjectOperationResult {
-    if (type === 'laravel' && semver.lt(phpVersion, LARAVEL_MIN_PHP_VERSION)) {
-      return {
-        success: false,
-        error: `Laravel requires PHP ${LARAVEL_MIN_PHP_VERSION} or higher. Selected version: ${phpVersion}`,
+    if (type === 'laravel') {
+      // Normalize PHP versions to semver format (add .0 if needed)
+      const normalizeVersion = (version: string): string => {
+        const parts = version.split('.');
+        return parts.length === 2 ? `${version}.0` : version;
       };
+
+      const normalizedPhpVersion = normalizeVersion(phpVersion);
+      const normalizedMinVersion = normalizeVersion(LARAVEL_MIN_PHP_VERSION);
+
+      if (semver.lt(normalizedPhpVersion, normalizedMinVersion)) {
+        return {
+          success: false,
+          error: `Laravel requires PHP ${LARAVEL_MIN_PHP_VERSION} or higher. Selected version: ${phpVersion}`,
+        };
+      }
     }
 
     return { success: true };
@@ -318,6 +330,8 @@ class ProjectStateManager {
 
   /**
    * Sanitize project name for URL and folder compatibility
+   * This is the single source of truth for name transformation.
+   * All project names are sanitized once at creation and stored in project.name.
    */
   private sanitizeName(name: string): string {
     return name
@@ -407,6 +421,7 @@ class ProjectStateManager {
         type: projectType,
         path: projectPath,
         volumeName: this.generateVolumeName(sanitizedName),
+        containerName: this.generateContainerName(sanitizedName),
         domain: this.generateDomain(sanitizedName),
         phpVersion: input.phpVersion,
         phpVariant: input.phpVariant,
@@ -417,6 +432,7 @@ class ProjectStateManager {
         networkName: DOCKER_NETWORK,
         postStartCommand: getPostStartCommand(),
         postCreateCommand: getPostCreateCommand(),
+        laravelOptions: input.laravelOptions,
         order: projectStorage.getNextOrder(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -425,21 +441,68 @@ class ProjectStateManager {
       };
 
       // Step 7: Create Docker volume
+      if (onProgress) {
+        onProgress({
+          message: `Creating Docker volume: ${project.volumeName}`,
+          currentStep: 1,
+          totalSteps: 10,
+          percentage: 10,
+          stage: 'creating-volume',
+        });
+      }
       await volumeManager.createVolume(project.volumeName);
       volumeCreated = true;
 
+      // Step 7a: Install Laravel if fresh Laravel project
+      if (input.laravelOptions) {
+        console.log('Installing fresh Laravel project to volume...');
+        await installLaravelToVolume(
+          project.volumeName,
+          sanitizedName,
+          input.laravelOptions,
+          onProgress
+        );
+      }
+
       // Step 8: Create devcontainer files
+      if (onProgress) {
+        onProgress({
+          message: 'Generating devcontainer configuration files...',
+          currentStep: 5,
+          totalSteps: 10,
+          percentage: 60,
+          stage: 'creating-devcontainer',
+        });
+      }
       const filesResult = await this.createDevcontainerFiles(project, input.overwriteExisting);
       if (!filesResult.success) {
         throw new Error(filesResult.error);
       }
       project.devcontainerCreated = true;
 
-      // Step 9: Copy local files to volume (directly to root, not in subfolder)
-      await volumeManager.copyToVolume(projectPath, project.volumeName, '.', onProgress);
+      // Step 9: Copy local files to volume (for non-Laravel or copy devcontainer for Laravel)
+      if (onProgress) {
+        onProgress({
+          message: 'Copying project files to Docker volume...',
+          currentStep: 7,
+          totalSteps: 10,
+          percentage: 80,
+          stage: 'copying-files',
+        });
+      }
+      await volumeManager.copyToVolume(projectPath, project.volumeName, onProgress);
       project.volumeCopied = true;
 
       // Step 10: Update hosts file
+      if (onProgress) {
+        onProgress({
+          message: `Adding domain ${project.domain} to hosts file...`,
+          currentStep: 9,
+          totalSteps: 10,
+          percentage: 90,
+          stage: 'updating-hosts',
+        });
+      }
       try {
         await this.addDomainToHosts(project.domain);
         domainAdded = true;
@@ -450,6 +513,15 @@ class ProjectStateManager {
       }
 
       // Step 11: Save project to storage
+      if (onProgress) {
+        onProgress({
+          message: 'Saving project configuration...',
+          currentStep: 10,
+          totalSteps: 10,
+          percentage: 95,
+          stage: 'saving-project',
+        });
+      }
       await projectStorage.setProject(project);
 
       // Step 12: Sync project to Caddy (non-blocking)
@@ -458,6 +530,17 @@ class ProjectStateManager {
       });
 
       console.log(`Project ${project.name} created successfully`);
+
+      // Final completion message
+      if (onProgress) {
+        onProgress({
+          message: '✓ Project setup complete!',
+          currentStep: 10,
+          totalSteps: 10,
+          percentage: 100,
+          stage: 'complete',
+        });
+      }
 
       return {
         success: true,
@@ -478,7 +561,7 @@ class ProjectStateManager {
           }
         }
 
-        // Remove Docker volume if created
+        // Remove Docker volume if created (this removes all contents including Laravel files)
         if (volumeCreated && project) {
           try {
             await volumeManager.removeVolume(project.volumeName);
@@ -690,11 +773,10 @@ class ProjectStateManager {
         };
       }
 
-      await volumeManager.copyToVolume(project.path, project.volumeName, '.', onProgress);
+      await volumeManager.copyToVolume(project.path, project.volumeName, onProgress);
 
       // Update volumeCopied flag
       await projectStorage.updateProject(projectId, { volumeCopied: true });
-
       console.log(`Files copied to volume for project ${project.name}`);
 
       return {

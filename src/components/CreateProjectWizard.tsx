@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Dialog,
@@ -18,11 +18,16 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, ArrowRight, Check, FolderOpen, Info, ChevronDown } from 'lucide-react';
 import { useCreateProject } from '@/api/projects/projects-queries';
-import { selectFolder as selectProjectFolder } from '@/api/projects/projects-api';
+import {
+  selectFolder as selectProjectFolder,
+  subscribeToCopyProgress,
+} from '@/api/projects/projects-api';
+import { ProjectCreationTerminal, type TerminalLog } from '@/components/ProjectCreationTerminal';
 import { ProjectType } from '@/types/project';
 import type { CreateProjectInput, PhpVersion, NodeVersion, PhpVariant } from '@/types/project';
 import { ProjectIcon } from '@/components/ProjectIcon';
-import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
+import { SiClaude, SiNodedotjs, SiPhp, SiReact, SiVuedotjs, SiLivewire } from 'react-icons/si';
+import { TbBolt, TbFlask, TbLock, TbShieldCheck, TbCode, TbLink } from 'react-icons/tb';
 import {
   Select,
   SelectContent,
@@ -58,7 +63,15 @@ interface CreateProjectWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type WizardStep = 'type' | 'basic' | 'variant' | 'runtime' | 'extensions' | 'review';
+type WizardStep =
+  | 'type'
+  | 'laravel-starter'
+  | 'laravel-config'
+  | 'basic'
+  | 'variant'
+  | 'runtime'
+  | 'extensions'
+  | 'review';
 
 const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: string }> = [
   {
@@ -157,8 +170,27 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   });
   const [nameError, setNameError] = useState<string | undefined>();
   const [extensionsExpanded, setExtensionsExpanded] = useState(false);
+  const [terminalLogs, setTerminalLogs] = useState<TerminalLog[]>([]);
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const createProjectMutation = useCreateProject();
+
+  // Subscribe to copy progress events
+  useEffect(() => {
+    const unsubscribe = subscribeToCopyProgress((projectId, progress) => {
+      const log: TerminalLog = {
+        id: `${Date.now()}-${Math.random()}`,
+        timestamp: new Date(),
+        message: progress.message,
+        type: progress.stage === 'complete' ? 'success' : 'progress',
+        stage: progress.stage,
+      };
+      setTerminalLogs(prev => [...prev, log]);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleSelectFolder = async () => {
     const result = await selectProjectFolder();
@@ -168,7 +200,22 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   };
 
   const handleNext = () => {
-    const steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
+    let steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
+
+    // Insert laravel-starter and laravel-config steps for fresh Laravel projects
+    if (formData.type === ProjectType.Laravel) {
+      steps = [
+        'type',
+        'laravel-starter',
+        'laravel-config',
+        'basic',
+        'variant',
+        'runtime',
+        'extensions',
+        'review',
+      ];
+    }
+
     const currentIndex = steps.indexOf(step);
     if (currentIndex < steps.length - 1) {
       setStep(steps[currentIndex + 1]);
@@ -176,7 +223,22 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   };
 
   const handleBack = () => {
-    const steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
+    let steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
+
+    // Insert laravel-starter and laravel-config steps for fresh Laravel projects
+    if (formData.type === ProjectType.Laravel) {
+      steps = [
+        'type',
+        'laravel-starter',
+        'laravel-config',
+        'basic',
+        'variant',
+        'runtime',
+        'extensions',
+        'review',
+      ];
+    }
+
     const currentIndex = steps.indexOf(step);
     if (currentIndex > 0) {
       setStep(steps[currentIndex - 1]);
@@ -186,31 +248,80 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   const handleCreate = async () => {
     if (!formData.path || !formData.name) return;
 
-    await createProjectMutation.mutateAsync({
-      name: formData.name,
-      path: formData.path,
-      type: formData.type || ProjectType.BasicPhp,
-      phpVersion: formData.phpVersion || '8.3',
-      phpVariant: formData.phpVariant || 'fpm-apache',
-      nodeVersion: formData.nodeVersion || 'none',
-      enableClaudeAi: formData.enableClaudeAi || false,
-      phpExtensions: formData.phpExtensions || [], // Only send additional extensions
-    });
+    // Show terminal and reset logs
+    setShowTerminal(true);
+    setIsCreating(true);
+    setTerminalLogs([
+      {
+        id: `${Date.now()}-start`,
+        timestamp: new Date(),
+        message: '🚀 Starting project creation...',
+        type: 'info',
+      },
+    ]);
 
-    // Reset and close
-    onOpenChange(false);
-    setStep('type');
-    setFormData({
-      type: ProjectType.BasicPhp,
-      phpVersion: '8.3',
-      phpVariant: 'fpm-apache',
-      nodeVersion: 'none',
-      enableClaudeAi: false,
-      phpExtensions: ['bcmath', 'gd', 'intl'],
-    });
+    try {
+      // Add initial steps
+      setTerminalLogs(prev => [
+        ...prev,
+        {
+          id: `${Date.now()}-validate`,
+          timestamp: new Date(),
+          message: '✓ Validating project configuration',
+          type: 'success',
+        },
+        {
+          id: `${Date.now()}-folder`,
+          timestamp: new Date(),
+          message: `📁 Creating project folder: ${formData.name}`,
+          type: 'progress',
+        },
+      ]);
 
-    // Navigate to projects list
-    navigate({ to: '/projects' });
+      await createProjectMutation.mutateAsync({
+        name: formData.name,
+        path: formData.path,
+        type: formData.type || ProjectType.BasicPhp,
+        phpVersion: formData.phpVersion || '8.3',
+        phpVariant: formData.phpVariant || 'fpm-apache',
+        nodeVersion: formData.nodeVersion || 'none',
+        enableClaudeAi: formData.enableClaudeAi || false,
+        phpExtensions: formData.phpExtensions || [], // Only send additional extensions
+        laravelOptions: formData.laravelOptions, // Include Laravel options if present
+      });
+
+      // Success log
+      setTerminalLogs(prev => [
+        ...prev,
+        {
+          id: `${Date.now()}-complete`,
+          timestamp: new Date(),
+          message: `✅ Project "${formData.name}" created successfully!`,
+          type: 'success',
+        },
+        {
+          id: `${Date.now()}-next`,
+          timestamp: new Date(),
+          message: '💡 You can now close this dialog and open the project in VS Code',
+          type: 'info',
+        },
+      ]);
+
+      setIsCreating(false);
+
+      // Don't auto-close - let user review the terminal output
+    } catch (error) {
+      setTerminalLogs(prev => [
+        ...prev,
+        {
+          id: `${Date.now()}-error`,
+          timestamp: new Date(),
+          message: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          type: 'error',
+        },
+      ]);
+      setIsCreating(false);
+    }
   };
 
   const toggleExtension = (extension: string) => {
@@ -234,6 +345,14 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     switch (step) {
       case 'type':
         return !!formData.type;
+      case 'laravel-starter':
+        // Custom URL validation for custom starter kit
+        if (formData.laravelOptions?.starterKit === 'custom') {
+          return !!formData.laravelOptions?.customStarterKitUrl?.trim();
+        }
+        return !!formData.laravelOptions?.starterKit;
+      case 'laravel-config':
+        return true;
       case 'basic': {
         const validation = validateSiteName(formData.name || '');
         return validation.isValid && !!formData.path;
@@ -278,6 +397,334 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
             </div>
           </div>
         );
+
+      case 'laravel-starter': {
+        const starterKit = formData.laravelOptions?.starterKit || 'none';
+
+        const starterKits = [
+          { value: 'none', label: 'None', icon: TbCode, desc: 'Blank Laravel application' },
+          { value: 'react', label: 'React', icon: SiReact, desc: 'React with Inertia.js' },
+          { value: 'vue', label: 'Vue', icon: SiVuedotjs, desc: 'Vue with Inertia.js' },
+          {
+            value: 'livewire',
+            label: 'Livewire',
+            icon: SiLivewire,
+            desc: 'Full-stack with Livewire',
+          },
+          { value: 'custom', label: 'Custom', icon: TbLink, desc: 'Custom GitHub repository' },
+        ];
+
+        return (
+          <div className="space-y-6">
+            {/* Starter Kit Grid */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Starter Kit</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {starterKits.map(kit => {
+                  const Icon = kit.icon;
+                  const isSelected = starterKit === kit.value;
+                  return (
+                    <button
+                      key={kit.value}
+                      type="button"
+                      onClick={() =>
+                        setFormData(prev => ({
+                          ...prev,
+                          laravelOptions: {
+                            starterKit: kit.value as
+                              | 'none'
+                              | 'react'
+                              | 'vue'
+                              | 'livewire'
+                              | 'custom',
+                            authentication: prev.laravelOptions?.authentication || 'none',
+                            useVolt: prev.laravelOptions?.useVolt || false,
+                            testingFramework: prev.laravelOptions?.testingFramework || 'pest',
+                            installBoost: prev.laravelOptions?.installBoost || false,
+                            customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                          },
+                        }))
+                      }
+                      className={`group hover:border-primary/50 relative flex flex-col items-start gap-2 rounded-lg border-2 p-4 text-left transition-all ${
+                        isSelected ? 'border-primary bg-primary/5' : 'border-border bg-background'
+                      }`}
+                    >
+                      <Icon
+                        className={`h-5 w-5 transition-colors ${
+                          isSelected
+                            ? 'text-primary'
+                            : 'text-muted-foreground group-hover:text-primary'
+                        }`}
+                      />
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{kit.label}</div>
+                        <div className="text-muted-foreground text-xs">{kit.desc}</div>
+                      </div>
+                      {isSelected && (
+                        <div className="absolute top-2 right-2">
+                          <Check className="text-primary h-4 w-4" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {starterKit === 'custom' && (
+                <Input
+                  placeholder="https://github.com/username/repo"
+                  value={formData.laravelOptions?.customStarterKitUrl || ''}
+                  onChange={e =>
+                    setFormData(prev => ({
+                      ...prev,
+                      laravelOptions: {
+                        starterKit: 'custom',
+                        customStarterKitUrl: e.target.value,
+                        authentication: prev.laravelOptions?.authentication || 'none',
+                        useVolt: prev.laravelOptions?.useVolt || false,
+                        testingFramework: prev.laravelOptions?.testingFramework || 'pest',
+                        installBoost: prev.laravelOptions?.installBoost || false,
+                      },
+                    }))
+                  }
+                />
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      case 'laravel-config': {
+        const starterKit = formData.laravelOptions?.starterKit || 'none';
+        const hasStarterKit = starterKit !== 'none' && starterKit !== 'custom';
+        const isLivewire = starterKit === 'livewire';
+        const authentication = formData.laravelOptions?.authentication || 'none';
+
+        return (
+          <div className="space-y-6">
+            {/* Authentication (only for starter kits) */}
+            {hasStarterKit && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Authentication</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData(prev => ({
+                        ...prev,
+                        laravelOptions: {
+                          starterKit: prev.laravelOptions?.starterKit || 'none',
+                          authentication: 'none',
+                          useVolt: prev.laravelOptions?.useVolt || false,
+                          testingFramework: prev.laravelOptions?.testingFramework || 'pest',
+                          installBoost: prev.laravelOptions?.installBoost || false,
+                          customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                        },
+                      }))
+                    }
+                    className={`hover:border-primary/50 flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                      authentication === 'none' ? 'border-primary bg-primary/5' : 'border-border'
+                    }`}
+                  >
+                    <TbCode
+                      className={`h-5 w-5 ${authentication === 'none' ? 'text-primary' : 'text-muted-foreground'}`}
+                    />
+                    <span className="text-xs font-medium">None</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData(prev => ({
+                        ...prev,
+                        laravelOptions: {
+                          starterKit: prev.laravelOptions?.starterKit || 'none',
+                          authentication: 'workos',
+                          useVolt: prev.laravelOptions?.useVolt || false,
+                          testingFramework: prev.laravelOptions?.testingFramework || 'pest',
+                          installBoost: prev.laravelOptions?.installBoost || false,
+                          customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                        },
+                      }))
+                    }
+                    className={`hover:border-primary/50 flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                      authentication === 'workos' ? 'border-primary bg-primary/5' : 'border-border'
+                    }`}
+                  >
+                    <TbShieldCheck
+                      className={`h-5 w-5 ${authentication === 'workos' ? 'text-primary' : 'text-muted-foreground'}`}
+                    />
+                    <span className="text-xs font-medium">WorkOS</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData(prev => ({
+                        ...prev,
+                        laravelOptions: {
+                          starterKit: prev.laravelOptions?.starterKit || 'none',
+                          authentication: 'laravel',
+                          useVolt: prev.laravelOptions?.useVolt || false,
+                          testingFramework: prev.laravelOptions?.testingFramework || 'pest',
+                          installBoost: prev.laravelOptions?.installBoost || false,
+                          customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                        },
+                      }))
+                    }
+                    className={`hover:border-primary/50 flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                      authentication === 'laravel' ? 'border-primary bg-primary/5' : 'border-border'
+                    }`}
+                  >
+                    <TbLock
+                      className={`h-5 w-5 ${authentication === 'laravel' ? 'text-primary' : 'text-muted-foreground'}`}
+                    />
+                    <span className="text-xs font-medium">Laravel's built-in</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Additional Options */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Additional Options</Label>
+              <div className="space-y-2">
+                {/* Volt Toggle */}
+                {isLivewire && authentication !== 'workos' && (
+                  <label
+                    htmlFor="use-volt"
+                    className="hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <TbBolt className="text-muted-foreground h-4 w-4" />
+                      <div>
+                        <div className="text-sm font-medium">Volt Functional API</div>
+                        <div className="text-muted-foreground text-xs">Use functional style</div>
+                      </div>
+                    </div>
+                    <Switch
+                      id="use-volt"
+                      checked={formData.laravelOptions?.useVolt || false}
+                      onCheckedChange={checked =>
+                        setFormData(prev => ({
+                          ...prev,
+                          laravelOptions: {
+                            starterKit: prev.laravelOptions?.starterKit || 'livewire',
+                            authentication: prev.laravelOptions?.authentication || 'none',
+                            useVolt: checked,
+                            testingFramework: prev.laravelOptions?.testingFramework || 'pest',
+                            installBoost: prev.laravelOptions?.installBoost || false,
+                            customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                )}
+
+                {/* Testing Framework */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData(prev => ({
+                        ...prev,
+                        laravelOptions: {
+                          starterKit: prev.laravelOptions?.starterKit || 'none',
+                          authentication: prev.laravelOptions?.authentication || 'none',
+                          useVolt: prev.laravelOptions?.useVolt || false,
+                          testingFramework: 'pest',
+                          installBoost: prev.laravelOptions?.installBoost || false,
+                          customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                        },
+                      }))
+                    }
+                    className={`flex items-center gap-2 rounded-lg border p-3 transition-all ${
+                      (formData.laravelOptions?.testingFramework || 'pest') === 'pest'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <TbFlask
+                      className={`h-4 w-4 ${
+                        (formData.laravelOptions?.testingFramework || 'pest') === 'pest'
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                    <div className="text-left">
+                      <div className="text-sm font-medium">Pest</div>
+                      <div className="text-muted-foreground text-xs">Recommended</div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData(prev => ({
+                        ...prev,
+                        laravelOptions: {
+                          starterKit: prev.laravelOptions?.starterKit || 'none',
+                          authentication: prev.laravelOptions?.authentication || 'none',
+                          useVolt: prev.laravelOptions?.useVolt || false,
+                          testingFramework: 'phpunit',
+                          installBoost: prev.laravelOptions?.installBoost || false,
+                          customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                        },
+                      }))
+                    }
+                    className={`flex items-center gap-2 rounded-lg border p-3 transition-all ${
+                      formData.laravelOptions?.testingFramework === 'phpunit'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <TbFlask
+                      className={`h-4 w-4 ${
+                        formData.laravelOptions?.testingFramework === 'phpunit'
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                    <div className="text-left">
+                      <div className="text-sm font-medium">PHPUnit</div>
+                      <div className="text-muted-foreground text-xs">Classic</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Boost */}
+                <label
+                  htmlFor="install-boost"
+                  className="hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <TbBolt className="text-muted-foreground h-4 w-4" />
+                    <div>
+                      <div className="text-sm font-medium">Laravel Boost</div>
+                      <div className="text-muted-foreground text-xs">Dev tools & enhancements</div>
+                    </div>
+                  </div>
+                  <Switch
+                    id="install-boost"
+                    checked={formData.laravelOptions?.installBoost || false}
+                    onCheckedChange={checked =>
+                      setFormData(prev => ({
+                        ...prev,
+                        laravelOptions: {
+                          starterKit: prev.laravelOptions?.starterKit || 'none',
+                          authentication: prev.laravelOptions?.authentication || 'none',
+                          useVolt: prev.laravelOptions?.useVolt || false,
+                          testingFramework: prev.laravelOptions?.testingFramework || 'pest',
+                          installBoost: checked,
+                          customStarterKitUrl: prev.laravelOptions?.customStarterKitUrl,
+                        },
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       case 'basic':
         return (
@@ -747,6 +1194,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     switch (step) {
       case 'type':
         return 'Choose Project Type';
+      case 'laravel-starter':
+        return 'Choose Starter Kit';
+      case 'laravel-config':
+        return 'Configure Options';
       case 'basic':
         return 'Basic Information';
       case 'variant':
@@ -769,6 +1220,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           <DialogTitle>{getStepTitle()}</DialogTitle>
           <DialogDescription>
             {step === 'type' && 'Select the type of project you want to create'}
+            {step === 'laravel-starter' &&
+              'Choose your Laravel starter kit or begin with a blank project'}
+            {step === 'laravel-config' &&
+              'Configure authentication, testing, and additional options'}
             {step === 'basic' && 'Enter the basic details for your project'}
             {step === 'variant' && 'Choose the web server and PHP runtime variant'}
             {step === 'runtime' && 'Configure PHP, Node.js, and other options'}
@@ -777,10 +1232,14 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           </DialogDescription>
         </DialogHeader>
 
-        {renderStepContent()}
+        {showTerminal ? (
+          <ProjectCreationTerminal logs={terminalLogs} className="my-4" />
+        ) : (
+          renderStepContent()
+        )}
 
         <DialogFooter className="flex-row justify-between">
-          {step !== 'type' && (
+          {!showTerminal && step !== 'type' && (
             <Button
               type="button"
               variant="outline"
@@ -792,27 +1251,53 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
             </Button>
           )}
 
-          <div className="flex gap-2">
-            {step !== 'review' ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                disabled={!canProceed() || createProjectMutation.isPending}
-              >
-                Next
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleCreate}
-                disabled={!canProceed() || createProjectMutation.isPending}
-              >
-                <Check className="mr-2 h-4 w-4" />
-                {createProjectMutation.isPending ? 'Creating...' : 'Create Project'}
-              </Button>
-            )}
-          </div>
+          {!showTerminal && (
+            <div className="flex gap-2">
+              {step !== 'review' ? (
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={!canProceed() || createProjectMutation.isPending}
+                >
+                  Next
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleCreate}
+                  disabled={!canProceed() || createProjectMutation.isPending}
+                >
+                  <Check className="mr-2 h-4 w-4" />
+                  Create Project
+                </Button>
+              )}
+            </div>
+          )}
+
+          {showTerminal && !isCreating && (
+            <Button
+              type="button"
+              onClick={() => {
+                // Reset wizard state and navigate to projects
+                onOpenChange(false);
+                setStep('type');
+                setFormData({
+                  type: ProjectType.BasicPhp,
+                  phpVersion: '8.3',
+                  phpVariant: 'fpm-apache',
+                  nodeVersion: 'none',
+                  enableClaudeAi: false,
+                  phpExtensions: ['bcmath', 'gd', 'intl'],
+                });
+                setShowTerminal(false);
+                setTerminalLogs([]);
+                navigate({ to: '/projects' });
+              }}
+            >
+              Close
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
