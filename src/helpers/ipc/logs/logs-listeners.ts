@@ -48,7 +48,7 @@ async function handleStartLogs(
     if (!containerStatus?.exists) {
       return {
         success: false,
-        error: `Container ${containerName} does not exist. Start the project first.`,
+        error: `Container ${project.containerName} does not exist. Start the project first.`,
       };
     }
 
@@ -109,7 +109,8 @@ async function handleReadFile(
       return { success: false, error: `Project ${projectId} not found` };
     }
 
-    const content = await dockerManager.readFileFromContainer(project.containerName, filePath);
+    const buffer = await dockerManager.getFileFromContainer(project.containerName, filePath);
+    const content = buffer.toString('utf-8');
 
     return { success: true, content };
   } catch (error) {
@@ -134,11 +135,12 @@ async function handleTailFile(
       return { success: false, error: `Project ${projectId} not found` };
     }
 
-    const content = await dockerManager.tailFileFromContainer(
-      project.containerName,
-      filePath,
-      lines
-    );
+    const buffer = await dockerManager.getFileFromContainer(project.containerName, filePath);
+    const fullContent = buffer.toString('utf-8');
+
+    // Get last N lines
+    const allLines = fullContent.split('\n');
+    const content = allLines.slice(-lines).join('\n');
 
     return { success: true, content };
   } catch (error) {
