@@ -35,3 +35,7 @@ export async function openProjectTinker(projectId: string) {
     defaultTerminal: settings.defaultTerminal,
   });
 }
+
+export async function openUrl(url: string) {
+  return await window.shell.openUrl(url);
+}

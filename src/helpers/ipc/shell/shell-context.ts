@@ -5,6 +5,7 @@ import {
   SHELL_OPEN_EDITOR_CHANNEL,
   SHELL_OPEN_TERMINAL_CHANNEL,
   SHELL_OPEN_TINKER_CHANNEL,
+  SHELL_OPEN_URL_CHANNEL,
   SHELL_GET_SETTINGS_CHANNEL,
 } from './shell-channels';
 
@@ -24,6 +25,7 @@ export interface ShellContext {
   openEditor: (projectId: string, settings?: ShellSettings) => Promise<ShellOperationResult>;
   openTerminal: (projectId: string, settings?: ShellSettings) => Promise<ShellOperationResult>;
   openTinker: (projectId: string, settings?: ShellSettings) => Promise<ShellOperationResult>;
+  openUrl: (url: string) => Promise<ShellOperationResult>;
 }
 
 export function exposeShellContext() {
@@ -36,5 +38,6 @@ export function exposeShellContext() {
       ipcRenderer.invoke(SHELL_OPEN_TERMINAL_CHANNEL, projectId, settings),
     openTinker: (projectId: string, settings?: ShellSettings) =>
       ipcRenderer.invoke(SHELL_OPEN_TINKER_CHANNEL, projectId, settings),
+    openUrl: (url: string) => ipcRenderer.invoke(SHELL_OPEN_URL_CHANNEL, url),
   });
 }

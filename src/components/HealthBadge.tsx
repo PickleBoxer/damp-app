@@ -3,16 +3,18 @@
  */
 
 import { cn } from '@/utils/tailwind';
+import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
 interface HealthBadgeProps {
   status?: 'starting' | 'healthy' | 'unhealthy' | 'none';
   className?: string;
+  variant?: 'default' | 'minimal';
 }
 
 /**
  * Displays a health status badge with appropriate styling and icon
  */
-export function HealthBadge({ status, className }: HealthBadgeProps) {
+export function HealthBadge({ status, className, variant = 'default' }: HealthBadgeProps) {
   // Don't show badge if no health check is configured
   if (!status || status === 'none') {
     return null;
@@ -20,37 +22,50 @@ export function HealthBadge({ status, className }: HealthBadgeProps) {
 
   const badges = {
     healthy: {
-      text: '✓ Healthy',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-      textColor: 'text-green-700 dark:text-green-400',
-      borderColor: 'border-green-200 dark:border-green-800',
+      text: 'Healthy',
+      icon: CheckCircle2,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/50',
+      border: 'border-emerald-200 dark:border-emerald-900',
     },
     unhealthy: {
-      text: '✗ Unhealthy',
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-      textColor: 'text-red-700 dark:text-red-400',
-      borderColor: 'border-red-200 dark:border-red-800',
+      text: 'Unhealthy',
+      icon: XCircle,
+      color: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-50 dark:bg-red-950/50',
+      border: 'border-red-200 dark:border-red-900',
     },
     starting: {
-      text: '⟳ Starting',
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-      textColor: 'text-yellow-700 dark:text-yellow-400',
-      borderColor: 'border-yellow-200 dark:border-yellow-800',
+      text: 'Starting',
+      icon: Loader2,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-950/50',
+      border: 'border-amber-200 dark:border-amber-900',
     },
   };
 
   const badge = badges[status];
+  const Icon = badge.icon;
+
+  if (variant === 'minimal') {
+    return (
+      <div className={cn('flex items-center gap-1', className)}>
+        <Icon className={cn('h-3.5 w-3.5', badge.color, status === 'starting' && 'animate-spin')} />
+      </div>
+    );
+  }
 
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium',
-        badge.bgColor,
-        badge.textColor,
-        badge.borderColor,
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium',
+        badge.bg,
+        badge.color,
+        badge.border,
         className
       )}
     >
+      <Icon className={cn('h-3 w-3', status === 'starting' && 'animate-spin')} />
       {badge.text}
     </span>
   );
@@ -65,12 +80,14 @@ export function HealthIcon({ status, className }: HealthBadgeProps) {
   }
 
   const icons = {
-    healthy: { icon: '✓', color: 'text-green-600 dark:text-green-400' },
-    unhealthy: { icon: '✗', color: 'text-red-600 dark:text-red-400' },
-    starting: { icon: '⟳', color: 'text-yellow-600 dark:text-yellow-400' },
+    healthy: { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400' },
+    unhealthy: { Icon: XCircle, color: 'text-red-600 dark:text-red-400' },
+    starting: { Icon: Loader2, color: 'text-amber-600 dark:text-amber-400' },
   };
 
-  const icon = icons[status];
+  const { Icon, color } = icons[status];
 
-  return <span className={cn('text-sm font-bold', icon.color, className)}>{icon.icon}</span>;
+  return (
+    <Icon className={cn('h-4 w-4', color, status === 'starting' && 'animate-spin', className)} />
+  );
 }
