@@ -22,6 +22,12 @@ interface ElectronWindow {
 
 interface DockerContext {
   getStatus: () => Promise<{ isRunning: boolean; error?: string }>;
+  getInfo: () => Promise<{
+    cpus: number;
+    cpuUsagePercent: number;
+    memTotal: number;
+    memUsed: number;
+  }>;
   getNetworkName: () => Promise<string>;
   ensureNetwork: () => Promise<void>;
   connectToNetwork: (containerIdOrName: string) => Promise<void>;
@@ -79,6 +85,10 @@ interface ShellContext {
     projectId: string,
     settings?: { defaultEditor: string; defaultTerminal: string }
   ) => Promise<{ success: boolean; error?: string }>;
+  openHomeTerminal: (settings?: {
+    defaultEditor: string;
+    defaultTerminal: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   openTinker: (
     projectId: string,
     settings?: { defaultEditor: string; defaultTerminal: string }
@@ -98,6 +108,17 @@ interface ProjectLogsContext {
   onLine: (callback: (log: LogLine) => void) => () => void;
 }
 
+interface AppContext {
+  getInfo: () => Promise<{
+    appName: string;
+    appVersion: string;
+    electronVersion: string;
+    chromeVersion: string;
+    nodeVersion: string;
+    v8Version: string;
+  }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
@@ -106,4 +127,5 @@ declare interface Window {
   projects: ProjectsContext;
   shell: ShellContext;
   projectLogs: ProjectLogsContext;
+  app: AppContext;
 }

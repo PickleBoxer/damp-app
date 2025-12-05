@@ -4,6 +4,7 @@ import {
   SHELL_OPEN_BROWSER_CHANNEL,
   SHELL_OPEN_EDITOR_CHANNEL,
   SHELL_OPEN_TERMINAL_CHANNEL,
+  SHELL_OPEN_HOME_TERMINAL_CHANNEL,
   SHELL_OPEN_TINKER_CHANNEL,
   SHELL_OPEN_URL_CHANNEL,
   SHELL_GET_SETTINGS_CHANNEL,
@@ -24,6 +25,7 @@ export interface ShellContext {
   openBrowser: (projectId: string) => Promise<ShellOperationResult>;
   openEditor: (projectId: string, settings?: ShellSettings) => Promise<ShellOperationResult>;
   openTerminal: (projectId: string, settings?: ShellSettings) => Promise<ShellOperationResult>;
+  openHomeTerminal: (settings?: ShellSettings) => Promise<ShellOperationResult>;
   openTinker: (projectId: string, settings?: ShellSettings) => Promise<ShellOperationResult>;
   openUrl: (url: string) => Promise<ShellOperationResult>;
 }
@@ -36,6 +38,8 @@ export function exposeShellContext() {
       ipcRenderer.invoke(SHELL_OPEN_EDITOR_CHANNEL, projectId, settings),
     openTerminal: (projectId: string, settings?: ShellSettings) =>
       ipcRenderer.invoke(SHELL_OPEN_TERMINAL_CHANNEL, projectId, settings),
+    openHomeTerminal: (settings?: ShellSettings) =>
+      ipcRenderer.invoke(SHELL_OPEN_HOME_TERMINAL_CHANNEL, settings),
     openTinker: (projectId: string, settings?: ShellSettings) =>
       ipcRenderer.invoke(SHELL_OPEN_TINKER_CHANNEL, projectId, settings),
     openUrl: (url: string) => ipcRenderer.invoke(SHELL_OPEN_URL_CHANNEL, url),

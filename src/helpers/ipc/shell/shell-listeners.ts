@@ -2,6 +2,7 @@ import { ipcMain, shell } from 'electron';
 import { z } from 'zod';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import os from 'node:os';
 import { projectStorage } from '../../../services/projects/project-storage';
 import type { ShellOperationResult, ShellSettings } from './shell-context';
 import {
@@ -9,6 +10,7 @@ import {
   SHELL_OPEN_BROWSER_CHANNEL,
   SHELL_OPEN_EDITOR_CHANNEL,
   SHELL_OPEN_TERMINAL_CHANNEL,
+  SHELL_OPEN_HOME_TERMINAL_CHANNEL,
   SHELL_OPEN_TINKER_CHANNEL,
   SHELL_OPEN_URL_CHANNEL,
 } from './shell-channels';
@@ -206,6 +208,25 @@ export function addShellEventListeners() {
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open terminal';
         console.error('Shell open terminal error:', message);
+        return { success: false, error: message };
+      }
+    }
+  );
+
+  /**
+   * Open terminal at home directory
+   */
+  ipcMain.handle(
+    SHELL_OPEN_HOME_TERMINAL_CHANNEL,
+    async (_event, settings?: ShellSettings): Promise<ShellOperationResult> => {
+      try {
+        const homeDir = os.homedir();
+        const terminalCmd = getTerminalCommand(homeDir, settings);
+        await execAsync(terminalCmd);
+        return { success: true };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to open terminal';
+        console.error('Shell open home terminal error:', message);
         return { success: false, error: message };
       }
     }

@@ -1,14 +1,18 @@
-import { useTranslation } from 'react-i18next';
+import { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { AboutDialog } from '@/components/AboutDialog';
 
 function AboutPage() {
-  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+
+  // Open dialog automatically on mount
+  useEffect(() => {
+    setOpen(true);
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center gap-2">
-        <h1 className="text-4xl font-bold">{t('titleAboutPage')}</h1>
-      </div>
+      <AboutDialog open={open} onOpenChange={setOpen} />
     </div>
   );
 }

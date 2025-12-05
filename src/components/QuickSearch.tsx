@@ -81,7 +81,6 @@ export function QuickSearch() {
       type: 'page',
       path: '/settings',
     },
-    { id: 'page-about', title: 'About', subtitle: 'About DAMP', type: 'page', path: '/about' },
     // Projects (only if loaded successfully)
     ...(!projectsError && projects
       ? projects.map(project => ({

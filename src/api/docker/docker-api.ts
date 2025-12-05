@@ -8,6 +8,13 @@ export interface DockerStatus {
   error?: string;
 }
 
+export interface DockerInfo {
+  cpus: number;
+  cpuUsagePercent: number;
+  memTotal: number;
+  memUsed: number;
+}
+
 // Typed reference to the Docker API exposed via preload script
 const dockerApi = (globalThis as unknown as Window).docker;
 
@@ -29,6 +36,14 @@ function ensureDockerApi() {
 export async function getDockerStatus(): Promise<DockerStatus> {
   ensureDockerApi();
   return dockerApi.getStatus();
+}
+
+/**
+ * Get Docker system information (CPU and RAM stats)
+ */
+export async function getDockerInfo(): Promise<DockerInfo> {
+  ensureDockerApi();
+  return dockerApi.getInfo();
 }
 
 /**

@@ -6,6 +6,7 @@ import { addServicesListeners } from './services/services-listeners';
 import { addProjectsListeners } from './projects/projects-listeners';
 import { addShellEventListeners } from './shell/shell-listeners';
 import { addLogsEventListeners } from './logs/logs-listeners';
+import { addAppEventListeners } from './app/app-listeners';
 
 export default function registerListeners(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow);
@@ -15,4 +16,5 @@ export default function registerListeners(mainWindow: BrowserWindow) {
   addProjectsListeners(mainWindow);
   addShellEventListeners();
   addLogsEventListeners();
+  addAppEventListeners();
 }

@@ -28,6 +28,14 @@ export async function openProjectTerminal(projectId: string) {
   });
 }
 
+export async function openHomeTerminal() {
+  const settings = getSettings();
+  return await window.shell.openHomeTerminal({
+    defaultEditor: settings.defaultEditor,
+    defaultTerminal: settings.defaultTerminal,
+  });
+}
+
 export async function openProjectTinker(projectId: string) {
   const settings = getSettings();
   return await window.shell.openTinker(projectId, {

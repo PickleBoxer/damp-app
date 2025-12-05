@@ -1,7 +1,6 @@
 'use client';
 import * as React from 'react';
-import { Command, Globe, Home, Info, Server, Settings } from 'lucide-react';
-import { NavDocker } from '@/components/NavDocker';
+import { Command, Globe, Home, Server } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -97,47 +96,7 @@ export default function AppSidebar({ ...props }: React.ComponentProps<typeof Sid
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        <SidebarGroup className="mt-auto">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip={{
-                  children: t('titleSettingsPage'),
-                  hidden: false,
-                }}
-                className="px-2.5 md:px-2"
-                asChild
-                isActive={isActive('/settings')}
-              >
-                <Link to="/settings">
-                  <Settings />
-                  <span>{t('titleSettingsPage')}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip={{
-                  children: t('titleAboutPage'),
-                  hidden: false,
-                }}
-                className="px-2.5 md:px-2"
-                asChild
-                isActive={isActive('/about')}
-              >
-                <Link to="/about">
-                  <Info />
-                  <span>{t('titleAboutPage')}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <NavDocker />
-      </SidebarFooter>
     </Sidebar>
   );
 }

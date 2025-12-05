@@ -1,8 +1,8 @@
 {
   "name": "damp-app",
-  "productName": "damp-app Template",
+  "productName": "DAMP",
   "version": "1.0.0",
-  "description": "Electron Forge with shadcn-ui (Vite + Typescript)",
+  "description": "Docker local development environment manager",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {

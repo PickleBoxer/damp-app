@@ -2,6 +2,7 @@ import { closeWindow, maximizeWindow, minimizeWindow } from '@/helpers/window_he
 import { isMacOS } from '@/utils/platform';
 import { Command } from 'lucide-react';
 import { QuickSearch } from './QuickSearch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DragWindowRegion() {
   return (
@@ -38,41 +39,53 @@ export default function DragWindowRegion() {
 function WindowButtons() {
   return (
     <div className="ml-auto flex" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button
-        title="Minimize"
-        type="button"
-        className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-white/10 dark:hover:bg-white/10"
-        onClick={minimizeWindow}
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10">
-          <rect fill="currentColor" width="10" height="1" y="5" />
-        </svg>
-      </button>
-      <button
-        title="Maximize"
-        type="button"
-        className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-white/10 dark:hover:bg-white/10"
-        onClick={maximizeWindow}
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10">
-          <rect width="9" height="9" x="0.5" y="0.5" fill="none" stroke="currentColor" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        title="Close"
-        className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-[#E81123] hover:text-white"
-        onClick={closeWindow}
-      >
-        <svg width="10" height="10" viewBox="0 0 10 10">
-          <path
-            fill="currentColor"
-            d="M 0.7,0 L 10,9.3 M 10,0.7 L 0.7,10"
-            stroke="currentColor"
-            strokeWidth="1.4"
-          />
-        </svg>
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-white/10 dark:hover:bg-white/10"
+            onClick={minimizeWindow}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <rect fill="currentColor" width="10" height="1" y="5" />
+            </svg>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Minimize</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-white/10 dark:hover:bg-white/10"
+            onClick={maximizeWindow}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <rect width="9" height="9" x="0.5" y="0.5" fill="none" stroke="currentColor" />
+            </svg>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Maximize</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="flex h-[35px] w-[46px] items-center justify-center transition-colors hover:bg-[#E81123] hover:text-white"
+            onClick={closeWindow}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10">
+              <path
+                fill="currentColor"
+                d="M 0.7,0 L 10,9.3 M 10,0.7 L 0.7,10"
+                stroke="currentColor"
+                strokeWidth="1.4"
+              />
+            </svg>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Close</TooltipContent>
+      </Tooltip>
     </div>
   );
 }
