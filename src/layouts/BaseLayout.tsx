@@ -1,7 +1,6 @@
 import React from 'react';
 import DragWindowRegion from '@/components/DragWindowRegion';
-import AppSidebar from '@/components/template/Sidebar';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import IconNav from '@/components/IconNav';
 import Footer from '@/components/template/Footer';
 import { Toaster } from 'sonner';
 import { useTheme } from '@/hooks/use-theme';
@@ -10,13 +9,13 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
   const { resolvedTheme } = useTheme();
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="flex h-screen flex-col overflow-hidden select-none">
-        <DragWindowRegion />
+    <div className="flex h-screen flex-col overflow-hidden select-none">
+      <DragWindowRegion />
+      <div className="flex flex-1 overflow-hidden">
+        <IconNav />
         <main className="flex-1 overflow-auto">{children}</main>
-        <Footer />
-      </SidebarInset>
+      </div>
+      <Footer />
       <Toaster
         position="bottom-right"
         theme={resolvedTheme}
@@ -26,6 +25,6 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
         visibleToasts={5}
         toastOptions={{ style: { pointerEvents: 'auto' } }}
       />
-    </SidebarProvider>
+    </div>
   );
 }

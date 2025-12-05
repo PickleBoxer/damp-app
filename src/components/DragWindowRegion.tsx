@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 export default function DragWindowRegion() {
   return (
-    <div className="bg-background relative sticky top-0 h-[35px] shrink-0 border-b">
+    <div className="bg-background relative h-[35px] w-full shrink-0 border-b">
       {/* Draggable layer for empty spaces */}
       <div className="draglayer absolute inset-0" />
 

@@ -27,7 +27,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-background flex h-5 shrink-0 items-center justify-between border-t text-[11px]">
+    <footer className="bg-background flex h-5 w-full shrink-0 items-center justify-between border-t text-[11px]">
       <DockerStatusFooter />
       <div className="flex h-full">
         <Tooltip>
