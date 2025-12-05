@@ -1,6 +1,5 @@
 import { SiDocker } from 'react-icons/si';
 import { useDockerStatus, useDockerInfo } from '@/api/docker/docker-queries';
-import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Cpu, MemoryStick, RefreshCw } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
@@ -130,8 +129,6 @@ export default function DockerStatusFooter() {
         </TooltipContent>
       </Tooltip>
 
-      <Separator orientation="vertical" className="h-3" />
-
       {/* Refresh Button */}
       <Tooltip>
         <TooltipTrigger asChild>
@@ -150,8 +147,6 @@ export default function DockerStatusFooter() {
 
       {showStats && (
         <>
-          <Separator orientation="vertical" className="h-3" />
-
           {/* CPU Usage */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -166,8 +161,6 @@ export default function DockerStatusFooter() {
               CPU: {dockerInfo.cpuUsagePercent.toFixed(2)}% / {totalCpuCapacity}%
             </TooltipContent>
           </Tooltip>
-
-          <Separator orientation="vertical" className="h-3" />
 
           {/* Memory Usage */}
           <Tooltip>

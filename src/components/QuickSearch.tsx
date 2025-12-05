@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Kbd } from '@/components/ui/kbd';
 import { useProjects } from '@/api/projects/projects-queries';
 import { useServices } from '@/api/services/services-queries';
 import { isMacOS } from '@/utils/platform';
@@ -151,13 +152,11 @@ export function QuickSearch() {
       {/* Search trigger button in title bar */}
       <button
         onClick={() => setOpen(true)}
-        className="bg-muted/50 border-border hover:bg-muted hover:border-ring/20 flex h-[26px] w-[320px] items-center gap-2 rounded-md border px-3 font-mono text-sm transition-all duration-100"
+        className="bg-muted/50 border-border hover:bg-muted hover:border-ring/20 relative flex h-[26px] w-[320px] items-center justify-center gap-2 rounded-md border px-3 font-mono text-sm transition-all duration-100"
       >
         <Search className="text-muted-foreground h-4 w-4" />
-        <span className="text-muted-foreground text-xs">Search projects, services...</span>
-        <kbd className="bg-background ml-auto flex items-center gap-0.5 rounded border px-1.5 py-0.5 text-xs">
-          {modKey}P
-        </kbd>
+        <span className="text-muted-foreground text-xs">DAMP</span>
+        <Kbd className="bg-background absolute right-3">{modKey}P</Kbd>
       </button>
 
       {/* Command palette dialog */}
@@ -264,9 +263,7 @@ export function QuickSearch() {
                       <div className="truncate text-sm font-medium">{item.title}</div>
                       <div className="text-muted-foreground truncate text-xs">{item.subtitle}</div>
                     </div>
-                    {index === selectedIndex && (
-                      <kbd className="bg-background rounded border px-1.5 py-0.5 text-xs">↵</kbd>
-                    )}
+                    {index === selectedIndex && <Kbd className="bg-background">↵</Kbd>}
                   </button>
                 ))}
               </div>
@@ -285,13 +282,13 @@ export function QuickSearch() {
           {/* Footer hint */}
           <div className="text-muted-foreground bg-muted/30 flex items-center gap-4 border-t px-3 py-2 text-xs">
             <span className="flex items-center gap-1">
-              <kbd className="bg-background rounded border px-1">↑↓</kbd> to navigate
+              <Kbd className="bg-background">↑↓</Kbd> to navigate
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="bg-background rounded border px-1">↵</kbd> to select
+              <Kbd className="bg-background">↵</Kbd> to select
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="bg-background rounded border px-1">ESC</kbd> to close
+              <Kbd className="bg-background">ESC</Kbd> to close
             </span>
           </div>
         </DialogContent>

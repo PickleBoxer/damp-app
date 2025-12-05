@@ -18,11 +18,12 @@ import {
   FolderOpen,
   Terminal,
   Sparkles,
-  Code,
   Trash2,
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
+import { VscTerminal } from 'react-icons/vsc';
+import { VscVscode } from 'react-icons/vsc';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -171,6 +172,15 @@ function ProjectDetailPage() {
               >
                 <FolderOpen className="text-muted-foreground h-4 w-4" />
               </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground h-8.5 w-8.5 shrink-0"
+                title="Delete project"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
@@ -207,58 +217,37 @@ function ProjectDetailPage() {
               {/* Actions Tab */}
               <TabsContent value="actions" className="flex flex-col gap-4">
                 {/* Action Buttons */}
-                <div className="grid grid-cols-6 gap-3">
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="h-8.5 gap-1.5 text-[0.8125rem]"
+                      onClick={handleOpenTerminal}
+                    >
+                      <Terminal className="mr-2 h-4 w-4" />
+                      Open Terminal
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-8.5 gap-1.5 text-[0.8125rem]"
+                      onClick={handleOpenTinker}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Open Tinker
+                    </Button>
+                  </div>
                   <Button
-                    variant="outline"
-                    className="col-span-3 h-8.5 gap-1.5 text-[0.8125rem]"
-                    onClick={handleOpenTerminal}
-                  >
-                    <Terminal className="mr-2 h-4 w-4" />
-                    Open Terminal
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="col-span-3 h-8.5 gap-1.5 text-[0.8125rem]"
-                    onClick={handleOpenTinker}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Open Tinker
-                  </Button>
-                  <Button
-                    className="col-span-5 h-8.5 gap-1.5 text-[0.8125rem]"
+                    className="h-8.5 gap-1.5 bg-[#007ACC] text-[0.8125rem] text-white hover:bg-[#005A9E]"
                     onClick={handleOpenVSCode}
                   >
-                    <Code className="mr-2 h-4 w-4" />
+                    <VscVscode className="mr-2 h-4 w-4" />
                     Open in VS Code
                   </Button>
-                  <Button
-                    variant="destructive"
-                    className="col-span-1 h-8.5"
-                    aria-label="Remove Site"
-                    onClick={() => setShowDeleteDialog(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
-                <Separator />
+              </TabsContent>
 
-                {/* Status */}
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Status</h3>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="capitalize">
-                      {project.type.replaceAll('-', ' ')}
-                    </Badge>
-                    <Badge variant="secondary">PHP {project.phpVersion}</Badge>
-                    <Badge variant="secondary" className="capitalize">
-                      {project.phpVariant}
-                    </Badge>
-                    <Badge variant="secondary">Node {project.nodeVersion}</Badge>
-                  </div>
-                </div>
-
-                <Separator />
-
+              {/* Environment Tab */}
+              <TabsContent value="environment" className="flex flex-col gap-4">
                 {/* Configuration */}
                 <div>
                   <h3 className="mb-2 text-sm font-semibold">Configuration</h3>
@@ -317,23 +306,6 @@ function ProjectDetailPage() {
                     </div>
                   </>
                 )}
-
-                <Separator />
-
-                {/* Timestamps */}
-                <div className="text-muted-foreground space-y-1 text-xs">
-                  <div>Created: {new Date(project.createdAt).toLocaleString()}</div>
-                  <div>Updated: {new Date(project.updatedAt).toLocaleString()}</div>
-                </div>
-              </TabsContent>
-
-              {/* Environment Tab */}
-              <TabsContent value="environment" className="mt-4 space-y-4">
-                <div className="rounded-md border border-dashed p-8 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    Environment variables configuration coming soon
-                  </p>
-                </div>
               </TabsContent>
 
               {/* Volume Sync Tab */}
@@ -347,18 +319,18 @@ function ProjectDetailPage() {
         </div>
       </ScrollArea>
 
-      {/* Expandable Console Panel */}
+      {/* Expandable Logs Panel */}
       <div
         className={`border-t ${consoleExpanded ? 'h-1/2' : 'h-10'} flex max-h-1/2 flex-col transition-all`}
       >
-        {/* Console Header */}
+        {/* Logs Header */}
         <button
           onClick={() => setConsoleExpanded(!consoleExpanded)}
           className="hover:bg-muted/50 flex h-10 w-full items-center justify-between px-4 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Terminal className="h-4 w-4" />
-            <span className="text-sm font-medium">Console</span>
+            <VscTerminal className="h-4 w-4" />
+            <span className="text-sm font-medium">Logs</span>
           </div>
           {consoleExpanded ? (
             <ChevronDown className="h-4 w-4" />
@@ -367,7 +339,7 @@ function ProjectDetailPage() {
           )}
         </button>
 
-        {/* Console Content */}
+        {/* Logs Content */}
         {consoleExpanded && (
           <div className="flex-1 overflow-hidden">
             <ProjectLogs key={project.id} projectId={project.id} />
