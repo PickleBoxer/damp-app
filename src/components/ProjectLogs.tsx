@@ -48,7 +48,10 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+          // Defer URL revocation to allow browser to start download
+          setTimeout(() => {
+            URL.revokeObjectURL(url);
+          }, 1000);
         },
       }),
       [logs, projectId]
@@ -71,6 +74,13 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
         setError(null);
 
         try {
+          // Check if API is available
+          if (!window.projectLogs) {
+            setError('Project logs API not available');
+            setIsStreaming(false);
+            return;
+          }
+
           // Start log streaming
           const result = await window.projectLogs.start(projectId);
 
@@ -78,6 +88,13 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
 
           if (!result.success) {
             setError(result.error || 'Failed to start log streaming');
+            setIsStreaming(false);
+            return;
+          }
+
+          // Check if API is available for subscription
+          if (!window.projectLogs) {
+            setError('Project logs API not available');
             setIsStreaming(false);
             return;
           }
@@ -110,8 +127,9 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
         if (unsubscribe) {
           unsubscribe();
         }
-        window.projectLogs.stop(projectId);
-        setIsStreaming(false);
+        if (window.projectLogs) {
+          window.projectLogs.stop(projectId);
+        }
       };
     }, [projectId, maxLines]);
 

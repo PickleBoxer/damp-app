@@ -136,6 +136,7 @@ export default function DockerStatusFooter() {
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors disabled:opacity-50"
+            aria-label="Refresh Docker status"
           >
             <RefreshCw
               className={`text-muted-foreground size-3 ${isRefreshing ? 'animate-spin' : ''}`}

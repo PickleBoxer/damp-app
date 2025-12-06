@@ -1,18 +1,12 @@
 import { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { createFileRoute } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { useSuspenseService, serviceQueryOptions } from '@/api/services/services-queries';
 import { ServiceId, ServiceInfo } from '@/types/service';
 import { HealthBadge } from '@/components/HealthBadge';
 import ServiceActions from '@/components/ServiceActions';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ServiceIcon } from '@/components/ServiceIcon';
 import {
   downloadCaddyCertificate,
   hasServiceUI,
@@ -359,32 +353,30 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
     hasServiceUI(service.definition.id) && service.state.container_status?.running;
 
   return (
-    <SheetContent className="flex h-full flex-col gap-0 p-0 select-none">
-      <SheetHeader className="border-b px-4 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <SheetTitle className="text-lg font-semibold">
-              {service.definition.display_name}
-            </SheetTitle>
-            <SheetDescription className="mt-1 text-sm">
-              {service.definition.description}
-            </SheetDescription>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {service.state.container_status?.health_status && (
-              <HealthBadge status={service.state.container_status.health_status} />
-            )}
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBadgeStyles(service)}`}
-            >
-              {getStatusText(service)}
-            </span>
-          </div>
-        </div>
-      </SheetHeader>
-
+    <div className="flex h-full flex-col">
       <ScrollArea className="flex-1">
-        <div className="space-y-5 px-4 py-4">
+        <div className="space-y-4 p-4">
+          {/* Service Header */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <ServiceIcon serviceId={service.definition.id} className="h-12 w-12" />
+              <div>
+                <h2 className="text-2xl font-bold">{service.definition.display_name}</h2>
+                <p className="text-muted-foreground text-sm">{service.definition.description}</p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {service.state.container_status?.health_status && (
+                <HealthBadge status={service.state.container_status.health_status} />
+              )}
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBadgeStyles(service)}`}
+              >
+                {getStatusText(service)}
+              </span>
+            </div>
+          </div>
+
           {isCaddy && service.state.installed && (
             <>
               <div className="flex items-center justify-between py-2">
@@ -436,9 +428,10 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
         </div>
       </ScrollArea>
 
-      <div className="border-t px-4 py-3">
+      {/* Action Buttons */}
+      <div className="flex flex-col gap-2 p-4">
         {showUIButton && (
-          <Button variant="default" onClick={handleOpenUI} size="sm" className="mb-2 w-full">
+          <Button variant="default" onClick={handleOpenUI} size="sm" className="w-full">
             <ExternalLink className="mr-2 h-4 w-4" />
             Open Web UI
           </Button>
@@ -449,7 +442,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
             onClick={handleDownloadCertificate}
             disabled={isDownloading}
             size="sm"
-            className="mb-2 w-full"
+            className="w-full"
           >
             <Download className="mr-2 h-4 w-4" />
             {isDownloading ? 'Downloading...' : 'Download Certificate'}
@@ -457,32 +450,20 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
         )}
         <ServiceActions service={service} />
       </div>
-    </SheetContent>
+    </div>
   );
 }
 
-function ServiceDetailSheet() {
+function ServiceDetailPage() {
   const { serviceId } = Route.useParams();
-  const navigate = useNavigate();
   const { data: service } = useSuspenseService(serviceId as ServiceId);
-  const [open, setOpen] = useState(true);
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      setOpen(false);
-      // Delay navigation to allow exit animation to complete
-      setTimeout(() => {
-        navigate({ to: '/services' });
-      }, 200); // Match the Sheet's exit animation duration
-    }
-  };
+  if (!service) {
+    return null;
+  }
 
   // Render service details
-  return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <ServiceDetails service={service} />
-    </Sheet>
-  );
+  return <ServiceDetails service={service} />;
 }
 
 export const Route = createFileRoute('/services/$serviceId')({
@@ -490,5 +471,5 @@ export const Route = createFileRoute('/services/$serviceId')({
     // Prefetch service data in the loader
     context.queryClient.ensureQueryData(serviceQueryOptions(params.serviceId as ServiceId));
   },
-  component: ServiceDetailSheet,
+  component: ServiceDetailPage,
 });

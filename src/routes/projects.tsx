@@ -60,9 +60,7 @@ function SortableProjectItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group/project relative ${
-        isSelected ? 'border-r-primary -bg-primary/5 border-r-2' : ''
-      }`}
+      className={`group/project relative ${isSelected ? 'bg-primary/5' : ''}`}
     >
       <div className="absolute top-0 left-0 flex h-full w-0 cursor-grab items-center justify-center overflow-hidden opacity-0 transition-all duration-200 group-hover/project:w-8 group-hover/project:opacity-100 active:cursor-grabbing">
         <GripVertical className="text-muted-foreground h-4 w-4" {...attributes} {...listeners} />
@@ -188,7 +186,7 @@ function ProjectsPage() {
           <div className="flex h-full flex-col">
             {/* Header Bar */}
             <div className="flex h-12 items-center justify-between border-b px-4">
-              <h2 className="text-sm font-semibold uppercase tracking-wide">Projects</h2>
+              <h2 className="text-sm font-semibold tracking-wide uppercase">Projects</h2>
               <button
                 onClick={handleAddProject}
                 className="hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md transition-colors"
@@ -197,10 +195,9 @@ function ProjectsPage() {
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-            
+
             <ScrollArea className="flex-1">
               <div className="flex flex-col">
-
                 {/* Loading State */}
                 {isProjectsLoading && (
                   <>
