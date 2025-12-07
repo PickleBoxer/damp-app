@@ -65,7 +65,7 @@ function SortableProjectItem({
       style={style}
       className={`group/project relative ${isSelected ? 'bg-primary/5' : ''}`}
     >
-      <div className="absolute bg-primary/5 top-0 left-0 flex h-full w-0 cursor-grab items-center justify-center overflow-hidden opacity-0 transition-all duration-200 group-hover/project:w-8 group-hover/project:opacity-100 active:cursor-grabbing">
+      <div className="bg-primary/5 absolute top-0 left-0 flex h-full w-0 cursor-grab items-center justify-center overflow-hidden opacity-0 transition-all duration-200 group-hover/project:w-8 group-hover/project:opacity-100 active:cursor-grabbing">
         <GripVertical className="text-muted-foreground h-4 w-4" {...attributes} {...listeners} />
       </div>
       <div className="transition-all duration-200 group-hover/project:pl-8">
@@ -78,7 +78,7 @@ function SortableProjectItem({
             <div className="relative">
               <ProjectIcon projectType={project.type} className="h-10 w-10" />
               {isSyncing && (
-                <div className="bg-background absolute -bottom-1 -right-1 rounded-full p-0.5">
+                <div className="bg-background absolute -right-1 -bottom-1 rounded-full p-0.5">
                   <Loader2 className="text-primary h-3 w-3 animate-spin" />
                 </div>
               )}

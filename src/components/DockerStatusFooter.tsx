@@ -219,20 +219,20 @@ export default function DockerStatusFooter() {
       {syncInfo.total > 0 && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 px-2 transition-colors bg-blue-500/10">
+            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 bg-blue-500/10 px-2 transition-colors">
               <div className="flex items-center gap-1">
                 {syncInfo.counts.from > 0 && (
                   <div className="flex items-center gap-0.5">
-                    <ArrowDownToLine className="text-blue-400 size-3 animate-pulse" />
-                    <span className="text-blue-400 font-mono text-[11px]">
+                    <ArrowDownToLine className="size-3 animate-pulse text-blue-400" />
+                    <span className="font-mono text-[11px] text-blue-400">
                       {syncInfo.counts.from}
                     </span>
                   </div>
                 )}
                 {syncInfo.counts.to > 0 && (
                   <div className="flex items-center gap-0.5">
-                    <ArrowUpFromLine className="text-blue-400 size-3 animate-pulse" />
-                    <span className="text-blue-400 font-mono text-[11px]">
+                    <ArrowUpFromLine className="size-3 animate-pulse text-blue-400" />
+                    <span className="font-mono text-[11px] text-blue-400">
                       {syncInfo.counts.to}
                     </span>
                   </div>
@@ -245,12 +245,14 @@ export default function DockerStatusFooter() {
               {syncInfo.fromProjects.map((project, idx) => (
                 <button
                   key={`from-${idx}`}
-                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
-                  className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-accent/50 first:rounded-t-md last:rounded-b-md text-left w-full"
+                  onClick={() =>
+                    navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
+                  }
+                  className="hover:bg-accent/50 flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
                     <ArrowDownToLine className="text-muted-foreground size-3.5 shrink-0" />
-                    <span className="text-xs text-muted-foreground">{project.name}</span>
+                    <span className="text-muted-foreground text-xs">{project.name}</span>
                   </div>
                   <span className="text-xs text-blue-400 hover:underline">Open</span>
                 </button>
@@ -258,12 +260,14 @@ export default function DockerStatusFooter() {
               {syncInfo.toProjects.map((project, idx) => (
                 <button
                   key={`to-${idx}`}
-                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
-                  className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-accent/50 first:rounded-t-md last:rounded-b-md text-left w-full"
+                  onClick={() =>
+                    navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
+                  }
+                  className="hover:bg-accent/50 flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
                     <ArrowUpFromLine className="text-muted-foreground size-3.5 shrink-0" />
-                    <span className="text-xs text-muted-foreground">{project.name}</span>
+                    <span className="text-muted-foreground text-xs">{project.name}</span>
                   </div>
                   <span className="text-xs text-blue-400 hover:underline">Open</span>
                 </button>

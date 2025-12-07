@@ -43,10 +43,7 @@ export async function syncFromVolume(
 /**
  * Sync files from local folder to Docker volume
  */
-export async function syncToVolume(
-  projectId: string,
-  options?: SyncOptions
-): Promise<SyncResult> {
+export async function syncToVolume(projectId: string, options?: SyncOptions): Promise<SyncResult> {
   ensureSyncApi();
   return await syncApi.toVolume(projectId, options);
 }

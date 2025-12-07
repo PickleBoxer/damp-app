@@ -8,6 +8,7 @@ The Volume Sync feature enables **non-blocking bidirectional file synchronizatio
 - **Sync to Volume**: Copy local changes to the Docker volume for the devcontainer
 
 **Key Features:**
+
 - ✅ **Non-blocking**: Multiple projects can sync simultaneously without freezing the app
 - ✅ **No timeout limits**: Sync operations (`syncFromVolume`, `syncToVolume`) have no timeout and can run indefinitely (Source: `volume-manager.ts` lines 279, 364)
 - ✅ **Background execution**: Navigate freely throughout the app while syncs run
@@ -35,6 +36,7 @@ async syncFromVolume(
 ```
 
 **Implementation Details:**
+
 - Uses Alpine Linux container with `rsync` for efficient file copying
 - Mounts Docker volume as read-only source
 - Mounts local folder as read-write target
@@ -60,6 +62,7 @@ async syncToVolume(
 ```
 
 **Implementation Details:**
+
 - Uses Alpine Linux container with `rsync` for efficient file copying
 - Mounts local folder as read-only source
 - Mounts Docker volume as read-write target
@@ -73,6 +76,7 @@ async syncToVolume(
 - Automatically cleans up temporary containers
 
 **Existing Method: `copyToVolume()` - Initial Project Creation**
+
 - Uses `tar` for file copying (different from sync operations)
 - Hardcoded exclusions for `node_modules` and `vendor`
 - **5-minute timeout**: Uses `Promise.race` with 300000ms timeout (Source: `volume-manager.ts:179-182`)
@@ -83,9 +87,9 @@ async syncToVolume(
 #### 1. Channels (`sync-channels.ts`)
 
 ```typescript
-SYNC_FROM_VOLUME = 'sync:from-volume'
-SYNC_TO_VOLUME = 'sync:to-volume'
-SYNC_PROGRESS = 'sync:progress'
+SYNC_FROM_VOLUME = 'sync:from-volume';
+SYNC_TO_VOLUME = 'sync:to-volume';
+SYNC_PROGRESS = 'sync:progress';
 ```
 
 #### 2. Context Bridge (`sync-context.ts`)
@@ -94,15 +98,16 @@ Exposes `window.sync` API to renderer process:
 
 ```typescript
 interface SyncContext {
-  fromVolume: (projectId: string, options?: SyncOptions) => Promise<SyncResult>
-  toVolume: (projectId: string, options?: SyncOptions) => Promise<SyncResult>
-  onSyncProgress: (callback) => () => void
+  fromVolume: (projectId: string, options?: SyncOptions) => Promise<SyncResult>;
+  toVolume: (projectId: string, options?: SyncOptions) => Promise<SyncResult>;
+  onSyncProgress: (callback) => () => void;
 }
 ```
 
 #### 3. Listeners (`sync-listeners.ts`)
 
 **Non-Blocking Architecture:**
+
 - Handlers return immediately after Docker checks and starting the sync operation
 - Sync operations run in background via fire-and-forget promises
 - IPC handlers don't `await` sync completion
@@ -110,6 +115,7 @@ interface SyncContext {
 - Guards check if `mainWindow` and `webContents` exist and are not destroyed before sending
 
 **Handlers:**
+
 - `SYNC_FROM_VOLUME`: Starts volume → local sync in background
 - `SYNC_TO_VOLUME`: Starts local → volume sync in background
 - Both return `{ success: true }` immediately after validation
@@ -117,6 +123,7 @@ interface SyncContext {
 - Errors during sync (permission issues, rsync failures) notified via IPC events
 
 **Error Handling:**
+
 - Setup errors: Returns `{ success: false, error: string }` immediately
 - Sync errors: Caught in promise `.catch()` and sent via `SYNC_PROGRESS` event
 - All errors propagated to renderer for toast notifications
@@ -126,10 +133,11 @@ interface SyncContext {
 #### 1. API Layer (`src/api/sync/`)
 
 **sync-api.ts**: Type-safe IPC wrappers
+
 ```typescript
-syncFromVolume(projectId, options)
-syncToVolume(projectId, options)
-onSyncProgress(callback)
+syncFromVolume(projectId, options);
+syncToVolume(projectId, options);
+onSyncProgress(callback);
 ```
 
 **sync-queries.ts**: React Query hooks
@@ -161,6 +169,7 @@ onSyncProgress(callback)
 **Project Detail Page (`src/routes/projects.$projectId.tsx`)**
 
 **Volume Sync Tab:**
+
 - Checkboxes for `includeNodeModules` and `includeVendor` options
 - Two sync buttons:
   - "Sync from Volume" (Download icon)
@@ -172,6 +181,7 @@ onSyncProgress(callback)
 **Projects List Page (`src/routes/projects.tsx`)**
 
 **Sync Indicators:**
+
 - Small animated spinner overlaid on project icon when syncing
 - Visible in sidebar even when viewing other projects
 - Uses `useActiveSyncs()` to check if project is currently syncing
@@ -224,6 +234,7 @@ interface ActiveSync {
 4. **Sync Error**: Mutation `onError` removes from map
 
 **Benefits:**
+
 - No Redux or Zustand needed
 - Automatic re-renders in all components
 - Persists across navigation
@@ -234,10 +245,12 @@ interface ActiveSync {
 ### File Exclusions
 
 **Default Exclusions:**
+
 - `node_modules` (unless `includeNodeModules: true`)
 - `vendor` (unless `includeVendor: true`)
 
 **Always Copied:**
+
 - `.git`
 - `.devcontainer`
 - `.vscode`
@@ -246,18 +259,21 @@ interface ActiveSync {
 ### Performance
 
 **Non-Blocking Execution:**
+
 - Sync operations run in background
 - App remains responsive during sync
 - Multiple syncs can run simultaneously
 - No timeout limits - syncs run until completion
 
 **Typical Sync Duration:**
+
 - Small projects (<100 files): ~5-15 seconds
 - Medium projects (100-1000 files): ~30-60 seconds
 - Large projects (1000-10000 files): 2-10 minutes
 - Very large projects with dependencies: 10+ minutes (no limit)
 
 **Optimizations:**
+
 - `rsync` uses delta transfer (only changed files)
 - Alpine Linux container is lightweight (~5MB)
 - Parallel syncs supported (no queuing)
@@ -266,6 +282,7 @@ interface ActiveSync {
 ### Security
 
 **Path Validation:**
+
 - Project paths validated against stored project metadata
 - No arbitrary path access from renderer process
 - Docker bind mounts use normalized paths
@@ -282,6 +299,7 @@ interface ActiveSync {
 5. **Container logs**: Included in error message for debugging
 
 **User Feedback:**
+
 - Toast error notification with error message
 - Progress indicator removed
 - Buttons re-enabled
@@ -325,6 +343,7 @@ interface ActiveSync {
 **A: No, the implementation is designed to avoid permission conflicts:**
 
 **Sync from Volume (Volume → Local):**
+
 - Uses `rsync` with `--no-perms --no-owner --no-group` flags
 - Does NOT preserve Unix permissions (UID/GID/chmod)
 - Sets all files to read/write/execute for all users (`--chmod=ugo=rwX`)
@@ -332,6 +351,7 @@ interface ActiveSync {
 - **Why**: Unix permissions don't translate to Windows filesystem properly
 
 **Sync to Volume (Local → Volume):**
+
 - Uses `rsync -a` (archive mode) to preserve file structure
 - Automatically runs `chown -R 1000:1000 /volume` after sync
 - Changes ownership from root (used during copy) to container user (UID 1000, GID 1000)
@@ -339,6 +359,7 @@ interface ActiveSync {
 - **Why**: Devcontainers run as user 1000:1000 by default (Docker Desktop standard)
 
 **Platform Handling:**
+
 - **Windows**: Always uses 1000:1000 (Docker Desktop default)
 - **macOS/Linux**: Detects current user's UID/GID with `id -u` and `id -g` commands
 - Cross-platform compatibility ensured
@@ -351,7 +372,8 @@ interface ActiveSync {
 ### Permission Errors During Sync
 
 **Cause**: Local folder not writable or Docker volume mounted incorrectly
-**Solution**: 
+**Solution**:
+
 - Check folder permissions on Windows (should have write access)
 - Ensure Docker Desktop has access to the drive (Settings → Resources → File Sharing)
 - Try restarting Docker Desktop
@@ -359,7 +381,8 @@ interface ActiveSync {
 ### Container Creation Failed
 
 **Cause**: Docker not running or Alpine image not available
-**Solution**: 
+**Solution**:
+
 - Ensure Docker Desktop is running (check status in footer)
 - Pull Alpine image manually: `docker pull alpine:latest`
 - Verify Docker has internet access
@@ -421,6 +444,7 @@ src/
 **No new dependencies required!**
 
 All functionality uses existing packages:
+
 - `dockerode`: Docker API (already installed)
 - `@tanstack/react-query`: State management (already installed)
 - `sonner`: Toast notifications (already installed)

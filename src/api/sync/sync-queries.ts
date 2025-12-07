@@ -51,7 +51,7 @@ export function useSyncFromVolume() {
         // Project already syncing, cancel this mutation
         throw new Error('Sync already in progress for this project');
       }
-      
+
       // Immediately add to active syncs to prevent duplicate clicks
       queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
         const newMap = new Map(oldMap || []);
@@ -101,7 +101,7 @@ export function useSyncToVolume() {
         // Project already syncing, cancel this mutation
         throw new Error('Sync already in progress for this project');
       }
-      
+
       // Immediately add to active syncs to prevent duplicate clicks
       queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
         const newMap = new Map(oldMap || []);

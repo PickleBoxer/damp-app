@@ -31,7 +31,11 @@ export interface SyncContext {
    * Listen for sync status updates (started/completed/failed)
    */
   onSyncProgress: (
-    callback: (projectId: string, direction: 'to' | 'from', progress: { status: 'started' | 'completed' | 'failed' }) => void
+    callback: (
+      projectId: string,
+      direction: 'to' | 'from',
+      progress: { status: 'started' | 'completed' | 'failed' }
+    ) => void
   ) => () => void;
 }
 
