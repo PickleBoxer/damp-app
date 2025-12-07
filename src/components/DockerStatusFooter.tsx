@@ -1,8 +1,11 @@
 import { SiDocker } from 'react-icons/si';
 import { useDockerStatus, useDockerInfo } from '@/api/docker/docker-queries';
+import { useProjects } from '@/api/projects/projects-queries';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Cpu, MemoryStick, RefreshCw } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { Cpu, MemoryStick, RefreshCw, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useActiveSyncs } from '@/api/sync/sync-queries';
+import { useNavigate } from '@tanstack/react-router';
 
 /**
  * Format bytes to MB or GB depending on size
@@ -18,12 +21,15 @@ function formatMemory(bytes: number): string {
 }
 
 export default function DockerStatusFooter() {
+  const navigate = useNavigate();
   const {
     data: dockerStatus,
     isLoading: statusLoading,
     refetch: refetchStatus,
   } = useDockerStatus();
   const { data: dockerInfo, refetch: refetchInfo } = useDockerInfo();
+  const { data: activeSyncs } = useActiveSyncs();
+  const { data: projects } = useProjects();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
@@ -99,6 +105,35 @@ export default function DockerStatusFooter() {
 
   // Calculate total CPU capacity (100% per core)
   const totalCpuCapacity = dockerInfo ? dockerInfo.cpus * 100 : 0;
+
+  // Count active syncs by direction and get project info
+  const syncInfo = useMemo(() => {
+    const counts = { from: 0, to: 0 };
+    const fromProjects: Array<{ id: string; name: string }> = [];
+    const toProjects: Array<{ id: string; name: string }> = [];
+
+    if (activeSyncs && projects) {
+      activeSyncs.forEach((sync, projectId) => {
+        const project = projects.find(p => p.id === projectId);
+        const projectInfo = { id: projectId, name: project?.name || projectId };
+
+        if (sync.direction === 'from') {
+          counts.from++;
+          fromProjects.push(projectInfo);
+        } else {
+          counts.to++;
+          toProjects.push(projectInfo);
+        }
+      });
+    }
+
+    return {
+      counts,
+      fromProjects,
+      toProjects,
+      total: counts.from + counts.to,
+    };
+  }, [activeSyncs, projects]);
 
   return (
     <div className="flex h-full items-center">
@@ -178,6 +213,64 @@ export default function DockerStatusFooter() {
             </TooltipContent>
           </Tooltip>
         </>
+      )}
+
+      {/* Active Syncs Indicator */}
+      {syncInfo.total > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 px-2 transition-colors bg-blue-500/10">
+              <div className="flex items-center gap-1">
+                {syncInfo.counts.from > 0 && (
+                  <div className="flex items-center gap-0.5">
+                    <ArrowDownToLine className="text-blue-400 size-3 animate-pulse" />
+                    <span className="text-blue-400 font-mono text-[11px]">
+                      {syncInfo.counts.from}
+                    </span>
+                  </div>
+                )}
+                {syncInfo.counts.to > 0 && (
+                  <div className="flex items-center gap-0.5">
+                    <ArrowUpFromLine className="text-blue-400 size-3 animate-pulse" />
+                    <span className="text-blue-400 font-mono text-[11px]">
+                      {syncInfo.counts.to}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="p-0">
+            <div className="flex flex-col">
+              {syncInfo.fromProjects.map((project, idx) => (
+                <button
+                  key={`from-${idx}`}
+                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
+                  className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-accent/50 first:rounded-t-md last:rounded-b-md text-left w-full"
+                >
+                  <div className="flex items-center gap-2">
+                    <ArrowDownToLine className="text-muted-foreground size-3.5 shrink-0" />
+                    <span className="text-xs text-muted-foreground">{project.name}</span>
+                  </div>
+                  <span className="text-xs text-blue-400 hover:underline">Open</span>
+                </button>
+              ))}
+              {syncInfo.toProjects.map((project, idx) => (
+                <button
+                  key={`to-${idx}`}
+                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
+                  className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-accent/50 first:rounded-t-md last:rounded-b-md text-left w-full"
+                >
+                  <div className="flex items-center gap-2">
+                    <ArrowUpFromLine className="text-muted-foreground size-3.5 shrink-0" />
+                    <span className="text-xs text-muted-foreground">{project.name}</span>
+                  </div>
+                  <span className="text-xs text-blue-400 hover:underline">Open</span>
+                </button>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   );

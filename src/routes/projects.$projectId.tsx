@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
+import { LuFolderSync } from 'react-icons/lu';
 import {
   useSuspenseProject,
   useDeleteProject,
@@ -11,6 +12,8 @@ import {
   useProjectPort,
   projectQueryOptions,
 } from '@/api/projects/projects-queries';
+import { useDockerStatus } from '@/api/docker/docker-queries';
+import { useSyncFromVolume, useSyncToVolume, useProjectSyncStatus } from '@/api/sync/sync-queries';
 import { useDocumentVisibility } from '@/hooks/use-document-visibility';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { ProjectPreview } from '@/components/ProjectPreview';
@@ -24,6 +27,8 @@ import {
   ChevronUp,
   ChevronDown,
   Download,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { VscTerminal, VscVscode } from 'react-icons/vsc';
@@ -55,10 +60,21 @@ function ProjectDetailPage() {
   const { projectId } = Route.useParams();
   const { data: project } = useSuspenseProject(projectId);
   const deleteProjectMutation = useDeleteProject();
+  const syncFromVolumeMutation = useSyncFromVolume();
+  const syncToVolumeMutation = useSyncToVolume();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [removeFolder, setRemoveFolder] = useState(false);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
+  const [includeNodeModules, setIncludeNodeModules] = useState(false);
+  const [includeVendor, setIncludeVendor] = useState(false);
   const isVisible = useDocumentVisibility();
+
+  // Check Docker status
+  const { data: dockerStatus } = useDockerStatus();
+  const isDockerRunning = dockerStatus?.isRunning ?? false;
+
+  // Get sync status for this project
+  const syncStatus = useProjectSyncStatus(projectId);
 
   // Use batch status (same as list view) - non-blocking, shares cache
   const { data: batchStatus } = useProjectsBatchStatus([projectId], {
@@ -137,6 +153,26 @@ function ProjectDetailPage() {
     );
     setShowDeleteDialog(false);
     setRemoveFolder(false);
+  };
+
+  const handleSyncFromVolume = () => {
+    syncFromVolumeMutation.mutate({
+      projectId: project.id,
+      options: {
+        includeNodeModules,
+        includeVendor,
+      },
+    });
+  };
+
+  const handleSyncToVolume = () => {
+    syncToVolumeMutation.mutate({
+      projectId: project.id,
+      options: {
+        includeNodeModules,
+        includeVendor,
+      },
+    });
   };
 
   // Suspense handles loading state, project is guaranteed to exist
@@ -375,17 +411,19 @@ function ProjectDetailPage() {
               <TabsContent value="volumes" className="flex flex-col gap-4">
                 <div className="flex flex-col gap-3">
                   <Alert className="rounded-md">
-                    <Download />
+                    <LuFolderSync className="h-4 w-4" />
                     <AlertTitle>Volume Sync</AlertTitle>
                     <AlertDescription>
                       <div className="text-muted-foreground space-y-2">
-                        <p>
-                          Use <strong>Sync from Volume</strong> to copy changes from the
-                          devcontainer back to your local folder.
-                        </p>
+                        <p>Sync files between the Docker volume and your local folder.</p>
                         <div className="flex flex-row gap-2">
                           <div className="flex items-center gap-2">
-                            <Checkbox aria-label="Sync node_modules" id="sync-node-modules" />
+                            <Checkbox
+                              aria-label="Sync node_modules"
+                              id="sync-node-modules"
+                              checked={includeNodeModules}
+                              onCheckedChange={checked => setIncludeNodeModules(checked === true)}
+                            />
                             <label
                               htmlFor="sync-node-modules"
                               className="cursor-pointer text-xs select-none"
@@ -394,7 +432,12 @@ function ProjectDetailPage() {
                             </label>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Checkbox aria-label="Sync vendor" id="sync-vendor" />
+                            <Checkbox
+                              aria-label="Sync vendor"
+                              id="sync-vendor"
+                              checked={includeVendor}
+                              onCheckedChange={checked => setIncludeVendor(checked === true)}
+                            />
                             <label
                               htmlFor="sync-vendor"
                               className="cursor-pointer text-xs select-none"
@@ -413,11 +456,47 @@ function ProjectDetailPage() {
                       </div>
                     </AlertDescription>
                   </Alert>
-
-                  <Button variant="outline" className="col-span-2 w-full rounded-md">
-                    <Download className="mr-2 h-4 w-4" />
-                    Sync from Volume
-                  </Button>
+                  {/* Sync Buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-md"
+                      onClick={handleSyncFromVolume}
+                      disabled={
+                        !isDockerRunning ||
+                        syncFromVolumeMutation.isPending ||
+                        syncToVolumeMutation.isPending ||
+                        !!syncStatus
+                      }
+                    >
+                      {syncFromVolumeMutation.isPending || syncStatus?.direction === 'from' ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="mr-2 h-4 w-4" />
+                      )}
+                      Sync from Volume
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-md"
+                      onClick={handleSyncToVolume}
+                      disabled={
+                        !isDockerRunning ||
+                        syncFromVolumeMutation.isPending ||
+                        syncToVolumeMutation.isPending ||
+                        !!syncStatus
+                      }
+                    >
+                      {syncToVolumeMutation.isPending || syncStatus?.direction === 'to' ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="mr-2 h-4 w-4" />
+                      )}
+                      Sync to Volume
+                    </Button>
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>

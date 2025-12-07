@@ -119,6 +119,24 @@ interface AppContext {
   }>;
 }
 
+interface SyncContext {
+  fromVolume: (
+    projectId: string,
+    options?: { includeNodeModules?: boolean; includeVendor?: boolean }
+  ) => Promise<{ success: boolean; error?: string }>;
+  toVolume: (
+    projectId: string,
+    options?: { includeNodeModules?: boolean; includeVendor?: boolean }
+  ) => Promise<{ success: boolean; error?: string }>;
+  onSyncProgress: (
+    callback: (
+      projectId: string,
+      direction: 'to' | 'from',
+      progress: { status: 'started' | 'completed' | 'failed' }
+    ) => void
+  ) => () => void;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
@@ -128,4 +146,5 @@ declare interface Window {
   shell: ShellContext;
   projectLogs: ProjectLogsContext;
   app: AppContext;
+  sync: SyncContext;
 }

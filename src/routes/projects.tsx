@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
-import { Plus, GripVertical } from 'lucide-react';
+import { Plus, GripVertical, Loader2 } from 'lucide-react';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import { FaLink } from 'react-icons/fa6';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,6 +10,7 @@ import {
   useReorderProjects,
   useProjectsBatchStatus,
 } from '@/api/projects/projects-queries';
+import { useActiveSyncs } from '@/api/sync/sync-queries';
 import { useDocumentVisibility } from '@/hooks/use-document-visibility';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { CreateProjectWizard } from '@/components/CreateProjectWizard';
@@ -38,6 +39,7 @@ interface SortableProjectItemProps {
   isSelected: boolean;
   isRunning?: boolean;
   isLoading?: boolean;
+  isSyncing?: boolean;
 }
 
 function SortableProjectItem({
@@ -45,6 +47,7 @@ function SortableProjectItem({
   isSelected,
   isRunning,
   isLoading,
+  isSyncing,
 }: Readonly<SortableProjectItemProps>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
@@ -72,7 +75,14 @@ function SortableProjectItem({
           className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
         >
           <div className="flex flex-1 items-center gap-3">
-            <ProjectIcon projectType={project.type} className="h-10 w-10" />
+            <div className="relative">
+              <ProjectIcon projectType={project.type} className="h-10 w-10" />
+              {isSyncing && (
+                <div className="bg-background absolute -bottom-1 -right-1 rounded-full p-0.5">
+                  <Loader2 className="text-primary h-3 w-3 animate-spin" />
+                </div>
+              )}
+            </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold capitalize">{project.name}</span>
@@ -113,6 +123,9 @@ function ProjectsPage() {
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
   const isVisible = useDocumentVisibility();
+
+  // Get active syncs
+  const { data: activeSyncs } = useActiveSyncs();
 
   // Get all project IDs for batch status check
   const projectIds = useMemo(() => projects?.map(p => p.id) || [], [projects]);
@@ -229,6 +242,7 @@ function ProjectsPage() {
                     >
                       {sortedProjects.map(project => {
                         const projectStatus = statusMap.get(project.id);
+                        const isSyncing = activeSyncs?.has(project.id) || false;
                         return (
                           <SortableProjectItem
                             key={project.id}
@@ -236,6 +250,7 @@ function ProjectsPage() {
                             isSelected={selectedProjectId === project.id}
                             isRunning={projectStatus?.running || false}
                             isLoading={isStatusLoading}
+                            isSyncing={isSyncing}
                           />
                         );
                       })}

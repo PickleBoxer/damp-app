@@ -12,9 +12,11 @@ export default function DragWindowRegion() {
 
       <div className="relative z-10 flex h-full items-center justify-center">
         {/* Left section - App icon (draggable) */}
-        <div className="bg-primary text-primary-foreground absolute left-0 ml-2 flex aspect-square items-center justify-center rounded-md p-1">
-          {!isMacOS() && <Box className="h-4 w-4" />}
-        </div>
+        {!isMacOS() && (
+          <div className="bg-primary text-primary-foreground absolute left-0 ml-2 flex aspect-square items-center justify-center rounded-md p-1">
+            <Box className="h-4 w-4" />
+          </div>
+        )}
 
         {/* Center section - Search on Windows/Linux, Title on macOS */}
         {!isMacOS() ? (

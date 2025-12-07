@@ -222,6 +222,175 @@ class VolumeManager {
   }
 
   /**
+   * Sync files from Docker volume to local folder using rsync
+   * Used for volume sync feature - respects include/exclude options
+   */
+  async syncFromVolume(
+    volumeName: string,
+    targetPath: string,
+    options: {
+      includeNodeModules?: boolean;
+      includeVendor?: boolean;
+    } = {}
+  ): Promise<void> {
+    try {
+      // Ensure volume exists
+      const exists = await this.volumeExists(volumeName);
+      if (!exists) {
+        throw new Error(`Volume ${volumeName} does not exist`);
+      }
+
+      // Normalize paths for Docker bind mounts
+      const normalizedTargetPath = this.normalizePathForDocker(targetPath);
+
+      console.log(`Syncing files from volume ${volumeName} to ${targetPath}...`);
+
+      // Build exclusion list based on user options
+      const exclusions: string[] = [];
+      if (!options.includeNodeModules) {
+        exclusions.push('--exclude=node_modules');
+      }
+      if (!options.includeVendor) {
+        exclusions.push('--exclude=vendor');
+      }
+
+      // Create Alpine container with rsync installed
+      const container = await docker.createContainer({
+        Image: 'alpine:latest',
+        Cmd: [
+          'sh',
+          '-c',
+          // Install rsync, sync files from volume to target, then fix ownership
+          `apk add --no-cache rsync && ` +
+            `rsync -a --no-perms --no-owner --no-group --chmod=ugo=rwX ${exclusions.join(' ')} /volume/ /target/`,
+        ],
+        HostConfig: {
+          Binds: [
+            `${volumeName}:/volume:ro`, // Volume as read-only
+            `${normalizedTargetPath}:/target`, // Target as read-write
+          ],
+        },
+        User: '0:0', // Run as root to ensure we can write to target
+      });
+
+      try {
+        // Start container and wait for it to complete
+        await container.start();
+
+        // Wait for completion without timeout - sync can take as long as needed
+        await container.wait();
+
+        // Check exit code
+        const inspectData = await container.inspect();
+        const exitCode = inspectData.State.ExitCode;
+
+        if (exitCode !== 0) {
+          // Get logs for error details
+          const logs = await container.logs({
+            stdout: true,
+            stderr: true,
+          });
+          const logStr = logs.toString('utf-8').trim();
+          throw new Error(
+            `Sync operation failed with exit code ${exitCode}${logStr ? ': ' + logStr : ''}`
+          );
+        }
+
+        console.log(`Successfully synced files from volume ${volumeName} to ${targetPath}`);
+      } finally {
+        // Clean up: remove temporary container
+        await container.remove();
+      }
+    } catch (error) {
+      throw new Error(`Failed to sync files from volume: ${error}`);
+    }
+  }
+
+  /**
+   * Sync files from local folder to Docker volume using rsync
+   * Used for volume sync feature - respects include/exclude options
+   * Different from copyToVolume() which uses tar for initial project creation
+   */
+  async syncToVolume(
+    sourcePath: string,
+    volumeName: string,
+    options: {
+      includeNodeModules?: boolean;
+      includeVendor?: boolean;
+    } = {}
+  ): Promise<void> {
+    try {
+      // Ensure volume exists
+      await this.createVolume(volumeName);
+
+      // Normalize paths for Docker bind mounts
+      const normalizedSourcePath = this.normalizePathForDocker(sourcePath);
+      // Build exclusion list based on user options
+      const exclusions: string[] = [];
+      if (!options.includeNodeModules) {
+        exclusions.push('--exclude=node_modules');
+      }
+      if (!options.includeVendor) {
+        exclusions.push('--exclude=vendor');
+      }
+
+      // Get appropriate UID:GID for the platform
+      const uidGid = await this.getUidGid();
+
+      // Create Alpine container with rsync installed
+      const container = await docker.createContainer({
+        Image: 'alpine:latest',
+        Cmd: [
+          'sh',
+          '-c',
+          // Install rsync, sync files from source to volume, then fix ownership to container user
+          `apk add --no-cache rsync && ` +
+            `rsync -a ${exclusions.join(' ')} /source/ /volume/ && ` +
+            `chown -R ${uidGid} /volume`,
+        ],
+        HostConfig: {
+          Binds: [
+            `${normalizedSourcePath}:/source:ro`, // Source as read-only
+            `${volumeName}:/volume`, // Volume as read-write
+          ],
+        },
+        User: '0:0', // Run as root to ensure we can write to volume
+      });
+
+      try {
+        // Start container and wait for it to complete
+        await container.start();
+
+        // Wait for completion without timeout - sync can take as long as needed
+        await container.wait();
+
+        // Check exit code
+        const inspectData = await container.inspect();
+        const exitCode = inspectData.State.ExitCode;
+
+        if (exitCode !== 0) {
+          // Get logs for error details
+          const logs = await container.logs({
+            stdout: true,
+            stderr: true,
+          });
+          const logStr = logs.toString('utf-8').trim();
+          throw new Error(
+            `Sync operation failed with exit code ${exitCode}${logStr ? ': ' + logStr : ''}`
+          );
+        }
+
+        console.log(`Successfully synced files to volume ${volumeName}`);
+      } finally {
+        // Clean up: remove temporary container
+        await container.remove();
+      }
+    } catch (error) {
+      throw new Error(`Failed to sync files to volume: ${error}`);
+    }
+  }
+
+  /**
    * Normalize path for Docker bind mounts
    * Converts Windows paths to format Docker expects
    */

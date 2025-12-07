@@ -6,6 +6,7 @@ import { exposeProjectsContext } from './projects/projects-context';
 import { exposeShellContext } from './shell/shell-context';
 import { exposeLogsContext } from './logs/logs-context';
 import { exposeAppContext } from './app/app-context';
+import { exposeSyncContext } from './sync/sync-context';
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -16,4 +17,5 @@ export default function exposeContexts() {
   exposeShellContext();
   exposeLogsContext();
   exposeAppContext();
+  exposeSyncContext();
 }

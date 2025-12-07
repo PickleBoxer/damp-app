@@ -3,8 +3,11 @@ import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import type { RouterContext } from '@/utils/routes';
+import { useSyncProgress } from '../api/sync/sync-queries';
 
 function Root() {
+  // Register sync progress listener once at app level
+  useSyncProgress();
   return (
     <BaseLayout>
       <Outlet />
