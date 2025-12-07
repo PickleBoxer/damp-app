@@ -2,6 +2,8 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
 import {
   useSuspenseProject,
   useDeleteProject,
@@ -21,10 +23,10 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
+  Download,
 } from 'lucide-react';
-import { VscTerminal } from 'react-icons/vsc';
-import { VscVscode } from 'react-icons/vsc';
-import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { VscTerminal, VscVscode } from 'react-icons/vsc';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
@@ -248,70 +250,174 @@ function ProjectDetailPage() {
 
               {/* Environment Tab */}
               <TabsContent value="environment" className="flex flex-col gap-4">
-                {/* Configuration */}
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold">Configuration</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <span className="text-muted-foreground">Domain</span>
-                      <span className="font-mono">{project.domain}</span>
-                    </div>
-                    <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <span className="text-muted-foreground">Project Path</span>
-                      <span className="font-mono break-all">{project.path}</span>
-                    </div>
-                    <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <span className="text-muted-foreground">Volume Name</span>
-                      <span className="font-mono">{project.volumeName}</span>
-                    </div>
-                    <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <span className="text-muted-foreground">Network</span>
-                      <span className="font-mono">{project.networkName}</span>
-                    </div>
-                    <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <span className="text-muted-foreground">Container Port</span>
-                      <span>{project.forwardedPort}</span>
-                    </div>
-                    {forwardedLocalhostPort && (
-                      <div className="grid grid-cols-[140px_1fr] gap-2">
-                        <span className="text-muted-foreground">Localhost Port</span>
-                        <span className="font-mono">
-                          localhost:{forwardedLocalhostPort}
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            VS Code forwarded
-                          </Badge>
-                        </span>
+                {/* Runtime Versions - Always Visible */}
+                <div className="space-y-3">
+                  {/* PHP Version */}
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-md bg-indigo-100 p-2 dark:bg-indigo-950/30">
+                        <SiPhp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                       </div>
-                    )}
-                    <div className="grid grid-cols-[140px_1fr] gap-2">
-                      <span className="text-muted-foreground">Claude AI</span>
-                      <span>{project.enableClaudeAi ? 'Enabled' : 'Disabled'}</span>
+                      <div>
+                        <p className="text-foreground text-sm font-medium">PHP Version</p>
+                        <p className="text-muted-foreground text-xs">Runtime environment</p>
+                      </div>
                     </div>
+                    <Badge variant="secondary" className="rounded-md font-mono">
+                      {project.phpVersion}
+                    </Badge>
+                  </div>
+
+                  {/* Node Version */}
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-md bg-green-100 p-2 dark:bg-green-950/30">
+                        <SiNodedotjs className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <p className="text-foreground text-sm font-medium">Node Version</p>
+                        <p className="text-muted-foreground text-xs">Runtime environment</p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="rounded-md font-mono">
+                      {project.nodeVersion || 'lts'}
+                    </Badge>
+                  </div>
+
+                  {/* Claude Code CLI Status */}
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-md bg-orange-100 p-2 dark:bg-orange-950/30">
+                        <SiClaude className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div>
+                        <p className="text-foreground text-sm font-medium">Claude Code</p>
+                        <p className="text-muted-foreground text-xs">
+                          Deep coding at terminal velocity
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="rounded-md font-mono">
+                      {project.enableClaudeAi ? 'Enabled' : 'Disabled'}
+                    </Badge>
                   </div>
                 </div>
 
-                {/* PHP Extensions */}
+                {/* Collapsible Configuration and PHP Extensions */}
+                {/* Configuration Section */}
+                <Collapsible>
+                  <CollapsibleTrigger className="hover:bg-accent flex w-full items-center justify-between rounded-md border px-4 py-2 text-sm font-semibold">
+                    Configuration
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-4 py-2">
+                    <div className="space-y-2 pt-2 text-sm">
+                      <div className="grid grid-cols-[140px_1fr] gap-2">
+                        <span className="text-muted-foreground">Domain</span>
+                        <span className="font-mono">{project.domain}</span>
+                      </div>
+                      <div className="grid grid-cols-[140px_1fr] gap-2">
+                        <span className="text-muted-foreground">Project Path</span>
+                        <span className="font-mono break-all">{project.path}</span>
+                      </div>
+                      <div className="grid grid-cols-[140px_1fr] gap-2">
+                        <span className="text-muted-foreground">Volume Name</span>
+                        <span className="font-mono">{project.volumeName}</span>
+                      </div>
+                      <div className="grid grid-cols-[140px_1fr] gap-2">
+                        <span className="text-muted-foreground">Network</span>
+                        <span className="font-mono">{project.networkName}</span>
+                      </div>
+                      <div className="grid grid-cols-[140px_1fr] gap-2">
+                        <span className="text-muted-foreground">Container Port</span>
+                        <span>{project.forwardedPort}</span>
+                      </div>
+                      {forwardedLocalhostPort && (
+                        <div className="grid grid-cols-[140px_1fr] gap-2">
+                          <span className="text-muted-foreground">Localhost Port</span>
+                          <span className="font-mono">
+                            localhost:{forwardedLocalhostPort}
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              VS Code forwarded
+                            </Badge>
+                          </span>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-[140px_1fr] gap-2">
+                        <span className="text-muted-foreground">Claude AI</span>
+                        <span>{project.enableClaudeAi ? 'Enabled' : 'Disabled'}</span>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* PHP Extensions Section */}
                 {project.phpExtensions && project.phpExtensions.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <h3 className="mb-2 text-sm font-semibold">PHP Extensions</h3>
-                      <div className="flex flex-wrap gap-2">
+                  <Collapsible>
+                    <CollapsibleTrigger className="hover:bg-accent flex w-full items-center justify-between rounded-md border px-4 py-2 text-sm font-semibold">
+                      PHP Extensions ({project.phpExtensions.length})
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-4 py-2">
+                      <div className="flex flex-wrap gap-2 pt-2">
                         {project.phpExtensions.map(ext => (
                           <Badge key={ext} variant="secondary">
                             {ext}
                           </Badge>
                         ))}
                       </div>
-                    </div>
-                  </>
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
               </TabsContent>
 
               {/* Volume Sync Tab */}
-              <TabsContent value="volumes" className="mt-4 space-y-4">
-                <div className="rounded-md border border-dashed p-8 text-center">
-                  <p className="text-muted-foreground text-sm">Volume sync settings coming soon</p>
+              <TabsContent value="volumes" className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
+                  <Alert className="rounded-md">
+                    <Download />
+                    <AlertTitle>Volume Sync</AlertTitle>
+                    <AlertDescription>
+                      <div className="text-muted-foreground space-y-2">
+                        <p>
+                          Use <strong>Sync from Volume</strong> to copy changes from the
+                          devcontainer back to your local folder.
+                        </p>
+                        <div className="flex flex-row gap-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox aria-label="Sync node_modules" id="sync-node-modules" />
+                            <label
+                              htmlFor="sync-node-modules"
+                              className="cursor-pointer text-xs select-none"
+                            >
+                              Sync <code>node_modules</code>
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox aria-label="Sync vendor" id="sync-vendor" />
+                            <label
+                              htmlFor="sync-vendor"
+                              className="cursor-pointer text-xs select-none"
+                            >
+                              Sync <code>vendor</code>
+                            </label>
+                          </div>
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          *Large folders may slow down sync. Disable above to skip them.
+                        </p>
+                        <p className="text-xs">Volume: </p>
+                        <pre className="rounded-md bg-neutral-950 px-2 py-1">
+                          <code className="text-white select-text">{project.volumeName}</code>
+                        </pre>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
+                  <Button variant="outline" className="col-span-2 w-full rounded-md">
+                    <Download className="mr-2 h-4 w-4" />
+                    Sync from Volume
+                  </Button>
                 </div>
               </TabsContent>
             </Tabs>
@@ -326,7 +432,7 @@ function ProjectDetailPage() {
         {/* Logs Header */}
         <button
           onClick={() => setConsoleExpanded(!consoleExpanded)}
-          className="hover:bg-muted/50 flex h-10 w-full items-center justify-between px-4 transition-colors"
+          className="hover:bg-primary/5 flex h-10 w-full items-center justify-between px-4 transition-colors"
         >
           <div className="flex items-center gap-2">
             <VscTerminal className="h-4 w-4" />

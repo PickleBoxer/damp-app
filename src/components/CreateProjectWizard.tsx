@@ -591,7 +591,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 {isLivewire && authentication !== 'workos' && (
                   <label
                     htmlFor="use-volt"
-                    className="hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
+                    className="hover:bg-primary/5 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <TbBolt className="text-muted-foreground h-4 w-4" />
@@ -693,7 +693,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 {/* Boost */}
                 <label
                   htmlFor="install-boost"
-                  className="hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
+                  className="hover:bg-primary/5 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <TbBolt className="text-muted-foreground h-4 w-4" />
@@ -1125,7 +1125,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 <button
                   type="button"
                   onClick={() => setExtensionsExpanded(!extensionsExpanded)}
-                  className="hover:bg-muted/50 flex w-full items-center justify-between p-4 text-left transition-colors"
+                  className="hover:bg-primary/5 flex w-full items-center justify-between p-4 text-left transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <h4 className="text-sm font-semibold">PHP Extensions</h4>

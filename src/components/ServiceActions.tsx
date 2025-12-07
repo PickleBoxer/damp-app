@@ -171,7 +171,7 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
 
       <div className="flex flex-wrap gap-2">
         {!isInstalled && (
-          <Button onClick={handleInstall} disabled={isActionDisabled} className="flex-1">
+          <Button onClick={handleInstall} disabled={isActionDisabled} size="sm" className="flex-1">
             {installMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Install
           </Button>
@@ -179,11 +179,16 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
 
         {isInstalled && !isRunning && (
           <>
-            <Button onClick={handleStart} disabled={isActionDisabled} className="flex-1">
+            <Button onClick={handleStart} disabled={isActionDisabled} size="sm" className="flex-1">
               {startMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Start
             </Button>
-            <Button onClick={handleUninstall} disabled={isActionDisabled} variant="destructive">
+            <Button
+              onClick={handleUninstall}
+              disabled={isActionDisabled}
+              size="sm"
+              variant="destructive"
+            >
               {uninstallMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Uninstall
             </Button>

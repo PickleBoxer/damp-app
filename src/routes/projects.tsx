@@ -62,14 +62,14 @@ function SortableProjectItem({
       style={style}
       className={`group/project relative ${isSelected ? 'bg-primary/5' : ''}`}
     >
-      <div className="absolute top-0 left-0 flex h-full w-0 cursor-grab items-center justify-center overflow-hidden opacity-0 transition-all duration-200 group-hover/project:w-8 group-hover/project:opacity-100 active:cursor-grabbing">
+      <div className="absolute bg-primary/5 top-0 left-0 flex h-full w-0 cursor-grab items-center justify-center overflow-hidden opacity-0 transition-all duration-200 group-hover/project:w-8 group-hover/project:opacity-100 active:cursor-grabbing">
         <GripVertical className="text-muted-foreground h-4 w-4" {...attributes} {...listeners} />
       </div>
-      <div className="transition-all duration-200 group-hover/project:pl-6">
+      <div className="transition-all duration-200 group-hover/project:pl-8">
         <Link
           to="/projects/$projectId"
           params={{ projectId: project.id }}
-          className="hover:bg-muted/50 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
+          className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
         >
           <div className="flex flex-1 items-center gap-3">
             <ProjectIcon projectType={project.type} className="h-10 w-10" />

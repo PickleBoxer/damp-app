@@ -152,7 +152,7 @@ export function QuickSearch() {
       {/* Search trigger button in title bar */}
       <button
         onClick={() => setOpen(true)}
-        className="bg-muted/50 border-border hover:bg-muted hover:border-ring/20 relative flex h-[26px] w-[320px] items-center justify-center gap-2 rounded-md border px-3 font-mono text-sm transition-all duration-100"
+        className="bg-primary/5 border-border hover:bg-muted hover:border-ring/20 relative flex h-[26px] w-[320px] items-center justify-center gap-2 rounded-md border px-3 font-mono text-sm transition-all duration-100"
       >
         <Search className="text-muted-foreground h-4 w-4" />
         <span className="text-muted-foreground text-xs">DAMP</span>
@@ -252,7 +252,7 @@ export function QuickSearch() {
                       index === selectedIndex ? 'bg-muted' : 'hover:bg-muted'
                     }`}
                   >
-                    <div className="bg-muted/50 flex h-8 w-8 items-center justify-center rounded-md">
+                    <div className="bg-primary/5 flex h-8 w-8 items-center justify-center rounded-md">
                       {item.type === 'project' && <Command className="text-primary h-4 w-4" />}
                       {item.type === 'service' && (
                         <div className="bg-primary h-2 w-2 rounded-full" />

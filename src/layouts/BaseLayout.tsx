@@ -23,7 +23,14 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
         closeButton
         expand={false}
         visibleToasts={5}
-        toastOptions={{ style: { pointerEvents: 'auto' } }}
+        toastOptions={{
+          style: {
+            pointerEvents: 'auto',
+            padding: '8px 12px',
+            minHeight: '40px',
+            fontSize: '11px',
+          },
+        }}
       />
     </div>
   );

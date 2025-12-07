@@ -126,7 +126,7 @@ function ServicesPage() {
                       <Link
                         to="/services/$serviceId"
                         params={{ serviceId: service.definition.id }}
-                        className="hover:bg-muted/50 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
+                        className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
                       >
                         <div className="flex flex-1 items-center gap-3">
                           <ServiceIcon serviceId={service.definition.id} className="h-10 w-10" />

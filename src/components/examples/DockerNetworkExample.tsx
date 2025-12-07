@@ -107,7 +107,7 @@ export function DockerNetworkExample() {
         <div className="bg-muted rounded-md p-3 font-mono text-xs break-all">{message}</div>
       )}
 
-      <div className="bg-muted/50 space-y-2 rounded-md p-3 text-xs">
+      <div className="bg-primary/5 space-y-2 rounded-md p-3 text-xs">
         <p className="font-semibold">Usage in Laravel .env:</p>
         <code className="block">
           DB_HOST={networkName || 'damp-mysql'}

@@ -1,6 +1,6 @@
 import { closeWindow, maximizeWindow, minimizeWindow } from '@/helpers/window_helpers';
 import { isMacOS } from '@/utils/platform';
-import { Command } from 'lucide-react';
+import { Box } from 'lucide-react';
 import { QuickSearch } from './QuickSearch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -12,8 +12,8 @@ export default function DragWindowRegion() {
 
       <div className="relative z-10 flex h-full items-center justify-center">
         {/* Left section - App icon (draggable) */}
-        <div className="absolute left-0 flex items-center gap-2 pl-3">
-          {!isMacOS() && <Command className="text-foreground h-4 w-4" />}
+        <div className="bg-primary text-primary-foreground absolute left-0 ml-2 flex aspect-square items-center justify-center rounded-md p-1">
+          {!isMacOS() && <Box className="h-4 w-4" />}
         </div>
 
         {/* Center section - Search on Windows/Linux, Title on macOS */}

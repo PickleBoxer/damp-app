@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { Command, Globe, Home, Server } from 'lucide-react';
+import { Globe, Home, Server } from 'lucide-react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -8,7 +7,12 @@ import { cn } from '@/components/lib/utils';
 export default function IconNav() {
   const { t } = useTranslation();
   const location = useRouterState({ select: s => s.location });
-  const isActive = (to: string) => location.pathname === to;
+  const isActive = (to: string) => {
+    if (to === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(to);
+  };
 
   const navItems = [
     {
@@ -43,9 +47,9 @@ export default function IconNav() {
                   <Link
                     to={item.to}
                     className={cn(
-                      'flex h-[35px] w-[35px] items-center justify-center transition-colors',
-                      'hover:bg-accent hover:text-accent-foreground',
-                      active && 'bg-accent text-accent-foreground'
+                      'flex h-[35px] w-[35px] items-center justify-center transition-colors text-muted-foreground',
+                      'hover:text-foreground',
+                      active && 'text-foreground border-r-2 border-foreground'
                     )}
                   >
                     <Icon className="size-4" />

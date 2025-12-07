@@ -236,13 +236,19 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
   const hostEnvConfig = formatAsLaravelEnv(service, 'localhost', port);
 
   return (
-    <Tabs defaultValue="docker" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="docker" className="gap-2">
+    <Tabs defaultValue="docker" className="flex w-full flex-col gap-4 px-2">
+      <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-[3px]">
+        <TabsTrigger
+          value="docker"
+          className="text-foreground dark:text-muted-foreground hover:text-muted-foreground/70 dark:hover:text-muted-foreground/70 data-[state=active]:bg-background dark:data-[state=active]:bg-background data-[state=active]:text-secondary-foreground dark:data-[state=active]:text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium whitespace-nowrap transition-all"
+        >
           <Network className="h-4 w-4" />
           Docker Network
         </TabsTrigger>
-        <TabsTrigger value="host" className="gap-2">
+        <TabsTrigger
+          value="host"
+          className="text-foreground dark:text-muted-foreground hover:text-muted-foreground/70 dark:hover:text-muted-foreground/70 data-[state=active]:bg-background dark:data-[state=active]:bg-background data-[state=active]:text-secondary-foreground dark:data-[state=active]:text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium whitespace-nowrap transition-all"
+        >
           <MonitorSmartphone className="h-4 w-4" />
           Host Machine
         </TabsTrigger>
@@ -254,7 +260,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
             <p className="text-muted-foreground mb-2 text-xs">
               Connection string for Docker containers:
             </p>
-            <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
+            <div className="bg-primary/5 flex items-center justify-between rounded-lg p-3">
               <code className="font-mono text-sm select-text">{dockerConnection}</code>
               <CopyButton text={dockerConnection} label="Connection string" />
             </div>
@@ -262,7 +268,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 
           <div>
             <p className="text-muted-foreground mb-2 text-xs">Add to your .env file:</p>
-            <div className="bg-muted/50 relative rounded-lg p-3">
+            <div className="bg-primary/5 relative rounded-lg p-3">
               <div className="absolute top-3 right-3">
                 <CopyButton text={dockerEnvConfig} label=".env configuration" />
               </div>
@@ -280,7 +286,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
             <p className="text-muted-foreground mb-2 text-xs">
               Connection string from host machine:
             </p>
-            <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
+            <div className="bg-primary/5 flex items-center justify-between rounded-lg p-3">
               <code className="font-mono text-sm select-text">{hostConnection}</code>
               <CopyButton text={hostConnection} label="Connection string" />
             </div>
@@ -288,7 +294,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 
           <div>
             <p className="text-muted-foreground mb-2 text-xs">Add to your .env file:</p>
-            <div className="bg-muted/50 relative rounded-lg p-3">
+            <div className="bg-primary/5 relative rounded-lg p-3">
               <div className="absolute top-3 right-3">
                 <CopyButton text={hostEnvConfig} label=".env configuration" />
               </div>
@@ -406,7 +412,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
                 </span>
               </div>
 
-              <div className="bg-muted/50 space-y-2 rounded-lg p-4">
+              <div className="bg-primary/5 space-y-2 rounded-lg p-4">
                 <p className="text-muted-foreground text-sm">
                   Caddy automatically manages SSL certificates for your projects. If you experience
                   any connection issues with HTTPS, you can manually download and install the root
@@ -441,8 +447,8 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
             variant="secondary"
             onClick={handleDownloadCertificate}
             disabled={isDownloading}
-            size="sm"
             className="w-full"
+            size="sm"
           >
             <Download className="mr-2 h-4 w-4" />
             {isDownloading ? 'Downloading...' : 'Download Certificate'}
