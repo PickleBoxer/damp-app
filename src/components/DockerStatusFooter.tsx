@@ -44,7 +44,7 @@ export default function DockerStatusFooter() {
     };
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (!isMountedRef.current || isRefreshing) return;
 
     setIsRefreshing(true);
@@ -54,22 +54,20 @@ export default function DockerStatusFooter() {
       clearTimeout(timeoutRef.current);
     }
 
-    // Trigger refetch for both queries
-    Promise.all([refetchStatus(), refetchInfo()])
-      .then(() => {
-        // Keep spinning for minimum duration for visual feedback
-        timeoutRef.current = setTimeout(() => {
-          if (isMountedRef.current) {
-            setIsRefreshing(false);
-          }
-        }, 500);
-      })
-      .catch(error => {
-        console.error('Failed to refresh Docker status:', error);
+    try {
+      // Trigger refetch for both queries
+      // Use Promise.allSettled to ensure both complete even if one fails
+      await Promise.allSettled([refetchStatus(), refetchInfo()]);
+    } catch (error) {
+      console.error('Failed to refresh Docker status:', error);
+    } finally {
+      // Keep spinning for minimum duration for visual feedback
+      timeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
           setIsRefreshing(false);
         }
-      });
+      }, 300);
+    }
   };
 
   // Determine status and icon color
