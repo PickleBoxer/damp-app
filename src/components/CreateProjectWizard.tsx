@@ -16,7 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, ArrowRight, Check, FolderOpen, Info, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowLeft, ArrowRight, FolderOpen, Info, ChevronDown } from 'lucide-react';
 import { useCreateProject } from '@/api/projects/projects-queries';
 import {
   selectFolder as selectProjectFolder,
@@ -27,7 +28,16 @@ import { ProjectType } from '@/types/project';
 import type { CreateProjectInput, PhpVersion, NodeVersion, PhpVariant } from '@/types/project';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { SiClaude, SiNodedotjs, SiPhp, SiReact, SiVuedotjs, SiLivewire } from 'react-icons/si';
-import { TbBolt, TbFlask, TbLock, TbShieldCheck, TbCode, TbLink } from 'react-icons/tb';
+import {
+  TbBolt,
+  TbFlask,
+  TbLock,
+  TbShieldCheck,
+  TbCode,
+  TbLink,
+  TbRocket,
+  TbCheck,
+} from 'react-icons/tb';
 import {
   Select,
   SelectContent,
@@ -63,15 +73,7 @@ interface CreateProjectWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type WizardStep =
-  | 'type'
-  | 'laravel-starter'
-  | 'laravel-config'
-  | 'basic'
-  | 'variant'
-  | 'runtime'
-  | 'extensions'
-  | 'review';
+type WizardStep = 'type' | 'laravel-starter' | 'laravel-config' | 'basic' | 'variant';
 
 const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: string }> = [
   {
@@ -166,13 +168,52 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     phpVariant: 'fpm-apache',
     nodeVersion: 'none',
     enableClaudeAi: false,
-    phpExtensions: ['bcmath', 'gd', 'intl'], // Only additional extensions (pre-installed are always included)
+    phpExtensions: [],
   });
   const [nameError, setNameError] = useState<string | undefined>();
   const [extensionsExpanded, setExtensionsExpanded] = useState(false);
+  const [preinstalledExpanded, setPreinstalledExpanded] = useState(false);
+  const [additionalExpanded, setAdditionalExpanded] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<TerminalLog[]>([]);
   const [showTerminal, setShowTerminal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Add keyboard listener to close dialog when creation is finished
+  useEffect(() => {
+    if (!isCreating && showTerminal && terminalLogs.length > 0) {
+      const handleKeyPress = (e: KeyboardEvent) => {
+        // Close on any key press
+        handleOpenChange(false);
+      };
+
+      window.addEventListener('keydown', handleKeyPress);
+      return () => window.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [isCreating, showTerminal, terminalLogs.length]);
+
+  // Reset wizard state when dialog closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Reset all state when closing
+      setStep('type');
+      setFormData({
+        type: ProjectType.BasicPhp,
+        phpVersion: '8.3',
+        phpVariant: 'fpm-apache',
+        nodeVersion: 'none',
+        enableClaudeAi: false,
+        phpExtensions: [],
+      });
+      setNameError(undefined);
+      setExtensionsExpanded(false);
+      setPreinstalledExpanded(false);
+      setAdditionalExpanded(false);
+      setTerminalLogs([]);
+      setShowTerminal(false);
+      setIsCreating(false);
+    }
+    onOpenChange(newOpen);
+  };
 
   const createProjectMutation = useCreateProject();
 
@@ -200,43 +241,28 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   };
 
   const handleNext = () => {
-    let steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
+    let steps: WizardStep[] = ['type', 'basic', 'variant'];
 
     // Insert laravel-starter and laravel-config steps for fresh Laravel projects
     if (formData.type === ProjectType.Laravel) {
-      steps = [
-        'type',
-        'laravel-starter',
-        'laravel-config',
-        'basic',
-        'variant',
-        'runtime',
-        'extensions',
-        'review',
-      ];
+      steps = ['type', 'laravel-starter', 'laravel-config', 'basic', 'variant'];
     }
 
     const currentIndex = steps.indexOf(step);
     if (currentIndex < steps.length - 1) {
       setStep(steps[currentIndex + 1]);
+    } else {
+      // Last step - trigger project creation
+      handleCreate();
     }
   };
 
   const handleBack = () => {
-    let steps: WizardStep[] = ['type', 'basic', 'variant', 'runtime', 'extensions', 'review'];
+    let steps: WizardStep[] = ['type', 'basic', 'variant'];
 
     // Insert laravel-starter and laravel-config steps for fresh Laravel projects
     if (formData.type === ProjectType.Laravel) {
-      steps = [
-        'type',
-        'laravel-starter',
-        'laravel-config',
-        'basic',
-        'variant',
-        'runtime',
-        'extensions',
-        'review',
-      ];
+      steps = ['type', 'laravel-starter', 'laravel-config', 'basic', 'variant'];
     }
 
     const currentIndex = steps.indexOf(step);
@@ -302,7 +328,13 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         {
           id: `${Date.now()}-next`,
           timestamp: new Date(),
-          message: '💡 You can now close this dialog and open the project in VS Code',
+          message: '',
+          type: 'info',
+        },
+        {
+          id: `${Date.now()}-press-key`,
+          timestamp: new Date(),
+          message: 'Press any key to close...',
           type: 'info',
         },
       ]);
@@ -355,16 +387,12 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         return true;
       case 'basic': {
         const validation = validateSiteName(formData.name || '');
-        return validation.isValid && !!formData.path;
+        return (
+          validation.isValid && !!formData.path && !!formData.phpVersion && !!formData.nodeVersion
+        );
       }
       case 'variant':
         return !!formData.phpVariant;
-      case 'runtime':
-        return !!formData.phpVersion && !!formData.nodeVersion;
-      case 'extensions':
-        return true;
-      case 'review':
-        return true;
       default:
         return false;
     }
@@ -374,27 +402,71 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     switch (step) {
       case 'type':
         return (
-          <div className="space-y-4">
-            <div className="space-y-2"></div>
-            <div className="space-y-2">
-              {PROJECT_TYPES.map(type => (
+          <div className="grid grid-cols-3 gap-4">
+            {PROJECT_TYPES.map(type => (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => {
+                  setFormData(prev => {
+                    const newData = { ...prev, type: type.value };
+                    // Initialize Laravel options with defaults when selecting Laravel
+                    if (type.value === ProjectType.Laravel && !prev.laravelOptions) {
+                      newData.laravelOptions = {
+                        starterKit: 'none',
+                        authentication: 'none',
+                        useVolt: false,
+                        testingFramework: 'pest',
+                        installBoost: false,
+                      };
+                    }
+                    return newData;
+                  });
+                  // Auto-advance to next step after selecting type
+                  // Determine next step based on project type
+                  setTimeout(() => {
+                    if (type.value === ProjectType.Laravel) {
+                      setStep('laravel-starter');
+                    } else {
+                      setStep('basic');
+                    }
+                  }, 100);
+                }}
+                className={`group hover:border-primary/50 relative flex flex-col items-center gap-3 border-2 p-6 text-center transition-all ${
+                  formData.type === type.value
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-border bg-background'
+                }`}
+              >
                 <div
-                  key={type.value}
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, type: type.value }));
-                  }}
-                  className={`border-input hover:border-primary flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors ${
-                    formData.type === type.value ? 'border-primary bg-primary/5' : ''
+                  className={`flex h-16 w-16 items-center justify-center rounded-xl transition-all ${
+                    formData.type === type.value
+                      ? 'bg-primary/10 scale-105'
+                      : 'bg-muted/50 group-hover:bg-primary/5 group-hover:scale-105'
                   }`}
                 >
-                  <ProjectIcon projectType={type.value} className="text-primary h-8 w-8 shrink-0" />
-                  <div className="flex flex-col">
-                    <div className="font-medium">{type.label}</div>
-                    <p className="text-muted-foreground mt-1 text-sm">{type.description}</p>
-                  </div>
+                  <ProjectIcon
+                    projectType={type.value}
+                    className={`h-8 w-8 transition-colors ${
+                      formData.type === type.value
+                        ? 'text-primary'
+                        : 'text-muted-foreground group-hover:text-primary'
+                    }`}
+                  />
                 </div>
-              ))}
-            </div>
+                <div className="flex-1">
+                  <div className="font-semibold">{type.label}</div>
+                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
+                    {type.description}
+                  </p>
+                </div>
+                {formData.type === type.value && (
+                  <div className="absolute top-3 right-3">
+                    <TbCheck className="text-primary h-5 w-5" />
+                  </div>
+                )}
+              </button>
+            ))}
           </div>
         );
 
@@ -415,11 +487,11 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         ];
 
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Starter Kit Grid */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Starter Kit</Label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {starterKits.map(kit => {
                   const Icon = kit.icon;
                   const isSelected = starterKit === kit.value;
@@ -462,7 +534,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                       </div>
                       {isSelected && (
                         <div className="absolute top-2 right-2">
-                          <Check className="text-primary h-4 w-4" />
+                          <TbCheck className="text-primary h-4 w-4" />
                         </div>
                       )}
                     </button>
@@ -501,12 +573,12 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         const authentication = formData.laravelOptions?.authentication || 'none';
 
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Authentication (only for starter kits) */}
             {hasStarterKit && (
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Authentication</Label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4">
                   <button
                     type="button"
                     onClick={() =>
@@ -586,7 +658,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
             {/* Additional Options */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">Additional Options</Label>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {/* Volt Toggle */}
                 {isLivewire && authentication !== 'workos' && (
                   <label
@@ -621,7 +693,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 )}
 
                 {/* Testing Framework */}
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() =>
@@ -729,48 +801,159 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       case 'basic':
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="project-name">Project Name *</Label>
-              <Input
-                id="project-name"
-                placeholder="My Awesome Project"
-                value={formData.name || ''}
-                onChange={e => {
-                  const newName = e.target.value;
-                  setFormData(prev => ({ ...prev, name: newName }));
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="project-name">Project Name *</Label>
+                <Input
+                  id="project-name"
+                  placeholder="My Awesome Project"
+                  value={formData.name || ''}
+                  onChange={e => {
+                    const newName = e.target.value;
+                    setFormData(prev => ({ ...prev, name: newName }));
 
-                  // Validate on change
-                  const validation = validateSiteName(newName);
-                  setNameError(validation.error);
-                }}
-                className={nameError ? 'border-destructive h-10' : 'h-10'}
-              />
-              {nameError ? (
-                <p className="text-destructive text-xs">{nameError}</p>
-              ) : (
+                    // Validate on change
+                    const validation = validateSiteName(newName);
+                    setNameError(validation.error);
+                  }}
+                  className={nameError ? 'border-destructive h-10' : 'h-10'}
+                />
+                {nameError ? (
+                  <p className="text-destructive text-xs">{nameError}</p>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    This will become the domain ({formData.name || 'site-name'}.local)
+                    {formData.type !== ProjectType.Existing && ' and folder name'}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Parent Folder *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    readOnly
+                    placeholder="Click to select parent folder..."
+                    value={formData.path || ''}
+                    className="h-10 flex-1"
+                  />
+                  <Button type="button" variant="outline" size="icon" onClick={handleSelectFolder}>
+                    <FolderOpen />
+                  </Button>
+                </div>
                 <p className="text-muted-foreground text-xs">
-                  This will become the domain ({formData.name || 'site-name'}.local)
-                  {formData.type !== ProjectType.Existing && ' and folder name'}
+                  Site folder will be created inside this directory
                 </p>
-              )}
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Parent Folder *</Label>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  placeholder="Click to select parent folder..."
-                  value={formData.path || ''}
-                  className="h-10 flex-1"
-                />
-                <Button type="button" variant="outline" size="icon" onClick={handleSelectFolder}>
-                  <FolderOpen />
-                </Button>
+            <div className="space-y-4">
+              <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-600/10">
+                      <SiPhp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <Label htmlFor="phpVersion" className="cursor-pointer text-sm font-medium">
+                        PHP Version
+                      </Label>
+                      <p className="text-muted-foreground text-xs">
+                        {formData.type === ProjectType.Laravel
+                          ? 'Laravel requires PHP 8.2 or higher'
+                          : formData.phpVariant === 'frankenphp'
+                            ? 'FrankenPHP requires PHP 8.3 or higher'
+                            : 'Select the PHP runtime version for your project'}
+                      </p>
+                    </div>
+                  </div>
+                  <Select
+                    value={formData.phpVersion}
+                    onValueChange={value =>
+                      setFormData(prev => ({ ...prev, phpVersion: value as PhpVersion }))
+                    }
+                  >
+                    <SelectTrigger className="w-[80px] rounded-md">
+                      <SelectValue placeholder="Select version" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {PHP_VERSIONS.map(version => (
+                        <SelectItem
+                          key={version}
+                          value={version}
+                          disabled={
+                            (formData.type === ProjectType.Laravel &&
+                              ['7.4', '8.1'].includes(version)) ||
+                            (formData.phpVariant === 'frankenphp' &&
+                              ['7.4', '8.1', '8.2'].includes(version))
+                          }
+                        >
+                          {version}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <p className="text-muted-foreground text-xs">
-                Site folder will be created inside this directory
-              </p>
+
+              <div className="rounded-lg border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-4 dark:border-green-800 dark:from-green-950/30 dark:to-emerald-950/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-green-600/10">
+                      <SiNodedotjs className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div className="flex-1">
+                      <Label htmlFor="nodeVersion" className="cursor-pointer text-sm font-medium">
+                        Node.js Version
+                      </Label>
+                      <p className="text-muted-foreground text-xs">
+                        Runtime version with Node.js, nvm, yarn, pnpm, and dependencies
+                      </p>
+                    </div>
+                  </div>
+                  <Select
+                    value={formData.nodeVersion}
+                    onValueChange={value =>
+                      setFormData(prev => ({ ...prev, nodeVersion: value as NodeVersion }))
+                    }
+                  >
+                    <SelectTrigger className="w-[80px] rounded-md">
+                      <SelectValue placeholder="Select version" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-md">
+                      {NODE_VERSIONS.map(version => (
+                        <SelectItem key={version} value={version}>
+                          {version}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 dark:border-orange-800 dark:from-orange-950/30 dark:to-amber-950/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-orange-600/10">
+                      <SiClaude className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <Label htmlFor="claudeAI" className="cursor-pointer text-sm font-medium">
+                        Add Claude Code CLI
+                      </Label>
+                      <p className="text-muted-foreground text-xs">
+                        Include Claude Code CLI coding assistant in your devcontainer
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={formData.enableClaudeAi || false}
+                    onCheckedChange={checked =>
+                      setFormData(prev => ({ ...prev, enableClaudeAi: checked }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -778,8 +961,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       case 'variant':
         return (
           <div className="space-y-4">
+            {/* PHP Variant Selection */}
             <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 p-4 dark:border-purple-800 dark:from-purple-950/30 dark:to-violet-950/30">
-              <div className="space-y-3">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-purple-600/10">
                     <SiPhp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
@@ -789,42 +973,111 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                       PHP Variant
                     </Label>
                     <p className="text-muted-foreground text-xs">
-                      Choose web server and runtime configuration
+                      {formData.phpVariant
+                        ? PHP_VARIANTS.find(v => v.value === formData.phpVariant)?.description
+                        : 'Choose web server and runtime configuration'}
                     </p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {PHP_VARIANTS.map(variant => (
-                    <div
-                      key={variant.value}
-                      onClick={() => {
-                        setFormData(prev => {
-                          const newData = { ...prev, phpVariant: variant.value };
-                          // Auto-upgrade PHP version if FrankenPHP selected and version is < 8.3
-                          if (
-                            variant.value === 'frankenphp' &&
-                            prev.phpVersion &&
-                            ['7.4', '8.1', '8.2'].includes(prev.phpVersion)
-                          ) {
-                            newData.phpVersion = '8.3';
-                          }
-                          return newData;
-                        });
-                      }}
-                      className={`border-input hover:border-primary flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                        formData.phpVariant === variant.value ? 'border-primary bg-primary/5' : ''
-                      }`}
-                    >
-                      <div className="flex flex-col">
-                        <div className="text-sm font-medium">{variant.label}</div>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          {variant.description}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Select
+                  value={formData.phpVariant}
+                  onValueChange={value => {
+                    setFormData(prev => {
+                      const newData = { ...prev, phpVariant: value as PhpVariant };
+                      // Auto-upgrade PHP version if FrankenPHP selected and version is < 8.3
+                      if (
+                        value === 'frankenphp' &&
+                        prev.phpVersion &&
+                        ['7.4', '8.1', '8.2'].includes(prev.phpVersion)
+                      ) {
+                        newData.phpVersion = '8.3';
+                      }
+                      return newData;
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select variant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PHP_VARIANTS.map(variant => (
+                      <SelectItem key={variant.value} value={variant.value}>
+                        {variant.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+
+            {/* Additional Extensions */}
+            <div className="rounded-lg border bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-4 dark:from-blue-950/20 dark:to-indigo-950/20">
+              <Collapsible open={additionalExpanded} onOpenChange={setAdditionalExpanded}>
+                <CollapsibleTrigger className="flex w-full items-start justify-between text-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
+                      <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="text-left">
+                      <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                        PHP Extensions
+                      </h4>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {PREINSTALLED_PHP_EXTENSIONS.length} pre-installed •{' '}
+                        {formData.phpExtensions?.length || 0} of {ADDITIONAL_PHP_EXTENSIONS.length}{' '}
+                        additional selected
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className={`text-muted-foreground mt-1 h-4 w-4 shrink-0 transition-transform duration-200 ${
+                      additionalExpanded ? 'rotate-180' : ''
+                    }`}
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  <div
+                    className="animate-in fade-in-0 slide-in-from-top-2 max-h-[280px] overflow-y-auto rounded-md bg-white/50 p-3 dark:bg-black/20"
+                    style={{ animationDuration: '300ms' }}
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      {ADDITIONAL_PHP_EXTENSIONS.map((ext, index) => {
+                        const isChecked = formData.phpExtensions?.includes(ext);
+                        return (
+                          <label
+                            key={ext}
+                            htmlFor={`ext-${ext}`}
+                            className={`group/ext flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-md border px-3 py-1.5 transition-all duration-200 ease-out ${
+                              isChecked
+                                ? 'border-primary bg-primary/10 dark:bg-primary/20 shadow-sm'
+                                : 'hover:border-primary/50 border-transparent bg-white/80 hover:bg-white dark:bg-white/5 dark:hover:bg-white/10'
+                            }`}
+                            style={{
+                              animationDelay: `${index * 20}ms`,
+                              animation: additionalExpanded
+                                ? 'fadeInScale 300ms ease-out forwards'
+                                : 'none',
+                            }}
+                          >
+                            <Checkbox
+                              id={`ext-${ext}`}
+                              checked={isChecked}
+                              onCheckedChange={() => toggleExtension(ext)}
+                              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary size-4 shrink-0 rounded border-2 transition-all duration-200"
+                            />
+                            <span className="font-mono text-sm leading-snug font-medium select-none">
+                              {ext}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-muted-foreground rounded-md bg-white/50 p-3 font-mono text-xs leading-relaxed select-text dark:bg-black/20">
+                    {PREINSTALLED_PHP_EXTENSIONS.join(', ')}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
 
             <div className="bg-muted/30 rounded-lg border p-3">
@@ -847,192 +1100,6 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 </button>{' '}
                 images
               </p>
-            </div>
-          </div>
-        );
-
-      case 'runtime':
-        return (
-          <div className="space-y-6">
-            <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <SiPhp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <div className="flex-1">
-                    <Label htmlFor="phpVersion" className="cursor-pointer text-sm font-medium">
-                      PHP Version
-                    </Label>
-                    <p className="text-muted-foreground text-xs">
-                      {formData.type === ProjectType.Laravel
-                        ? 'Laravel requires PHP 8.2 or higher'
-                        : formData.phpVariant === 'frankenphp'
-                          ? 'FrankenPHP requires PHP 8.3 or higher'
-                          : 'Select the PHP runtime version for your project'}
-                    </p>
-                  </div>
-                </div>
-                <Select
-                  value={formData.phpVersion}
-                  onValueChange={value =>
-                    setFormData(prev => ({ ...prev, phpVersion: value as PhpVersion }))
-                  }
-                >
-                  <SelectTrigger className="w-[80px] rounded-md">
-                    <SelectValue placeholder="Select version" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    {PHP_VERSIONS.map(version => (
-                      <SelectItem
-                        key={version}
-                        value={version}
-                        disabled={
-                          (formData.type === ProjectType.Laravel &&
-                            ['7.4', '8.1'].includes(version)) ||
-                          (formData.phpVariant === 'frankenphp' &&
-                            ['7.4', '8.1', '8.2'].includes(version))
-                        }
-                      >
-                        {version}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-4 dark:border-green-800 dark:from-green-950/30 dark:to-emerald-950/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <SiNodedotjs className="text-green-600 dark:text-green-400" />
-                  <div className="flex-1">
-                    <Label htmlFor="nodeVersion" className="cursor-pointer text-sm font-medium">
-                      Node.js Version
-                    </Label>
-                    <p className="text-muted-foreground text-xs">
-                      Runtime version with Node.js, nvm, yarn, pnpm, and dependencies
-                    </p>
-                  </div>
-                </div>
-                <Select
-                  value={formData.nodeVersion}
-                  onValueChange={value =>
-                    setFormData(prev => ({ ...prev, nodeVersion: value as NodeVersion }))
-                  }
-                >
-                  <SelectTrigger className="w-[80px] rounded-md">
-                    <SelectValue placeholder="Select version" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-md">
-                    {NODE_VERSIONS.map(version => (
-                      <SelectItem key={version} value={version}>
-                        {version}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 dark:border-orange-800 dark:from-orange-950/30 dark:to-amber-950/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <SiClaude className="text-orange-600 dark:text-orange-400" />
-                  <div>
-                    <Label htmlFor="claudeAI" className="cursor-pointer text-sm font-medium">
-                      Add Claude Code CLI
-                    </Label>
-                    <p className="text-muted-foreground text-xs">
-                      Include Claude Code CLI coding assistant in your devcontainer
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={formData.enableClaudeAi || false}
-                  onCheckedChange={checked =>
-                    setFormData(prev => ({ ...prev, enableClaudeAi: checked }))
-                  }
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'extensions':
-        return (
-          <div className="space-y-6">
-            {/* Pre-installed Extensions */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
-                  <Check className="text-primary h-4 w-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold">Pre-installed Extensions</h4>
-                  <p className="text-muted-foreground text-xs">
-                    Included by default • {PREINSTALLED_PHP_EXTENSIONS.length} extensions
-                  </p>
-                </div>
-              </div>
-              <div className="bg-muted/30 rounded-lg border p-4">
-                <div className="flex flex-wrap gap-1.5">
-                  {PREINSTALLED_PHP_EXTENSIONS.map(ext => (
-                    <Badge
-                      key={ext}
-                      variant="outline"
-                      className="bg-background rounded-md font-mono text-xs"
-                    >
-                      {ext}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Additional Extensions */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
-                  <Info className="h-4 w-4 text-blue-500" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold">Additional Extensions</h4>
-                  <p className="text-muted-foreground text-xs">
-                    Optional • {formData.phpExtensions?.length || 0} selected
-                  </p>
-                </div>
-              </div>
-              <ScrollArea>
-                <div className="flex flex-wrap gap-2 pr-4">
-                  {ADDITIONAL_PHP_EXTENSIONS.map(ext => {
-                    const isChecked = formData.phpExtensions?.includes(ext);
-                    return (
-                      <label
-                        key={ext}
-                        htmlFor={`ext-${ext}`}
-                        className={`group/ext flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-md border px-3 py-1.5 transition-all duration-100 ease-linear ${
-                          isChecked
-                            ? 'border-primary bg-primary/5 dark:bg-primary/10 px-2'
-                            : 'hover:bg-accent'
-                        }`}
-                      >
-                        <Checkbox
-                          id={`ext-${ext}`}
-                          checked={isChecked}
-                          onCheckedChange={() => toggleExtension(ext)}
-                          className={`size-4 shrink-0 rounded-full border shadow-sm transition-all duration-100 ease-linear ${
-                            isChecked
-                              ? 'ml-0 translate-x-0'
-                              : 'border-input dark:bg-input/30 -ml-6 -translate-x-1'
-                          }`}
-                        />
-                        <span className="font-mono text-sm leading-snug">{ext}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
             </div>
           </div>
         );
@@ -1203,44 +1270,52 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       case 'laravel-config':
         return 'Configure Options';
       case 'basic':
-        return 'Basic Information';
+        return 'Project Configuration';
       case 'variant':
-        return 'PHP Variant';
-      case 'runtime':
-        return 'Runtime Configuration';
-      case 'extensions':
-        return 'PHP Extensions';
-      case 'review':
-        return 'Review & Create';
+        return 'Server & Extensions';
       default:
         return '';
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{getStepTitle()}</DialogTitle>
-          <DialogDescription>
-            {step === 'type' && 'Select the type of project you want to create'}
-            {step === 'laravel-starter' &&
-              'Choose your Laravel starter kit or begin with a blank project'}
-            {step === 'laravel-config' &&
-              'Configure authentication, testing, and additional options'}
-            {step === 'basic' && 'Enter the basic details for your project'}
-            {step === 'variant' && 'Choose the web server and PHP runtime variant'}
-            {step === 'runtime' && 'Configure PHP, Node.js, and other options'}
-            {step === 'extensions' && 'Choose the PHP extensions you need'}
-            {step === 'review' && 'Review your project configuration before creating'}
-          </DialogDescription>
-        </DialogHeader>
-
-        {showTerminal ? (
-          <ProjectCreationTerminal logs={terminalLogs} className="my-4" />
-        ) : (
-          renderStepContent()
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className={`max-w-2xl select-none ${showTerminal ? 'gap-0 p-0 [&>button]:top-2' : ''}`}
+      >
+        {!showTerminal && (
+          <DialogHeader>
+            <DialogTitle>{getStepTitle()}</DialogTitle>
+            <DialogDescription>
+              {step === 'type' && 'Select the type of project you want to create'}
+              {step === 'laravel-starter' &&
+                'Choose your Laravel starter kit or begin with a blank project'}
+              {step === 'laravel-config' &&
+                'Configure authentication, testing, and additional options'}
+              {step === 'basic' && 'Configure project details, runtime versions, and AI tools'}
+              {step === 'variant' &&
+                'Choose web server variant and PHP extensions for your project'}
+            </DialogDescription>
+          </DialogHeader>
         )}
+
+        <div className="relative overflow-hidden">
+          {showTerminal ? (
+            <div
+              className="animate-in fade-in-0 slide-in-from-top-4"
+              style={{ animationDuration: '400ms' }}
+            >
+              <ProjectCreationTerminal logs={terminalLogs} />
+            </div>
+          ) : (
+            <div
+              className="animate-in fade-in-0 slide-in-from-bottom-2"
+              style={{ animationDuration: '300ms' }}
+            >
+              {renderStepContent()}
+            </div>
+          )}
+        </div>
 
         <DialogFooter className="flex-row justify-between">
           {!showTerminal && step !== 'type' && (
@@ -1257,50 +1332,24 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
 
           {!showTerminal && (
             <div className="flex gap-2">
-              {step !== 'review' ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!canProceed() || createProjectMutation.isPending}
-                >
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={handleCreate}
-                  disabled={!canProceed() || createProjectMutation.isPending}
-                >
-                  <Check className="mr-2 h-4 w-4" />
-                  Create Project
-                </Button>
-              )}
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={!canProceed() || createProjectMutation.isPending}
+              >
+                {step === 'variant' ? (
+                  <>
+                    Launch Project
+                    <TbRocket className="ml-2 h-5 w-5" />
+                  </>
+                ) : (
+                  <>
+                    Next
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
             </div>
-          )}
-
-          {showTerminal && !isCreating && (
-            <Button
-              type="button"
-              onClick={() => {
-                // Reset wizard state and navigate to projects
-                onOpenChange(false);
-                setStep('type');
-                setFormData({
-                  type: ProjectType.BasicPhp,
-                  phpVersion: '8.3',
-                  phpVariant: 'fpm-apache',
-                  nodeVersion: 'none',
-                  enableClaudeAi: false,
-                  phpExtensions: ['bcmath', 'gd', 'intl'],
-                });
-                setShowTerminal(false);
-                setTerminalLogs([]);
-                navigate({ to: '/projects' });
-              }}
-            >
-              Close
-            </Button>
           )}
         </DialogFooter>
       </DialogContent>
