@@ -61,10 +61,11 @@ export function useSuspenseServices() {
 /**
  * Hook to fetch a specific service
  */
-export function useService(serviceId: ServiceId) {
+export function useService(serviceId: ServiceId, options?: { refetchInterval?: number | false }) {
   return useQuery({
     ...serviceQueryOptions(serviceId),
     enabled: !!serviceId,
+    refetchInterval: options?.refetchInterval,
   });
 }
 

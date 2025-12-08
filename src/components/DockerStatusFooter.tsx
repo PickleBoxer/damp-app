@@ -33,10 +33,12 @@ export default function DockerStatusFooter() {
   const { data: projects } = useProjects();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isMountedRef = useRef(true);
+  const isMountedRef = useRef(false);
 
-  // Cleanup on unmount
+  // Track mount state and cleanup on unmount
   useEffect(() => {
+    isMountedRef.current = true;
+
     return () => {
       isMountedRef.current = false;
       if (timeoutRef.current) {
@@ -190,9 +192,10 @@ export default function DockerStatusFooter() {
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            type="button"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors disabled:opacity-50"
+            className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Refresh Docker status"
           >
             <RefreshCw

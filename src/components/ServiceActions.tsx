@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -17,8 +17,6 @@ interface ServiceActionsProps {
 }
 
 export default function ServiceActions({ service }: ServiceActionsProps) {
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
   const installMutation = useInstallService();
   const startMutation = useStartService();
   const stopMutation = useStopService();
@@ -60,14 +58,13 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const isActionDisabled = isLoading || isDockerLoading || !isDockerRunning;
 
   const handleInstall = async () => {
-    setSuccessMessage(null);
     try {
       const result = await installMutation.mutateAsync({
         serviceId: service.definition.id,
         options: { start_immediately: true },
       });
       if (result?.success) {
-        setSuccessMessage(
+        toast.success(
           service.definition.post_install_message ||
             `${service.definition.display_name} installed successfully`
         );
@@ -84,11 +81,10 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   };
 
   const handleStart = async () => {
-    setSuccessMessage(null);
     try {
       const result = await startMutation.mutateAsync(service.definition.id);
       if (result?.success) {
-        setSuccessMessage(`${service.definition.display_name} started successfully`);
+        toast.success(`${service.definition.display_name} started successfully`);
       } else {
         toast.error(`Failed to start ${service.definition.display_name}`, {
           description: result?.error || 'Unknown error occurred',
@@ -102,11 +98,10 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   };
 
   const handleStop = async () => {
-    setSuccessMessage(null);
     try {
       const result = await stopMutation.mutateAsync(service.definition.id);
       if (result?.success) {
-        setSuccessMessage(`${service.definition.display_name} stopped successfully`);
+        toast.success(`${service.definition.display_name} stopped successfully`);
       } else {
         toast.error(`Failed to stop ${service.definition.display_name}`, {
           description: result?.error || 'Unknown error occurred',
@@ -120,11 +115,10 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   };
 
   const handleRestart = async () => {
-    setSuccessMessage(null);
     try {
       const result = await restartMutation.mutateAsync(service.definition.id);
       if (result?.success) {
-        setSuccessMessage(`${service.definition.display_name} restarted successfully`);
+        toast.success(`${service.definition.display_name} restarted successfully`);
       } else {
         toast.error(`Failed to restart ${service.definition.display_name}`, {
           description: result?.error || 'Unknown error occurred',
@@ -138,14 +132,13 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   };
 
   const handleUninstall = async () => {
-    setSuccessMessage(null);
     try {
       const result = await uninstallMutation.mutateAsync({
         serviceId: service.definition.id,
         removeVolumes: false,
       });
       if (result?.success) {
-        setSuccessMessage(`${service.definition.display_name} uninstalled successfully`);
+        toast.success(`${service.definition.display_name} uninstalled successfully`);
       } else {
         toast.error(`Failed to uninstall ${service.definition.display_name}`, {
           description: result?.error || 'Unknown error occurred',
@@ -162,61 +155,53 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const isRunning = service.state.container_status?.running ?? false;
 
   return (
-    <div className="space-y-4">
-      {successMessage && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
-          {successMessage}
-        </div>
+    <div className="flex flex-wrap gap-2">
+      {!isInstalled && (
+        <Button onClick={handleInstall} disabled={isActionDisabled} size="sm" className="flex-1">
+          {installMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Install
+        </Button>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {!isInstalled && (
-          <Button onClick={handleInstall} disabled={isActionDisabled} size="sm" className="flex-1">
-            {installMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Install
+      {isInstalled && !isRunning && (
+        <>
+          <Button onClick={handleStart} disabled={isActionDisabled} size="sm" className="flex-1">
+            {startMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Start
           </Button>
-        )}
+          <Button
+            onClick={handleUninstall}
+            disabled={isActionDisabled}
+            size="sm"
+            variant="destructive"
+          >
+            {uninstallMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Uninstall
+          </Button>
+        </>
+      )}
 
-        {isInstalled && !isRunning && (
-          <>
-            <Button onClick={handleStart} disabled={isActionDisabled} size="sm" className="flex-1">
-              {startMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Start
-            </Button>
-            <Button
-              onClick={handleUninstall}
-              disabled={isActionDisabled}
-              size="sm"
-              variant="destructive"
-            >
-              {uninstallMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Uninstall
-            </Button>
-          </>
-        )}
-
-        {isInstalled && isRunning && (
-          <>
-            <Button
-              onClick={handleStop}
-              disabled={isActionDisabled}
-              variant="secondary"
-              className="flex-1"
-            >
-              {stopMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Stop
-            </Button>
-            <Button onClick={handleRestart} disabled={isActionDisabled}>
-              {restartMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Restart
-            </Button>
-            <Button onClick={handleUninstall} disabled={isActionDisabled} variant="destructive">
-              {uninstallMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Uninstall
-            </Button>
-          </>
-        )}
-      </div>
+      {isInstalled && isRunning && (
+        <>
+          <Button
+            onClick={handleStop}
+            disabled={isActionDisabled}
+            variant="secondary"
+            className="flex-1"
+          >
+            {stopMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Stop
+          </Button>
+          <Button onClick={handleRestart} disabled={isActionDisabled}>
+            {restartMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Restart
+          </Button>
+          <Button onClick={handleUninstall} disabled={isActionDisabled} variant="destructive">
+            {uninstallMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Uninstall
+          </Button>
+        </>
+      )}
     </div>
   );
 }

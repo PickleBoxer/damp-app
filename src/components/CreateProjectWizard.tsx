@@ -214,7 +214,6 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       });
       setNameError(undefined);
       setExtensionsExpanded(false);
-      setPreinstalledExpanded(false);
       setAdditionalExpanded(false);
       setTerminalLogs([]);
       setShowTerminal(false);
@@ -307,6 +306,8 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       },
     ]);
 
+    let result: any = null;
+
     try {
       // Add initial steps
       setTerminalLogs(prev => [
@@ -328,7 +329,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         },
       ]);
 
-      await createProjectMutation.mutateAsync({
+      result = await createProjectMutation.mutateAsync({
         name: formData.name,
         path: formData.path,
         type: formData.type || ProjectType.BasicPhp,
@@ -338,9 +339,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         enableClaudeAi: formData.enableClaudeAi || false,
         phpExtensions: formData.phpExtensions || [], // Only send additional extensions
         laravelOptions: formData.laravelOptions, // Include Laravel options if present
+        overwriteExisting: formData.type === ProjectType.Existing, // Set to true for existing projects
       });
 
-      // Success log
+      // Success log (mutation already validated success)
       setTerminalLogs(prev => [
         ...prev,
         {
@@ -367,6 +369,8 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
 
       // Don't auto-close - let user review the terminal output
     } catch (error) {
+      console.error('Project creation error:', error);
+
       setTerminalLogs(prev => [
         ...prev,
         {
@@ -374,6 +378,18 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           timestamp: new Date(),
           message: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
           type: 'error',
+        },
+        {
+          id: `${Date.now()}-next`,
+          timestamp: new Date(),
+          message: '',
+          type: 'info',
+        },
+        {
+          id: `${Date.now()}-press-key`,
+          timestamp: new Date(),
+          message: 'Press any key to close...',
+          type: 'info',
         },
       ]);
       setIsCreating(false);
@@ -456,7 +472,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                     }
                   }, 100);
                 }}
-                className={`group hover:border-primary/50 relative flex flex-col items-center gap-3 border-2 p-6 text-center transition-all ${
+                className={`group hover:border-primary/50 relative flex flex-col items-center gap-3 rounded-md border-2 p-6 text-center transition-all ${
                   formData.type === type.value
                     ? 'border-primary bg-primary/5 shadow-sm'
                     : 'border-border bg-background'
@@ -896,7 +912,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
+              <div className="rounded-lg border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-600/10">
@@ -944,7 +960,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 </div>
               </div>
 
-              <div className="rounded-lg border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-4 dark:border-green-800 dark:from-green-950/30 dark:to-emerald-950/30">
+              <div className="rounded-lg border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-md bg-green-600/10">
@@ -979,7 +995,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 </div>
               </div>
 
-              <div className="rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 dark:border-orange-800 dark:from-orange-950/30 dark:to-amber-950/30">
+              <div className="rounded-lg border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-md bg-orange-600/10">
@@ -1150,158 +1166,6 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
               </p>
             </div>
           </div>
-        );
-
-      case 'review':
-        return (
-          <ScrollArea>
-            <div className="space-y-4 pr-4">
-              {/* Project Overview Card */}
-              <div className="from-background to-muted/20 rounded-lg border bg-gradient-to-br p-4">
-                <div className="mb-4 flex items-center gap-3">
-                  <ProjectIcon projectType={formData.type!} className="h-10 w-10" />
-                  <div>
-                    <h3 className="text-lg font-semibold">{formData.name}</h3>
-                    <p className="text-muted-foreground text-xs">{formData.name}.local</p>
-                  </div>
-                </div>
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Project Type</span>
-                    <span className="font-medium capitalize">
-                      {formData.type?.replace('-', ' ')}
-                    </span>
-                  </div>
-                  <Separator className="bg-border/50" />
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Location</span>
-                    <span className="font-mono text-xs">{formData.path}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Runtime Configuration */}
-              <div className="space-y-3">
-                <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 p-3.5 dark:border-purple-800 dark:from-purple-950/30 dark:to-violet-950/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <SiPhp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      <span className="text-sm font-medium">PHP Variant</span>
-                    </div>
-                    <Badge
-                      variant="secondary"
-                      className="bg-background rounded-md text-xs capitalize"
-                    >
-                      {PHP_VARIANTS.find(v => v.value === formData.phpVariant)?.label}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-3.5 dark:border-blue-800 dark:from-blue-950/30 dark:to-indigo-950/30">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <SiPhp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-medium">PHP</span>
-                      </div>
-                      <Badge variant="secondary" className="bg-background rounded-md font-mono">
-                        {formData.phpVersion}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-3.5 dark:border-green-800 dark:from-green-950/30 dark:to-emerald-950/30">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <SiNodedotjs className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        <span className="text-sm font-medium">Node.js</span>
-                      </div>
-                      <Badge
-                        variant="secondary"
-                        className="bg-background rounded-md font-mono capitalize"
-                      >
-                        {formData.nodeVersion}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {formData.enableClaudeAi && (
-                  <div className="rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-3.5 dark:border-orange-800 dark:from-orange-950/30 dark:to-amber-950/30">
-                    <div className="flex items-center gap-2">
-                      <SiClaude className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                      <span className="text-sm font-medium">Claude Code CLI</span>
-                      <Badge variant="outline" className="ml-auto text-xs">
-                        Enabled
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Extensions Summary */}
-              <div className="rounded-lg border">
-                <button
-                  type="button"
-                  onClick={() => setExtensionsExpanded(!extensionsExpanded)}
-                  className="hover:bg-primary/5 flex w-full items-center justify-between p-4 text-left transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <h4 className="text-sm font-semibold">PHP Extensions</h4>
-                    <Badge variant="outline" className="bg-background rounded-md text-xs">
-                      {PREINSTALLED_PHP_EXTENSIONS.length + (formData.phpExtensions?.length || 0)}{' '}
-                      total
-                    </Badge>
-                  </div>
-                  <ChevronDown
-                    className={`text-muted-foreground h-4 w-4 transition-transform ${
-                      extensionsExpanded ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {extensionsExpanded && (
-                  <div className="space-y-3 border-t px-4 pt-3 pb-4">
-                    <div className="bg-muted/30 rounded-md p-3">
-                      <p className="text-muted-foreground mb-2 text-xs font-medium">
-                        Pre-installed ({PREINSTALLED_PHP_EXTENSIONS.length})
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {PREINSTALLED_PHP_EXTENSIONS.slice(0, 8).map(ext => (
-                          <Badge
-                            key={ext}
-                            variant="outline"
-                            className="bg-background rounded-md font-mono text-xs"
-                          >
-                            {ext}
-                          </Badge>
-                        ))}
-                        {PREINSTALLED_PHP_EXTENSIONS.length > 8 && (
-                          <Badge variant="outline" className="bg-background rounded-md text-xs">
-                            +{PREINSTALLED_PHP_EXTENSIONS.length - 8} more
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {formData.phpExtensions && formData.phpExtensions.length > 0 && (
-                      <div className="bg-primary/5 rounded-md p-3">
-                        <p className="text-muted-foreground mb-2 text-xs font-medium">
-                          Additional ({formData.phpExtensions.length})
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {formData.phpExtensions.map(ext => (
-                            <Badge key={ext} className="rounded-md font-mono text-xs">
-                              {ext}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </ScrollArea>
         );
 
       default:

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
-import { useSuspenseService, serviceQueryOptions } from '@/api/services/services-queries';
+import { useService, serviceQueryOptions } from '@/api/services/services-queries';
 import { ServiceId, ServiceInfo } from '@/types/service';
 import { HealthBadge } from '@/components/HealthBadge';
+import { useDocumentVisibility } from '@/hooks/use-document-visibility';
 import ServiceActions from '@/components/ServiceActions';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ServiceIcon } from '@/components/ServiceIcon';
@@ -21,22 +22,10 @@ import {
   Network,
   MonitorSmartphone,
   ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
-// Helper function to get status badge styles
-function getStatusBadgeStyles(service: ServiceInfo): string {
-  if (service.state.container_status?.running) {
-    return 'bg-primary text-primary-foreground';
-  }
-
-  if (service.state.installed) {
-    return 'bg-secondary text-secondary-foreground';
-  }
-
-  return 'border-input bg-background border';
-}
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Helper function to get status text
 function getStatusText(service: ServiceInfo): string {
@@ -62,7 +51,7 @@ function getServicePort(service: ServiceInfo, portIndex: number = 0): string {
 }
 
 // Copy to clipboard component
-function CopyButton({ text, label }: { text: string; label: string }) {
+function CopyButton({ text, label }: { readonly text: string; readonly label: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -90,10 +79,10 @@ function getEnvironmentVars(service: ServiceInfo): string[] {
 // Helper function to parse env vars into an object
 function parseEnvVars(envVars: string[]): Record<string, string> {
   const parsed: Record<string, string> = {};
-  envVars.forEach(envVar => {
+  for (const envVar of envVars) {
     const [key, ...valueParts] = envVar.split('=');
     parsed[key] = valueParts.join('=');
-  });
+  }
   return parsed;
 }
 
@@ -220,6 +209,9 @@ function formatAsLaravelEnv(service: ServiceInfo, host: string, port: string): s
 
 // Connection info component
 function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
+  const [dockerOpen, setDockerOpen] = useState(true);
+  const [hostOpen, setHostOpen] = useState(false);
+
   const containerName = `damp-${service.definition.id}`;
   const port = getServicePort(service, 0);
   const internalPort = service.definition.default_config.ports?.[0]?.[1] || port;
@@ -235,76 +227,140 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
   const hostEnvConfig = formatAsLaravelEnv(service, 'localhost', port);
 
   return (
-    <Tabs defaultValue="docker" className="flex w-full flex-col gap-4 px-2">
-      <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-[3px]">
-        <TabsTrigger
-          value="docker"
-          className="text-foreground dark:text-muted-foreground hover:text-muted-foreground/70 dark:hover:text-muted-foreground/70 data-[state=active]:bg-background dark:data-[state=active]:bg-background data-[state=active]:text-secondary-foreground dark:data-[state=active]:text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium whitespace-nowrap transition-all"
-        >
-          <Network className="h-4 w-4" />
-          Docker Network
-        </TabsTrigger>
-        <TabsTrigger
-          value="host"
-          className="text-foreground dark:text-muted-foreground hover:text-muted-foreground/70 dark:hover:text-muted-foreground/70 data-[state=active]:bg-background dark:data-[state=active]:bg-background data-[state=active]:text-secondary-foreground dark:data-[state=active]:text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium whitespace-nowrap transition-all"
-        >
-          <MonitorSmartphone className="h-4 w-4" />
-          Host Machine
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="docker" className="mt-4 space-y-4">
-        <div className="space-y-3">
-          <div>
-            <p className="text-muted-foreground mb-2 text-xs">
-              Connection string for Docker containers:
-            </p>
-            <div className="bg-primary/5 flex items-center justify-between rounded-lg p-3">
-              <code className="font-mono text-sm select-text">{dockerConnection}</code>
-              <CopyButton text={dockerConnection} label="Connection string" />
+    <div className="space-y-3">
+      {/* Docker Network Section */}
+      <Collapsible open={dockerOpen} onOpenChange={setDockerOpen}>
+        <div className="border-border bg-card overflow-hidden rounded-md border">
+          <CollapsibleTrigger className="hover:bg-accent/50 flex w-full items-center justify-between px-4 py-3 transition-colors">
+            <div className="flex items-center gap-2">
+              <Network className="text-muted-foreground h-4 w-4" />
+              <span className="text-sm font-medium">Docker Network</span>
+              <span className="text-muted-foreground text-xs">(Container to Container)</span>
             </div>
-          </div>
+            <ChevronDown
+              className={`text-muted-foreground h-4 w-4 transition-transform ${dockerOpen ? 'rotate-180' : ''}`}
+            />
+          </CollapsibleTrigger>
 
-          <div>
-            <p className="text-muted-foreground mb-2 text-xs">Add to your .env file:</p>
-            <div className="bg-primary/5 relative rounded-lg p-3">
-              <div className="absolute top-3 right-3">
-                <CopyButton text={dockerEnvConfig} label=".env configuration" />
+          <CollapsibleContent>
+            <div className="border-border space-y-3 border-t px-4 py-3">
+              <div>
+                <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
+                <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
+                  <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
+                    {dockerConnection}
+                  </code>
+                  <div className="px-2">
+                    <CopyButton text={dockerConnection} label="Connection string" />
+                  </div>
+                </div>
               </div>
-              <pre className="pr-10 font-mono text-xs whitespace-pre-wrap select-text">
-                {dockerEnvConfig}
-              </pre>
-            </div>
-          </div>
-        </div>
-      </TabsContent>
 
-      <TabsContent value="host" className="mt-4 space-y-4">
-        <div className="space-y-3">
-          <div>
-            <p className="text-muted-foreground mb-2 text-xs">
-              Connection string from host machine:
-            </p>
-            <div className="bg-primary/5 flex items-center justify-between rounded-lg p-3">
-              <code className="font-mono text-sm select-text">{hostConnection}</code>
-              <CopyButton text={hostConnection} label="Connection string" />
-            </div>
-          </div>
-
-          <div>
-            <p className="text-muted-foreground mb-2 text-xs">Add to your .env file:</p>
-            <div className="bg-primary/5 relative rounded-lg p-3">
-              <div className="absolute top-3 right-3">
-                <CopyButton text={hostEnvConfig} label=".env configuration" />
+              <div>
+                <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
+                <div className="bg-background border-border relative overflow-hidden rounded-md border">
+                  <div className="absolute top-3 right-3 z-10">
+                    <CopyButton text={dockerEnvConfig} label=".env configuration" />
+                  </div>
+                  <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-sm leading-relaxed whitespace-pre-wrap outline-none select-text">
+                    {dockerEnvConfig}
+                  </pre>
+                </div>
               </div>
-              <pre className="pr-10 font-mono text-xs whitespace-pre-wrap select-text">
-                {hostEnvConfig}
-              </pre>
             </div>
-          </div>
+          </CollapsibleContent>
         </div>
-      </TabsContent>
-    </Tabs>
+      </Collapsible>
+
+      {/* Host Machine Section */}
+      <Collapsible open={hostOpen} onOpenChange={setHostOpen}>
+        <div className="border-border bg-card overflow-hidden rounded-md border">
+          <CollapsibleTrigger className="hover:bg-accent/50 flex w-full items-center justify-between px-4 py-3 transition-colors">
+            <div className="flex items-center gap-2">
+              <MonitorSmartphone className="text-muted-foreground h-4 w-4" />
+              <span className="text-sm font-medium">Host Machine</span>
+              <span className="text-muted-foreground text-xs">(Local Development)</span>
+            </div>
+            <ChevronDown
+              className={`text-muted-foreground h-4 w-4 transition-transform ${hostOpen ? 'rotate-180' : ''}`}
+            />
+          </CollapsibleTrigger>
+
+          <CollapsibleContent>
+            <div className="border-border space-y-3 border-t px-4 py-3">
+              <div>
+                <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
+                <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
+                  <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
+                    {hostConnection}
+                  </code>
+                  <div className="px-2">
+                    <CopyButton text={hostConnection} label="Connection string" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
+                <div className="bg-background border-border relative overflow-hidden rounded-md border">
+                  <div className="absolute top-3 right-3 z-10">
+                    <CopyButton text={hostEnvConfig} label=".env configuration" />
+                  </div>
+                  <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-sm leading-relaxed whitespace-pre-wrap outline-none select-text">
+                    {hostEnvConfig}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    </div>
+  );
+}
+
+// Service Info Card Component
+function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
+  const port = getServicePort(service, 0);
+  const isRunning = service.state.container_status?.running;
+  const healthStatus = service.state.container_status?.health_status;
+
+  return (
+    <div className="bg-muted/30 dark:bg-muted/10 border-border border-b px-4 py-3">
+      <div className="flex items-center justify-between gap-4">
+        {/* Status Section */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div
+              className={`h-2 w-2 rounded-full ${
+                isRunning
+                  ? 'bg-emerald-500 dark:bg-emerald-400'
+                  : 'bg-muted-foreground/40 dark:bg-muted-foreground/30'
+              }`}
+            />
+            <span className="text-foreground text-sm font-medium">{getStatusText(service)}</span>
+          </div>
+
+          {/* Port Info */}
+          {service.state.installed && service.definition.default_config.ports.length > 0 && (
+            <>
+              <div className="bg-border h-4 w-px" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-xs">Port:</span>
+                <span className="text-foreground font-mono text-xs font-medium">{port}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Health Badge */}
+        {healthStatus && healthStatus !== 'none' && (
+          <div className="flex items-center gap-2">
+            <HealthBadge status={healthStatus} variant="minimal" />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -342,7 +398,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
     }
 
     try {
-      const result = await window.electronWindow.openExternal(uiUrl);
+      const result = await globalThis.window.electronWindow.openExternal(uiUrl);
       if (result.success) {
         toast.success('Opening service UI in browser');
       } else {
@@ -365,29 +421,24 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Service Header */}
+      <div className="bg-background border-border border-b px-4 py-4">
+        <div className="flex items-center gap-3">
+          <ServiceIcon serviceId={service.definition.id} className="h-9 w-9" />
+          <div className="min-w-0 flex-1">
+            <h1 className="text-foreground text-md font-semibold">
+              {service.definition.display_name}
+            </h1>
+            <p className="text-muted-foreground text-xs">{service.definition.description}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Service Info Card */}
+      <ServiceInfoCard service={service} />
+
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-4">
-          {/* Service Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <ServiceIcon serviceId={service.definition.id} className="h-12 w-12" />
-              <div>
-                <h2 className="text-2xl font-bold">{service.definition.display_name}</h2>
-                <p className="text-muted-foreground text-sm">{service.definition.description}</p>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {service.state.container_status?.health_status && (
-                <HealthBadge status={service.state.container_status.health_status} />
-              )}
-              <span
-                className={`rounded-full px-2.5 py-1 text-xs font-medium ${getStatusBadgeStyles(service)}`}
-              >
-                {getStatusText(service)}
-              </span>
-            </div>
-          </div>
-
           {isCaddy && service.state.installed && (
             <>
               <div className="flex items-center justify-between py-2">
@@ -432,7 +483,6 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
             service.state.installed &&
             service.definition.default_config.ports.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold">Connection</h3>
                 <ConnectionInfo service={service} />
               </div>
             )}
@@ -442,7 +492,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
       {/* Action Buttons */}
       <div className="flex flex-col gap-2 p-4">
         {showUIButton && (
-          <Button variant="default" onClick={handleOpenUI} size="sm" className="w-full">
+          <Button variant="ghost" onClick={handleOpenUI} size="sm" className="w-full border">
             <ExternalLink className="mr-2 h-4 w-4" />
             Open Web UI
           </Button>
@@ -467,7 +517,12 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 
 function ServiceDetailPage() {
   const { serviceId } = Route.useParams();
-  const { data: service } = useSuspenseService(serviceId as ServiceId);
+  const isVisible = useDocumentVisibility();
+  
+  // Use polling to keep health status updated (only when tab is visible)
+  const { data: service } = useService(serviceId as ServiceId, {
+    refetchInterval: isVisible ? 3000 : false, // Poll every 3 seconds when visible
+  });
 
   if (!service) {
     return null;

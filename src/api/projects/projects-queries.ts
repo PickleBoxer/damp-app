@@ -138,23 +138,20 @@ export function useCreateProject() {
   const queryClient = useQueryClient();
 
   return useMutation<ProjectOperationResult, Error, CreateProjectInput>({
-    mutationFn: projectsApi.createProject,
+    mutationFn: async (input: CreateProjectInput) => {
+      const result = await projectsApi.createProject(input);
+      // If the operation failed, throw an error to trigger onError handler
+      if (!result.success) {
+        throw new Error(result.error || 'Project creation failed');
+      }
+      return result;
+    },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
 
-      if (data.success) {
-        toast.success('Project created successfully', {
-          description: `${variables.name} is ready to use`,
-        });
-      } else if (data.error) {
-        toast.error('Failed to create project', {
-          description: data.error,
-        });
-      } else {
-        toast.error('Failed to create project', {
-          description: 'An unexpected response was received',
-        });
-      }
+      toast.success('Project created successfully', {
+        description: `${variables.name} is ready to use`,
+      });
     },
     onError: error => {
       toast.error('Failed to create project', {

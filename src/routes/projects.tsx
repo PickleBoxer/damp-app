@@ -201,7 +201,7 @@ function ProjectsPage() {
           <div className="flex h-full flex-col">
             {/* Header Bar */}
             <div className="flex h-12 items-center justify-between border-b px-4">
-              <h2 className="text-sm font-semibold tracking-wide uppercase">Projects</h2>
+              <h2 className="text-sm font-semibold tracking-wide">Projects</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

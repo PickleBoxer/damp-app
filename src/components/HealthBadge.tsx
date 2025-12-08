@@ -49,8 +49,9 @@ export function HealthBadge({ status, className, variant = 'default' }: HealthBa
 
   if (variant === 'minimal') {
     return (
-      <div className={cn('flex items-center gap-1', className)}>
+      <div className={cn('flex items-center gap-1.5', className)}>
         <Icon className={cn('h-3.5 w-3.5', badge.color, status === 'starting' && 'animate-spin')} />
+        <span className={cn('text-xs font-medium', badge.color)}>{badge.text}</span>
       </div>
     );
   }
