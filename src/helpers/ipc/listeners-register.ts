@@ -8,6 +8,7 @@ import { addShellEventListeners } from './shell/shell-listeners';
 import { addLogsEventListeners } from './logs/logs-listeners';
 import { addAppEventListeners } from './app/app-listeners';
 import { addSyncListeners } from './sync/sync-listeners';
+import { addNgrokListeners } from './ngrok/ngrok-listeners';
 
 export default function registerListeners(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow);
@@ -19,4 +20,5 @@ export default function registerListeners(mainWindow: BrowserWindow) {
   addLogsEventListeners();
   addAppEventListeners();
   addSyncListeners(mainWindow);
+  addNgrokListeners();
 }

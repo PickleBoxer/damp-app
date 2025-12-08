@@ -5,6 +5,10 @@ import started from 'electron-squirrel-startup';
 import path from 'node:path';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { TrayMenu } from '@/electron/TrayMenu';
+import { ngrokManager } from '@/services/ngrok/ngrok-manager';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('main');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -61,9 +65,9 @@ app.whenReady().then(async () => {
   if (inDevelopment) {
     try {
       await installExtension(REACT_DEVELOPER_TOOLS);
-      console.log('React DevTools loaded');
+      logger.info('React DevTools loaded');
     } catch (err) {
-      console.error('Failed to load React DevTools:', err);
+      logger.error('Failed to load React DevTools', { error: err });
     }
   }
 
@@ -71,6 +75,21 @@ app.whenReady().then(async () => {
 
   // Use TrayMenu class for tray setup
   new TrayMenu();
+
+  // Setup automatic cleanup for stopped tunnels (every 60 seconds, only when needed)
+  const cleanupInterval = setInterval(() => {
+    // Only run cleanup if there are tracked tunnels
+    if (ngrokManager.hasActiveTunnels()) {
+      ngrokManager.cleanupStoppedTunnels().catch(error => {
+        logger.error('Failed to cleanup stopped tunnels', { error });
+      });
+    }
+  }, 60000);
+
+  // Clear interval on quit
+  app.on('before-quit', () => {
+    clearInterval(cleanupInterval);
+  });
 });
 
 app.on('activate', function () {
@@ -85,6 +104,31 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     //app.quit();
   }
+});
+
+// Cleanup ngrok tunnels before app quits
+app.on('before-quit', event => {
+  event.preventDefault();
+  logger.info('Application quitting, cleaning up ngrok tunnels...');
+
+  // Set a timeout to force quit if cleanup takes too long
+  const forceQuitTimeout = setTimeout(() => {
+    logger.error('Ngrok cleanup timed out, forcing quit');
+    app.exit(1);
+  }, 5000);
+
+  ngrokManager
+    .stopAllTunnels()
+    .then(() => {
+      logger.info('Ngrok tunnels cleaned up successfully');
+    })
+    .catch(error => {
+      logger.error('Failed to cleanup ngrok tunnels on quit', { error });
+    })
+    .finally(() => {
+      clearTimeout(forceQuitTimeout);
+      app.exit(0);
+    });
 });
 
 app.on('activate', () => {

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
 import { LuFolderSync } from 'react-icons/lu';
+import { IoInformationCircle, IoWarning } from 'react-icons/io5';
 import {
   useSuspenseProject,
   useDeleteProject,
@@ -14,6 +15,7 @@ import {
 } from '@/api/projects/projects-queries';
 import { useDockerStatus } from '@/api/docker/docker-queries';
 import { useSyncFromVolume, useSyncToVolume, useProjectSyncStatus } from '@/api/sync/sync-queries';
+import { useNgrokStatus, useStartNgrokTunnel, useStopNgrokTunnel } from '@/api/ngrok/ngrok-queries';
 import { useDocumentVisibility } from '@/hooks/use-document-visibility';
 import { ProjectIcon } from '@/components/ProjectIcon';
 import { ProjectPreview } from '@/components/ProjectPreview';
@@ -29,7 +31,10 @@ import {
   Download,
   Upload,
   Loader2,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
+import { VscDebugStop, VscDebugStart } from 'react-icons/vsc';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { VscTerminal, VscVscode } from 'react-icons/vsc';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +58,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { useState } from 'react';
+import { getSettings } from '@/helpers/settings_helpers';
 
 function ProjectDetailPage() {
   const navigate = useNavigate();
@@ -62,6 +69,8 @@ function ProjectDetailPage() {
   const deleteProjectMutation = useDeleteProject();
   const syncFromVolumeMutation = useSyncFromVolume();
   const syncToVolumeMutation = useSyncToVolume();
+  const startNgrokMutation = useStartNgrokTunnel();
+  const stopNgrokMutation = useStopNgrokTunnel();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [removeFolder, setRemoveFolder] = useState(false);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
@@ -75,6 +84,11 @@ function ProjectDetailPage() {
 
   // Get sync status for this project
   const syncStatus = useProjectSyncStatus(projectId);
+
+  // Get ngrok tunnel status
+  const { data: ngrokStatusData } = useNgrokStatus(projectId, { enabled: isVisible });
+  const ngrokStatus = ngrokStatusData?.status || 'stopped';
+  const ngrokPublicUrl = ngrokStatusData?.publicUrl;
 
   // Use batch status (same as list view) - non-blocking, shares cache
   const { data: batchStatus } = useProjectsBatchStatus([projectId], {
@@ -175,6 +189,40 @@ function ProjectDetailPage() {
     });
   };
 
+  const handleStartNgrok = () => {
+    const settings = getSettings();
+    if (!settings.ngrokAuthToken) {
+      toast.error('Please configure ngrok auth token in Settings first');
+      return;
+    }
+    startNgrokMutation.mutate({
+      projectId: project.id,
+      authToken: settings.ngrokAuthToken,
+      region: settings.ngrokRegion,
+    });
+  };
+
+  const handleStopNgrok = () => {
+    stopNgrokMutation.mutate(project.id);
+  };
+
+  const handleCopyUrl = async () => {
+    if (ngrokPublicUrl) {
+      try {
+        await navigator.clipboard.writeText(ngrokPublicUrl);
+        toast.success('URL copied to clipboard!');
+      } catch (error) {
+        toast.error('Failed to copy URL');
+      }
+    }
+  };
+
+  const handleOpenPublicUrl = () => {
+    if (ngrokPublicUrl) {
+      window.electronWindow.openExternal(ngrokPublicUrl);
+    }
+  };
+
   // Suspense handles loading state, project is guaranteed to exist
   return (
     <div className="flex h-full flex-col">
@@ -249,6 +297,12 @@ function ProjectDetailPage() {
                   className="text-foreground dark:text-muted-foreground hover:text-muted-foreground/70 dark:hover:text-muted-foreground/70 data-[state=active]:bg-background dark:data-[state=active]:bg-background data-[state=active]:text-secondary-foreground dark:data-[state=active]:text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium whitespace-nowrap transition-all"
                 >
                   Volume Sync
+                </TabsTrigger>
+                <TabsTrigger
+                  value="ngrok"
+                  className="text-foreground dark:text-muted-foreground hover:text-muted-foreground/70 dark:hover:text-muted-foreground/70 data-[state=active]:bg-background dark:data-[state=active]:bg-background data-[state=active]:text-secondary-foreground dark:data-[state=active]:text-foreground inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium whitespace-nowrap transition-all"
+                >
+                  Share Online
                 </TabsTrigger>
               </TabsList>
 
@@ -497,6 +551,137 @@ function ProjectDetailPage() {
                       Sync to Volume
                     </Button>
                   </div>
+                </div>
+              </TabsContent>
+
+              {/* Share Online Tab (Ngrok) */}
+              <TabsContent value="ngrok" className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
+                  <Alert className="rounded-md">
+                    <IoInformationCircle className="h-4 w-4" />
+                    <AlertTitle>Share Project Online</AlertTitle>
+                    <AlertDescription>
+                      <div className="text-muted-foreground space-y-2">
+                        <p>
+                          Use ngrok to create a secure tunnel and share your project with anyone.
+                        </p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* Status Badge */}
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <span className="text-sm font-medium">Status</span>
+                    <Badge
+                      variant={
+                        ngrokStatus === 'active'
+                          ? 'default'
+                          : ngrokStatus === 'error'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                      className="capitalize"
+                    >
+                      {ngrokStatus}
+                    </Badge>
+                  </div>
+
+                  {/* Public URL Display (when active) */}
+                  {ngrokStatus === 'active' && ngrokPublicUrl && (
+                    <div className="flex flex-col gap-2">
+                      <Label className="text-sm font-medium">Public URL</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={ngrokPublicUrl}
+                          readOnly
+                          className="flex-1 font-mono text-sm"
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={handleCopyUrl}
+                          title="Copy URL"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={handleOpenPublicUrl}
+                          title="Open in browser"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error Message (when error) */}
+                  {ngrokStatus === 'error' && ngrokStatusData?.error && (
+                    <Alert variant="destructive" className="rounded-md">
+                      <AlertDescription>{ngrokStatusData.error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Control Buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full rounded-md"
+                      onClick={handleStartNgrok}
+                      disabled={
+                        !isDockerRunning ||
+                        !isRunning ||
+                        ngrokStatus === 'starting' ||
+                        ngrokStatus === 'active' ||
+                        startNgrokMutation.isPending
+                      }
+                    >
+                      {startNgrokMutation.isPending || ngrokStatus === 'starting' ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <VscDebugStart className="mr-2 h-4 w-4" />
+                      )}
+                      Start Tunnel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-md"
+                      onClick={handleStopNgrok}
+                      disabled={
+                        ngrokStatus === 'stopped' ||
+                        ngrokStatus === 'error' ||
+                        stopNgrokMutation.isPending
+                      }
+                    >
+                      {stopNgrokMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <VscDebugStop className="mr-2 h-4 w-4" />
+                      )}
+                      Stop Tunnel
+                    </Button>
+                  </div>
+
+                  {!getSettings().ngrokAuthToken && (
+                    <Alert className="rounded-md">
+                      <IoWarning className="h-4 w-4" />
+                      <AlertDescription className="text-muted-foreground text-sm">
+                        Please configure your ngrok auth token in Settings to use this feature.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {!isRunning && (
+                    <Alert className="rounded-md">
+                      <IoWarning className="h-4 w-4" />
+                      <AlertDescription className="text-muted-foreground text-sm">
+                        The project container must be running to start an ngrok tunnel.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>

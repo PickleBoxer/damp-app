@@ -2,9 +2,10 @@ import { SiDocker } from 'react-icons/si';
 import { useDockerStatus, useDockerInfo } from '@/api/docker/docker-queries';
 import { useProjects } from '@/api/projects/projects-queries';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Cpu, MemoryStick, RefreshCw, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { Cpu, MemoryStick, RefreshCw, ArrowDownToLine, ArrowUpFromLine, Globe } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useActiveSyncs } from '@/api/sync/sync-queries';
+import { useActiveNgrokTunnels } from '@/api/ngrok/ngrok-queries';
 import { useNavigate } from '@tanstack/react-router';
 
 /**
@@ -54,20 +55,24 @@ export default function DockerStatusFooter() {
       clearTimeout(timeoutRef.current);
     }
 
-    try {
-      // Trigger refetch for both queries
-      // Use Promise.allSettled to ensure both complete even if one fails
-      await Promise.allSettled([refetchStatus(), refetchInfo()]);
-    } catch (error) {
-      console.error('Failed to refresh Docker status:', error);
-    } finally {
-      // Keep spinning for minimum duration for visual feedback
-      timeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
-          setIsRefreshing(false);
-        }
-      }, 300);
-    }
+    // Trigger refetch for both queries
+    // Use Promise.allSettled to ensure both complete even if one fails
+    const results = await Promise.allSettled([refetchStatus(), refetchInfo()]);
+
+    // Log any failures
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        const queryName = index === 0 ? 'status' : 'info';
+        console.error(`Failed to refresh Docker ${queryName}:`, result.reason);
+      }
+    });
+
+    // Keep spinning for minimum duration for visual feedback
+    timeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        setIsRefreshing(false);
+      }
+    }, 300);
   };
 
   // Determine status and icon color
@@ -132,6 +137,25 @@ export default function DockerStatusFooter() {
       total: counts.from + counts.to,
     };
   }, [activeSyncs, projects]);
+
+  // Use TanStack Query as single source of truth for ngrok tunnels
+  // This reads from the query cache - no additional IPC calls!
+  const projectIds = projects?.map(p => p.id) || [];
+  const { data: activeTunnels = [] } = useActiveNgrokTunnels(projectIds);
+
+  // Map tunnel data with project names
+  const ngrokInfo = useMemo(() => {
+    const tunnelsWithNames = activeTunnels.map(tunnel => ({
+      id: tunnel.id,
+      name: projects?.find(p => p.id === tunnel.id)?.name || tunnel.id,
+      url: tunnel.publicUrl,
+    }));
+
+    return {
+      activeTunnels: tunnelsWithNames,
+      total: tunnelsWithNames.length,
+    };
+  }, [activeTunnels, projects]);
 
   return (
     <div className="flex h-full items-center">
@@ -268,6 +292,39 @@ export default function DockerStatusFooter() {
                     <span className="text-muted-foreground text-xs">{project.name}</span>
                   </div>
                   <span className="text-xs text-blue-400 hover:underline">Open</span>
+                </button>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Active Ngrok Tunnels Indicator */}
+      {ngrokInfo.total > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 bg-purple-500/10 px-2 transition-colors">
+              <div className="flex items-center gap-1">
+                <Globe className="size-3 animate-pulse text-purple-400" />
+                <span className="font-mono text-[11px] text-purple-400">{ngrokInfo.total}</span>
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="p-0">
+            <div className="flex flex-col">
+              {ngrokInfo.activeTunnels.map((tunnel, idx) => (
+                <button
+                  key={`tunnel-${idx}`}
+                  onClick={() =>
+                    navigate({ to: '/projects/$projectId', params: { projectId: tunnel.id } })
+                  }
+                  className="hover:bg-accent/50 flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
+                >
+                  <div className="flex items-center gap-2">
+                    <Globe className="text-muted-foreground size-3.5 shrink-0" />
+                    <span className="text-muted-foreground text-xs">{tunnel.name}</span>
+                  </div>
+                  <span className="text-xs text-purple-400 hover:underline">Open</span>
                 </button>
               ))}
             </div>

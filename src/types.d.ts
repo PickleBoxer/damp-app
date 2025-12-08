@@ -137,6 +137,25 @@ interface SyncContext {
   ) => () => void;
 }
 
+interface NgrokContext {
+  startTunnel: (
+    projectId: string,
+    authToken: string,
+    region?: string
+  ) => Promise<{ success: boolean; data?: unknown; error?: string }>;
+  stopTunnel: (projectId: string) => Promise<{ success: boolean; error?: string }>;
+  getStatus: (projectId: string) => Promise<{
+    success: boolean;
+    data?: { status: string; containerId?: string; publicUrl?: string };
+    error?: string;
+  }>;
+  getPublicUrl: (projectId: string) => Promise<{
+    success: boolean;
+    data?: { url: string };
+    error?: string;
+  }>;
+}
+
 declare interface Window {
   themeMode: ThemeModeContext;
   electronWindow: ElectronWindow;
@@ -147,4 +166,5 @@ declare interface Window {
   projectLogs: ProjectLogsContext;
   app: AppContext;
   sync: SyncContext;
+  ngrok: NgrokContext;
 }

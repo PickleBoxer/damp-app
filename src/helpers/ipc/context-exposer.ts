@@ -7,6 +7,7 @@ import { exposeShellContext } from './shell/shell-context';
 import { exposeLogsContext } from './logs/logs-context';
 import { exposeAppContext } from './app/app-context';
 import { exposeSyncContext } from './sync/sync-context';
+import { exposeNgrokContext } from './ngrok/ngrok-context';
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -18,4 +19,5 @@ export default function exposeContexts() {
   exposeLogsContext();
   exposeAppContext();
   exposeSyncContext();
+  exposeNgrokContext();
 }
