@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import {
   Dialog,
   DialogContent,
@@ -66,6 +65,17 @@ function validateSiteName(name: string): {
   }
 
   return { isValid: true };
+}
+
+/**
+ * Sanitizes a project name to match backend logic
+ * Converts to lowercase and replaces non-alphanumeric characters with hyphens
+ */
+function sanitizeProjectName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
 
 interface CreateProjectWizardProps {
@@ -160,7 +170,6 @@ const ADDITIONAL_PHP_EXTENSIONS = [
 ];
 
 export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProjectWizardProps>) {
-  const navigate = useNavigate();
   const [step, setStep] = useState<WizardStep>('type');
   const [formData, setFormData] = useState<Partial<CreateProjectInput>>({
     type: ProjectType.BasicPhp,
@@ -172,7 +181,6 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   });
   const [nameError, setNameError] = useState<string | undefined>();
   const [extensionsExpanded, setExtensionsExpanded] = useState(false);
-  const [preinstalledExpanded, setPreinstalledExpanded] = useState(false);
   const [additionalExpanded, setAdditionalExpanded] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<TerminalLog[]>([]);
   const [showTerminal, setShowTerminal] = useState(false);
@@ -236,7 +244,20 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   const handleSelectFolder = async () => {
     const result = await selectProjectFolder();
     if (result.success && result.path) {
-      setFormData(prev => ({ ...prev, path: result.path }));
+      setFormData(prev => {
+        const newData = { ...prev, path: result.path };
+
+        // For existing projects, extract folder name from path
+        if (prev.type === ProjectType.Existing && result.path) {
+          const folderName = result.path.split(/[\\\/]/).pop() || '';
+          newData.name = folderName;
+
+          // Clear any validation errors since we have a valid folder name
+          setNameError(undefined);
+        }
+
+        return newData;
+      });
     }
   };
 
@@ -299,7 +320,10 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         {
           id: `${Date.now()}-folder`,
           timestamp: new Date(),
-          message: `📁 Creating project folder: ${formData.name}`,
+          message:
+            formData.type === ProjectType.Existing
+              ? `📁 Analyzing existing project: ${formData.name}`
+              : `📁 Creating project folder: ${formData.name}`,
           type: 'progress',
         },
       ]);
@@ -806,7 +830,11 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 <Label htmlFor="project-name">Project Name *</Label>
                 <Input
                   id="project-name"
-                  placeholder="My Awesome Project"
+                  placeholder={
+                    formData.type === ProjectType.Existing
+                      ? 'Select project folder to populate name'
+                      : 'My Awesome Project'
+                  }
                   value={formData.name || ''}
                   onChange={e => {
                     const newName = e.target.value;
@@ -816,24 +844,42 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                     const validation = validateSiteName(newName);
                     setNameError(validation.error);
                   }}
+                  readOnly={formData.type === ProjectType.Existing}
                   className={nameError ? 'border-destructive h-10' : 'h-10'}
                 />
                 {nameError ? (
                   <p className="text-destructive text-xs">{nameError}</p>
                 ) : (
                   <p className="text-muted-foreground text-xs">
-                    This will become the domain ({formData.name || 'site-name'}.local)
-                    {formData.type !== ProjectType.Existing && ' and folder name'}
+                    {formData.name ? (
+                      <>
+                        Domain:{' '}
+                        <span className="font-mono">
+                          {sanitizeProjectName(formData.name)}.local
+                        </span>
+                        {formData.type !== ProjectType.Existing && ' (folder name)'}
+                      </>
+                    ) : formData.type === ProjectType.Existing ? (
+                      'Select project folder first'
+                    ) : (
+                      'This will become the domain and folder name'
+                    )}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label>Parent Folder *</Label>
+                <Label>
+                  {formData.type === ProjectType.Existing ? 'Project Folder' : 'Parent Folder'} *
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     readOnly
-                    placeholder="Click to select parent folder..."
+                    placeholder={
+                      formData.type === ProjectType.Existing
+                        ? 'Click to select project folder...'
+                        : 'Click to select parent folder...'
+                    }
                     value={formData.path || ''}
                     className="h-10 flex-1"
                   />
@@ -842,7 +888,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   </Button>
                 </div>
                 <p className="text-muted-foreground text-xs">
-                  Site folder will be created inside this directory
+                  {formData.type === ProjectType.Existing
+                    ? 'Select your existing project folder'
+                    : 'Site folder will be created inside this directory'}
                 </p>
               </div>
             </div>

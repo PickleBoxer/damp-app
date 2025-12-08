@@ -65,6 +65,8 @@ export interface Project {
   name: string;
   /** Project type */
   type: ProjectType;
+  /** Import method - whether project was created or imported */
+  importMethod: 'create' | 'import';
   /** Absolute path to project folder */
   path: string;
   /** Docker volume name (damp_project_{name}) */
@@ -113,6 +115,8 @@ export interface CreateProjectInput {
   name: string;
   /** Project type (auto-detected for existing) */
   type?: ProjectType;
+  /** Import method - whether project was created or imported */
+  importMethod?: 'create' | 'import';
   /** Project folder path (selected via dialog) */
   path?: string;
   /** PHP version */

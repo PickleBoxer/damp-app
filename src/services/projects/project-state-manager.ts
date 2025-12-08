@@ -117,18 +117,20 @@ class ProjectStateManager {
 
   /**
    * Detect if a folder contains a Laravel project
+   * Requires BOTH composer.json with laravel/framework AND artisan file for high confidence
    */
   async detectLaravel(folderPath: string): Promise<LaravelDetectionResult> {
     try {
       const composerJsonPath = path.join(folderPath, 'composer.json');
+      const artisanPath = path.join(folderPath, 'artisan');
 
       // Check if composer.json exists
-      const exists = await fs
+      const composerExists = await fs
         .access(composerJsonPath)
         .then(() => true)
         .catch(() => false);
 
-      if (!exists) {
+      if (!composerExists) {
         return { isLaravel: false };
       }
 
@@ -139,22 +141,40 @@ class ProjectStateManager {
         'require-dev'?: Record<string, string>;
       };
 
-      // Check for Laravel package
-      const hasLaravel =
+      // Check for Laravel package in composer.json
+      const hasLaravelInComposer =
         'laravel/framework' in (composerJson.require || {}) ||
         'laravel/framework' in (composerJson['require-dev'] || {});
 
-      if (hasLaravel) {
+      // Check if artisan file exists
+      const artisanExists = await fs
+        .access(artisanPath)
+        .then(() => true)
+        .catch(() => false);
+
+      // Require BOTH composer.json with Laravel AND artisan file for high confidence detection
+      if (hasLaravelInComposer && artisanExists) {
         // Try to extract Laravel version
         const version =
           composerJson.require?.['laravel/framework'] ||
           composerJson['require-dev']?.['laravel/framework'];
+
+        console.log(
+          `High-confidence Laravel detection: composer.json + artisan file present (version: ${version || 'unknown'})`
+        );
 
         return {
           isLaravel: true,
           version,
           composerJsonPath,
         };
+      }
+
+      // If either check fails, treat as non-Laravel project
+      if (hasLaravelInComposer && !artisanExists) {
+        console.log(
+          'Laravel package found in composer.json but artisan file missing - treating as non-Laravel'
+        );
       }
 
       return { isLaravel: false };
@@ -254,7 +274,12 @@ class ProjectStateManager {
         phpVariant: project.phpVariant,
         nodeVersion: project.nodeVersion,
         phpExtensions: project.phpExtensions.join(' '),
-        documentRoot: project.type === 'existing' ? '/var/www/html' : '/var/www/html/public',
+        documentRoot:
+          project.importMethod === 'import' && project.type === 'laravel'
+            ? '/var/www/html/public'
+            : project.importMethod === 'import'
+              ? '/var/www/html'
+              : '/var/www/html/public',
         networkName: project.networkName,
         containerName: this.generateContainerName(project.name),
         forwardedPort: project.forwardedPort,
@@ -358,12 +383,11 @@ class ProjectStateManager {
     let project: Project | null = null;
 
     try {
-      // Step 1: Sanitize project name
-      const sanitizedName = this.sanitizeName(input.name);
-
-      // Step 2: Select folder if not provided and build full path
+      // Step 1: Determine import method and handle folder path
       let parentPath = input.path;
       let projectType: ProjectType = (input.type as ProjectType) || 'basic-php';
+      const importMethod: 'create' | 'import' = projectType === 'existing' ? 'import' : 'create';
+      let nameToSanitize = input.name;
 
       if (!parentPath) {
         const folderResult = await this.selectFolder();
@@ -376,20 +400,34 @@ class ProjectStateManager {
         parentPath = folderResult.path;
       }
 
-      // Create the project folder path inside parent directory
-      projectPath = path.join(parentPath, sanitizedName);
+      // For existing projects, use the selected folder directly as project path
+      // For new projects, create a subfolder inside the parent directory
+      if (importMethod === 'import') {
+        // Use selected folder directly as the project path
+        projectPath = parentPath;
+        // Extract folder name from path for sanitization
+        nameToSanitize = path.basename(parentPath);
+      } else {
+        // Sanitize name first for new projects
+        const sanitizedName = this.sanitizeName(nameToSanitize);
+        // Create subfolder inside parent directory
+        projectPath = path.join(parentPath, sanitizedName);
 
-      // Create the site folder if it doesn't exist
-      try {
-        await fs.access(projectPath);
-      } catch {
-        // Folder doesn't exist, create it
-        await fs.mkdir(projectPath, { recursive: true });
-        folderCreated = true;
+        // Create the site folder if it doesn't exist
+        try {
+          await fs.access(projectPath);
+        } catch {
+          // Folder doesn't exist, create it
+          await fs.mkdir(projectPath, { recursive: true });
+          folderCreated = true;
+        }
       }
 
+      // Step 2: Sanitize the project name (either from input or extracted from folder)
+      const sanitizedName = this.sanitizeName(nameToSanitize);
+
       // Step 3: Detect Laravel for existing projects
-      if (projectType === 'existing') {
+      if (importMethod === 'import') {
         const laravelDetection = await this.detectLaravel(projectPath);
         if (laravelDetection.isLaravel) {
           projectType = 'laravel' as ProjectType;
@@ -419,6 +457,7 @@ class ProjectStateManager {
         id: randomUUID(),
         name: sanitizedName,
         type: projectType,
+        importMethod,
         path: projectPath,
         volumeName: this.generateVolumeName(sanitizedName),
         containerName: this.generateContainerName(sanitizedName),
