@@ -59,6 +59,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useState } from 'react';
 import { getSettings } from '@/helpers/settings_helpers';
 
@@ -217,9 +218,22 @@ function ProjectDetailPage() {
     }
   };
 
-  const handleOpenPublicUrl = () => {
+  const handleOpenPublicUrl = async () => {
     if (ngrokPublicUrl) {
-      window.electronWindow.openExternal(ngrokPublicUrl);
+      try {
+        const result = await window.electronWindow.openExternal(ngrokPublicUrl);
+        if (result.success) {
+          toast.success('Opening in browser...');
+        } else {
+          toast.error('Failed to open URL', {
+            description: result.error || 'An unknown error occurred',
+          });
+        }
+      } catch (error) {
+        toast.error('Failed to open URL', {
+          description: error instanceof Error ? error.message : 'An unknown error occurred',
+        });
+      }
     }
   };
 
@@ -240,33 +254,45 @@ function ProjectDetailPage() {
               <ProjectIcon projectType={project.type} className="h-11 w-11" />
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                className="h-8.5 w-8.5 shrink-0"
-                title="Open site in browser"
-                onClick={handleOpenBrowser}
-              >
-                <Globe className="text-muted-foreground h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                className="h-8.5 w-8.5 shrink-0"
-                title="Open site folder"
-                onClick={handleOpenFolder}
-              >
-                <FolderOpen className="text-muted-foreground h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                className="border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground h-8.5 w-8.5 shrink-0"
-                title="Delete project"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-8.5 w-8.5 shrink-0"
+                    onClick={handleOpenBrowser}
+                  >
+                    <Globe className="text-muted-foreground h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open site in browser</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="h-8.5 w-8.5 shrink-0"
+                    onClick={handleOpenFolder}
+                  >
+                    <FolderOpen className="text-muted-foreground h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open site folder</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    className="border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground h-8.5 w-8.5 shrink-0"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete project</TooltipContent>
+              </Tooltip>
             </div>
           </div>
 

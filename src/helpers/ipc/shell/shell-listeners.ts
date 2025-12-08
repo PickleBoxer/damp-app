@@ -12,7 +12,6 @@ import {
   SHELL_OPEN_TERMINAL_CHANNEL,
   SHELL_OPEN_HOME_TERMINAL_CHANNEL,
   SHELL_OPEN_TINKER_CHANNEL,
-  SHELL_OPEN_URL_CHANNEL,
 } from './shell-channels';
 
 const execAsync = promisify(exec);
@@ -146,25 +145,6 @@ export function addShellEventListeners() {
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open browser';
         console.error('Shell open browser error:', message);
-        return { success: false, error: message };
-      }
-    }
-  );
-
-  /**
-   * Open URL in default browser
-   */
-  ipcMain.handle(
-    SHELL_OPEN_URL_CHANNEL,
-    async (_event, url: string): Promise<ShellOperationResult> => {
-      try {
-        const urlSchema = z.string().url();
-        const validatedUrl = urlSchema.parse(url);
-        await openInBrowser(validatedUrl);
-        return { success: true };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to open URL';
-        console.error('Shell open URL error:', message);
         return { success: false, error: message };
       }
     }

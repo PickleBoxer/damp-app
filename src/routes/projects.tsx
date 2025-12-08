@@ -3,6 +3,8 @@ import { useState, useMemo } from 'react';
 import { Plus, GripVertical, Loader2 } from 'lucide-react';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import { FaLink } from 'react-icons/fa6';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import {
@@ -200,13 +202,19 @@ function ProjectsPage() {
             {/* Header Bar */}
             <div className="flex h-12 items-center justify-between border-b px-4">
               <h2 className="text-sm font-semibold tracking-wide uppercase">Projects</h2>
-              <button
-                onClick={handleAddProject}
-                className="hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md transition-colors"
-                title="Add new project"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleAddProject}
+                    className="h-7 w-7"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Add new project</TooltipContent>
+              </Tooltip>
             </div>
 
             <ScrollArea className="flex-1">

@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { openUrl } from '@/helpers/shell_helpers';
 
 // Helper function to get status badge styles
 function getStatusBadgeStyles(service: ServiceInfo): string {
@@ -342,12 +341,18 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
       return;
     }
 
-    const result = await openUrl(uiUrl);
-    if (result.success) {
-      toast.success('Opening service UI in browser');
-    } else {
+    try {
+      const result = await window.electronWindow.openExternal(uiUrl);
+      if (result.success) {
+        toast.success('Opening service UI in browser');
+      } else {
+        toast.error('Failed to open UI', {
+          description: result.error || 'An unknown error occurred',
+        });
+      }
+    } catch (error) {
       toast.error('Failed to open UI', {
-        description: result.error || 'An unknown error occurred',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
       });
     }
   };

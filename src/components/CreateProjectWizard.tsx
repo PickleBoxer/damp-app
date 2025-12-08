@@ -832,11 +832,15 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 Powered by{' '}
                 <button
                   type="button"
-                  onClick={() =>
-                    window.electronWindow.openExternal(
-                      'https://serversideup.net/open-source/docker-php/docs/getting-started'
-                    )
-                  }
+                  onClick={async () => {
+                    try {
+                      await window.electronWindow.openExternal(
+                        'https://serversideup.net/open-source/docker-php/docs/getting-started'
+                      );
+                    } catch (error) {
+                      console.error('Failed to open link:', error);
+                    }
+                  }}
                   className="text-primary cursor-pointer font-medium hover:underline"
                 >
                   ServerSideUp Docker PHP

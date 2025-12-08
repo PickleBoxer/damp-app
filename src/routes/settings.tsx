@@ -316,11 +316,15 @@ function SettingsPage() {
                       Get your token from{' '}
                       <button
                         type="button"
-                        onClick={() =>
-                          window.electronWindow.openExternal(
-                            'https://dashboard.ngrok.com/get-started/your-authtoken'
-                          )
-                        }
+                        onClick={async () => {
+                          try {
+                            await window.electronWindow.openExternal(
+                              'https://dashboard.ngrok.com/get-started/your-authtoken'
+                            );
+                          } catch (error) {
+                            toast.error('Failed to open link');
+                          }
+                        }}
                         className="text-primary cursor-pointer hover:underline"
                       >
                         ngrok dashboard

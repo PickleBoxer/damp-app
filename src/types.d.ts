@@ -17,7 +17,7 @@ interface ElectronWindow {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
-  openExternal: (url: string) => Promise<void>;
+  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 interface DockerContext {
