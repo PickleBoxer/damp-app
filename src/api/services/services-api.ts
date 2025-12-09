@@ -110,6 +110,110 @@ export async function updateServiceConfig(
 }
 
 /**
+ * Stop all running services
+ */
+export async function stopAllServices(): Promise<{
+  success: boolean;
+  results: Array<{ serviceId: ServiceId; success: boolean; error?: string }>;
+}> {
+  ensureServicesApi();
+
+  // Get all services first
+  const services = await getAllServices();
+
+  // Filter for running services only
+  const runningServices = services.filter(
+    service => service.state.container_status?.running === true
+  );
+
+  if (runningServices.length === 0) {
+    return { success: true, results: [] };
+  }
+
+  // Stop all running services in parallel
+  const results = await Promise.allSettled(
+    runningServices.map(service => stopService(service.definition.id))
+  );
+
+  // Map results to include service IDs
+  const mappedResults = runningServices.map((service, index) => {
+    const result = results[index];
+    if (result.status === 'fulfilled') {
+      return {
+        serviceId: service.definition.id,
+        success: result.value.success,
+        error: result.value.error,
+      };
+    } else {
+      return {
+        serviceId: service.definition.id,
+        success: false,
+        error: result.reason?.message || 'Unknown error',
+      };
+    }
+  });
+
+  const allSuccessful = mappedResults.every(r => r.success);
+
+  return {
+    success: allSuccessful,
+    results: mappedResults,
+  };
+}
+
+/**
+ * Start all installed services
+ */
+export async function startAllServices(): Promise<{
+  success: boolean;
+  results: Array<{ serviceId: ServiceId; success: boolean; error?: string }>;
+}> {
+  ensureServicesApi();
+
+  // Get all services first
+  const services = await getAllServices();
+
+  // Filter for installed but not running services
+  const stoppedServices = services.filter(
+    service => service.state.installed && !service.state.container_status?.running
+  );
+
+  if (stoppedServices.length === 0) {
+    return { success: true, results: [] };
+  }
+
+  // Start all stopped services in parallel
+  const results = await Promise.allSettled(
+    stoppedServices.map(service => startService(service.definition.id))
+  );
+
+  // Map results to include service IDs
+  const mappedResults = stoppedServices.map((service, index) => {
+    const result = results[index];
+    if (result.status === 'fulfilled') {
+      return {
+        serviceId: service.definition.id,
+        success: result.value.success,
+        error: result.value.error,
+      };
+    } else {
+      return {
+        serviceId: service.definition.id,
+        success: false,
+        error: result.reason?.message || 'Unknown error',
+      };
+    }
+  });
+
+  const allSuccessful = mappedResults.every(r => r.success);
+
+  return {
+    success: allSuccessful,
+    results: mappedResults,
+  };
+}
+
+/**
  * Subscribe to installation progress events
  */
 export function subscribeToInstallProgress(

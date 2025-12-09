@@ -10,12 +10,14 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "lucide",
   "aliases": {
     "components": "@/components",
     "utils": "@/utils/tailwind",
     "ui": "@/components/ui",
-    "hooks": "@/hooks",
-    "api": "@/api"
+    "hooks": "@/hooks"
   },
-  "iconLibrary": "lucide"
+  "registries": {
+    "@magicui": "https://magicui.design/r/{name}.json"
+  }
 }

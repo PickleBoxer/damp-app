@@ -44,10 +44,11 @@ export const serviceQueryOptions = (serviceId: ServiceId) =>
 /**
  * Hook to fetch all services
  */
-export function useServices(options?: { refetchInterval?: number }) {
+export function useServices(options?: { refetchInterval?: number; staleTime?: number }) {
   return useQuery({
     ...servicesQueryOptions(),
     refetchInterval: options?.refetchInterval,
+    staleTime: options?.staleTime,
   });
 }
 
@@ -223,6 +224,36 @@ export function useUpdateServiceConfig() {
         queryKey: servicesKeys.detail(variables.serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
+    },
+  });
+}
+
+/**
+ * Hook to stop all running services
+ */
+export function useStopAllServices() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => servicesApi.stopAllServices(),
+    onSuccess: () => {
+      // Invalidate all service queries to refetch updated states
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.all });
+    },
+  });
+}
+
+/**
+ * Hook to start all installed services
+ */
+export function useStartAllServices() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => servicesApi.startAllServices(),
+    onSuccess: () => {
+      // Invalidate all service queries to refetch updated states
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.all });
     },
   });
 }

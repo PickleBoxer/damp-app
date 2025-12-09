@@ -297,6 +297,32 @@
     font-size: 15px;
     scroll-behavior: smooth;
   }
+  @keyframes wave-hand {
+    0% {
+      transform: rotate(0deg);
+    }
+    10% {
+      transform: rotate(20deg);
+    }
+    20% {
+      transform: rotate(-10deg);
+    }
+    30% {
+      transform: rotate(20deg);
+    }
+    40% {
+      transform: rotate(-5deg);
+    }
+    50% {
+      transform: rotate(10deg);
+    }
+    60% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
 }
 
 /* Sidebar Colors */
@@ -371,4 +397,25 @@
 [data-sonner-toast] [data-close-button] {
   width: 16px !important;
   height: 16px !important;
+}
+
+@theme inline {
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 }
