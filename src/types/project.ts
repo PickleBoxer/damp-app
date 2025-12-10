@@ -187,6 +187,8 @@ export interface ProjectTemplate {
   devcontainerJson: string;
   dockerfile: string;
   launchJson: string;
+  dockerignore: string;
+  dockerCompose: string;
 }
 
 /**

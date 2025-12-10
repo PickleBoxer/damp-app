@@ -293,14 +293,22 @@ class ProjectStateManager {
       // Generate templates
       const templates = generateProjectTemplates(context);
 
-      // Write files
+      // Write devcontainer files
       await fs.writeFile(
         path.join(devcontainerPath, 'devcontainer.json'),
         templates.devcontainerJson,
         'utf-8'
       );
-      await fs.writeFile(path.join(devcontainerPath, 'Dockerfile'), templates.dockerfile, 'utf-8');
       await fs.writeFile(path.join(vscodePath, 'launch.json'), templates.launchJson, 'utf-8');
+
+      // Write production files to project root
+      await fs.writeFile(path.join(project.path, 'Dockerfile'), templates.dockerfile, 'utf-8');
+      await fs.writeFile(path.join(project.path, '.dockerignore'), templates.dockerignore, 'utf-8');
+      await fs.writeFile(
+        path.join(project.path, 'docker-compose.yml'),
+        templates.dockerCompose,
+        'utf-8'
+      );
 
       // Create index.php for basic-php projects if it doesn't exist
       if (project.type === 'basic-php') {

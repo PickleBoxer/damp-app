@@ -106,8 +106,8 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
     "workspaceFolder": "/var/www/html",
 
     "build": {
-        "dockerfile": "./Dockerfile",
-        "context": ".",
+        "dockerfile": "../Dockerfile",
+        "context": "..",
         "target": "development",
         "args": {
             "USER_ID": "\${localEnv:UID:1000}",
@@ -281,6 +281,165 @@ const LAUNCH_JSON_TEMPLATE = `{
 }`;
 
 /**
+ * .dockerignore template
+ * Excludes files from Docker build context for faster builds and smaller images
+ */
+const DOCKERIGNORE_TEMPLATE = `# Development files
+.devcontainer/
+.vscode/
+.idea/
+.git/
+.gitignore
+.editorconfig
+
+# Environment files
+# .env
+.env.*
+!.env.example
+
+# Dependencies
+# node_modules/
+# vendor/
+
+# Build artifacts
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.cache/
+
+# Testing
+coverage/
+.phpunit.result.cache
+tests/_output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+`;
+
+/**
+ * docker-compose.yml template
+ * Provides both development and production service configurations
+ * Use: docker compose up app-dev (development) or docker compose up app-prod (production)
+ */
+const DOCKER_COMPOSE_TEMPLATE = `# Docker Compose Configuration
+#
+# Usage:
+#   Development:  docker compose --profile development up app-dev
+#   Production:   docker compose --profile production up app-prod
+#
+#   Or shorter:   docker compose up app-dev
+#                 docker compose up app-prod
+#
+# Environment variables can be customized in .env file:
+#   DEV_PORT=80, DEV_SSL_PORT=443
+#   PROD_PORT=80, PROD_SSL_PORT=443
+#   APP_ENV=local, APP_DEBUG=true, LOG_LEVEL=debug
+
+version: '3.9'
+
+services:
+  # Development service - with hot-reload and debugging tools
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+      args:
+        PHP_VERSION: {{PHP_VERSION}}
+        PHP_VARIANT: {{PHP_VARIANT}}
+        USER_ID: \${UID:-1000}
+        GROUP_ID: \${GID:-1000}
+        CONTAINER_NAME: {{CONTAINER_NAME}}_dev
+    container_name: {{CONTAINER_NAME}}_dev
+    restart: unless-stopped
+
+    ports:
+      - "\${DEV_PORT:-80}:8080"
+      - "\${DEV_SSL_PORT:-443}:8443"
+
+    networks:
+      - {{NETWORK_NAME}}
+
+    environment:
+      - APP_ENV=\${APP_ENV:-local}
+      - APP_DEBUG=\${APP_DEBUG:-true}
+      - SSL_MODE=\${SSL_MODE:-full}
+      - PHP_OPCACHE_ENABLE=0
+      - PHP_DISPLAY_ERRORS=On
+      - LOG_LEVEL=\${LOG_LEVEL:-debug}
+
+    volumes:
+      # Option 1: Bind mount for hot-reload (default, uncomment to use)
+      - .:/var/www/html
+
+      # Option 2: Named volume for better performance (comment above and uncomment below)
+      # - {{VOLUME_NAME}}:/var/www/html
+
+    profiles:
+      - development
+
+  # Production service - optimized and minimal
+  app-prod:
+    # Option 1: Build image from Dockerfile (default)
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        PHP_VERSION: {{PHP_VERSION}}
+        PHP_VARIANT: {{PHP_VARIANT}}
+
+    # Option 2: Use pre-built image (comment 'build' above and uncomment 'image' below)
+    # Build image first: docker build --target production -t {{CONTAINER_NAME}}:latest .
+    # image: {{CONTAINER_NAME}}:latest
+
+    container_name: {{CONTAINER_NAME}}_prod
+    restart: unless-stopped
+
+    ports:
+      - "\${PROD_PORT:-80}:8080"
+      - "\${PROD_SSL_PORT:-443}:8443"
+
+    networks:
+      - {{NETWORK_NAME}}
+
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - SSL_MODE=\${SSL_MODE:-full}
+      - PHP_OPCACHE_ENABLE=1
+      - PHP_DISPLAY_ERRORS=Off
+      - LOG_LEVEL=\${LOG_LEVEL:-warning}
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    profiles:
+      - production
+
+networks:
+  {{NETWORK_NAME}}:
+    external: true
+`;
+
+/**
  * Get post-start command based on project type
  * With fpm-apache, Apache and PHP-FPM auto-start via S6 Overlay
  */
@@ -305,6 +464,8 @@ export function generateProjectTemplates(context: TemplateContext): ProjectTempl
     devcontainerJson: renderTemplate(DEVCONTAINER_JSON_TEMPLATE, context),
     dockerfile: renderTemplate(DOCKERFILE_TEMPLATE, context),
     launchJson: renderTemplate(LAUNCH_JSON_TEMPLATE, context),
+    dockerignore: renderTemplate(DOCKERIGNORE_TEMPLATE, context),
+    dockerCompose: renderTemplate(DOCKER_COMPOSE_TEMPLATE, context),
   };
 }
 
