@@ -232,7 +232,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
     <Accordion type="single" collapsible className="w-full" defaultValue="docker-network">
       {/* Docker Network Section */}
       <AccordionItem value="docker-network">
-        <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+        <AccordionTrigger className="hover:bg-muted/50 bg-card p-2 hover:no-underline">
           <div className="flex items-center gap-2">
             <Network className="h-4 w-4" />
             <span className="text-sm font-medium">Docker Network</span>
@@ -241,7 +241,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
         </AccordionTrigger>
         <AccordionContent className="space-y-4 p-4">
           <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
-          <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
+          <div className="bg-background border-border flex items-center justify-between overflow-hidden border">
             <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
               {dockerConnection}
             </code>
@@ -251,7 +251,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
           </div>
 
           <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
-          <div className="bg-background border-border relative overflow-hidden rounded-md border">
+          <div className="bg-background border-border relative overflow-hidden border">
             <div className="absolute top-3 right-3 z-10">
               <CopyButton text={dockerEnvConfig} label=".env configuration" />
             </div>
@@ -264,7 +264,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 
       {/* Host Machine Section */}
       <AccordionItem value="host-machine">
-        <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+        <AccordionTrigger className="hover:bg-muted/50 bg-card p-2 hover:no-underline">
           <div className="flex items-center gap-2">
             <MonitorSmartphone className="text-muted-foreground h-4 w-4" />
             <span className="text-sm font-medium">Host Machine</span>
@@ -273,7 +273,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
         </AccordionTrigger>
         <AccordionContent className="space-y-4 p-4">
           <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
-          <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
+          <div className="bg-background border-border flex items-center justify-between overflow-hidden border">
             <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
               {hostConnection}
             </code>
@@ -283,7 +283,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
           </div>
 
           <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
-          <div className="bg-background border-border relative overflow-hidden rounded-md border">
+          <div className="bg-background border-border relative overflow-hidden border">
             <div className="absolute top-3 right-3 z-10">
               <CopyButton text={hostEnvConfig} label=".env configuration" />
             </div>

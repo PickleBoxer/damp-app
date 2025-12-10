@@ -429,7 +429,7 @@ function ProjectDetailPage() {
                 <Accordion type="single" collapsible className="w-full">
                   {/* Configuration Section */}
                   <AccordionItem value="configuration">
-                    <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+                    <AccordionTrigger className="hover:bg-muted/50 bg-card p-2 hover:no-underline">
                       <span className="text-sm font-medium">Configuration</span>
                     </AccordionTrigger>
                     <AccordionContent className="space-y-2 p-4">
@@ -476,7 +476,7 @@ function ProjectDetailPage() {
                   {/* PHP Extensions Section */}
                   {project.phpExtensions && project.phpExtensions.length > 0 && (
                     <AccordionItem value="php-extensions">
-                      <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+                      <AccordionTrigger className="hover:bg-muted/50 bg-card p-2 hover:no-underline">
                         <span className="text-sm font-medium">
                           PHP Extensions ({project.phpExtensions.length})
                         </span>

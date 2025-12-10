@@ -76,16 +76,14 @@ function SortableProjectItem({
           params={{ projectId: project.id }}
           className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
         >
-          <div className="flex flex-1 items-center gap-3">
-            <div className="relative">
-              <ProjectIcon projectType={project.type} className="h-10 w-10" />
-              {isSyncing && (
-                <div className="bg-background absolute -right-1 -bottom-1 rounded-full p-0.5">
-                  <Loader2 className="text-primary h-3 w-3 animate-spin" />
-                </div>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
+          <div className="flex w-full flex-1 items-center gap-3">
+            <ProjectIcon projectType={project.type} className="h-10 w-10" />
+            {isSyncing && (
+              <div className="absolute top-1 right-1 rounded-full p-0.5">
+                <Loader2 className="text-primary h-3 w-3 animate-spin" />
+              </div>
+            )}
+            <div className="w-full truncate">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold capitalize">{project.name}</span>
                 {!isLoading && (
@@ -197,7 +195,7 @@ function ProjectsPage() {
     <>
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Left side - Project List */}
-        <ResizablePanel defaultSize={40}>
+        <ResizablePanel defaultSize={45}>
           <div className="flex h-full flex-col">
             {/* Header Bar */}
             <div className="flex h-12 items-center justify-between border-b px-4">
@@ -217,8 +215,8 @@ function ProjectsPage() {
               </Tooltip>
             </div>
 
-            <ScrollArea className="flex-1">
-              <div className="flex flex-col">
+            <ScrollArea className="flex-1 [&_[data-radix-scroll-area-viewport]>:first-child]:block!">
+              <div className="flex w-full flex-col">
                 {/* Loading State */}
                 {isProjectsLoading && (
                   <>
@@ -273,7 +271,7 @@ function ProjectsPage() {
         <ResizableHandle withHandle />
 
         {/* Right side - Project Detail */}
-        <ResizablePanel defaultSize={60}>
+        <ResizablePanel defaultSize={55}>
           <div className="h-full overflow-hidden">
             <Outlet />
           </div>

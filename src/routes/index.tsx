@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -51,13 +51,30 @@ function DashboardPage() {
   const otherInstalledServices = installedServices.filter(s => !s.definition.required);
   const displayServices = [...allMandatoryServices, ...otherInstalledServices];
 
-  // Update carousel scroll state
-  if (carouselApi) {
-    carouselApi.on('select', () => {
+  // Initialize and update carousel scroll state
+  useEffect(() => {
+    if (!carouselApi) {
+      return;
+    }
+
+    // Initialize state immediately
+    setCanScrollPrev(carouselApi.canScrollPrev());
+    setCanScrollNext(carouselApi.canScrollNext());
+
+    // Update state on carousel events
+    const updateScrollState = () => {
       setCanScrollPrev(carouselApi.canScrollPrev());
       setCanScrollNext(carouselApi.canScrollNext());
-    });
-  }
+    };
+
+    carouselApi.on('select', updateScrollState);
+    carouselApi.on('reInit', updateScrollState);
+
+    return () => {
+      carouselApi.off('select', updateScrollState);
+      carouselApi.off('reInit', updateScrollState);
+    };
+  }, [carouselApi]);
 
   const handleStartAll = async () => {
     const servicesToStart = installedServices.filter(s => !s.state.container_status?.running);

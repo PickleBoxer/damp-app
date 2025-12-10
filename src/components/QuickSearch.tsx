@@ -161,7 +161,7 @@ export function QuickSearch() {
 
       {/* Command palette dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
+        <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0 [&>button]:top-2">
           <VisuallyHidden>
             <DialogTitle>Quick Search</DialogTitle>
             <DialogDescription>Search for projects, services, and pages</DialogDescription>

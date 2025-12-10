@@ -58,8 +58,8 @@ function ServicesPage() {
   return (
     <ResizablePanelGroup direction="horizontal" className="h-full">
       {/* Left side - Service List */}
-      <ResizablePanel defaultSize={55}>
-        <div className="flex h-full flex-col">
+      <ResizablePanel defaultSize={45}>
+        <div className="flex h-full flex-1 flex-col">
           {/* Header Bar */}
           <div className="flex h-12 items-center justify-between border-b px-4">
             <h2 className="text-sm font-semibold tracking-wide">Services</h2>
@@ -92,8 +92,8 @@ function ServicesPage() {
           )}
 
           {!error && (
-            <ScrollArea className="flex-1">
-              <div className="flex flex-col">
+            <ScrollArea className="flex-1 [&_[data-radix-scroll-area-viewport]>:first-child]:block!">
+              <div className="flex w-full flex-1 flex-col">
                 {/* Loading State */}
                 {isLoading && (
                   <>
@@ -117,7 +117,7 @@ function ServicesPage() {
                     {filteredServices.map(service => (
                       <div
                         key={service.definition.id}
-                        className={`group/service relative ${
+                        className={`group/service relative w-full ${
                           selectedServiceId === service.definition.id ? 'bg-primary/5' : ''
                         } ${!service.state.installed ? 'opacity-50' : ''}`}
                       >
@@ -126,9 +126,9 @@ function ServicesPage() {
                           params={{ serviceId: service.definition.id }}
                           className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
                         >
-                          <div className="flex flex-1 items-center gap-3">
+                          <div className="flex w-full flex-1 items-center gap-3">
                             <ServiceIcon serviceId={service.definition.id} className="h-10 w-10" />
-                            <div className="min-w-0 flex-1">
+                            <div className="w-full truncate">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="truncate text-sm font-semibold">
                                   {service.definition.display_name}
@@ -196,7 +196,7 @@ function ServicesPage() {
       <ResizableHandle withHandle />
 
       {/* Right side - Service Detail */}
-      <ResizablePanel defaultSize={45}>
+      <ResizablePanel defaultSize={55}>
         <div className="h-full overflow-hidden">
           <Outlet />
         </div>

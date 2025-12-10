@@ -118,7 +118,7 @@ class NgrokManager {
         name: containerName,
         Image: NGROK_IMAGE,
         Env: env,
-        Cmd: ['http', `${project.containerName}:${project.forwardedPort}`],
+        Cmd: ['http', `https://${project.containerName}:${project.forwardedPort}`],
         ExposedPorts: {
           '4040/tcp': {},
         },
