@@ -31,9 +31,9 @@ import {
 } from './project-templates';
 import { syncProjectsToCaddy } from '../docker/caddy-config';
 import { installLaravelToVolume } from './laravel-installer';
+import { FORWARDED_PORT } from '../../constants/ports';
 
 const DOCKER_NETWORK = 'damp-network';
-const FORWARDED_PORT = 8080;
 const LARAVEL_MIN_PHP_VERSION = '8.2';
 
 /**

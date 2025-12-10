@@ -76,7 +76,7 @@ export interface ProjectsContext {
 
   /**
    * Discover the forwarded localhost port for a container
-   * Scans ports 8080-8090 and checks X-Container-Name header
+   * Scans dynamic port range and checks X-Container-Name header
    */
   discoverPort: (containerName: string) => Promise<number | null>;
 

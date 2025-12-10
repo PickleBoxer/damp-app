@@ -85,7 +85,7 @@ export interface Project {
   phpExtensions: string[];
   /** Enable Claude AI devcontainer feature */
   enableClaudeAi: boolean;
-  /** Port to forward (static: 8080) */
+  /** Port to forward (configurable, default: 8443) */
   forwardedPort: number;
   /** Docker network name (damp-network) */
   networkName: string;

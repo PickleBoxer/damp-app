@@ -105,7 +105,7 @@ export function useProjectsBatchStatus(
  *
  * This is separated from status check for performance:
  * - Only runs when explicitly enabled (e.g., when user opens Preview tab)
- * - Port discovery is expensive (~2s to scan ports 8080-8090)
+ * - Port discovery is expensive (~2s to scan dynamic port range)
  * - List views don't need ports, only detail view preview needs it
  * - Long cache time since port rarely changes once container is running
  *

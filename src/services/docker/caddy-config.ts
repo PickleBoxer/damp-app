@@ -6,6 +6,7 @@
 import { dockerManager } from './docker-manager';
 import { projectStorage } from '../projects/project-storage';
 import type { Project } from '../../types/project';
+import { FORWARDED_PORT } from '../../constants/ports';
 
 /**
  * Path to Caddyfile inside the Caddy container
@@ -25,7 +26,7 @@ function generateCaddyfile(projects: Project[]): string {
     '# DAMP Reverse Proxy Configuration',
     '# Auto-generated - Do not edit manually',
     '',
-    '# SSL Bootstrap',
+    '# Bootstrap',
     'https://damp.local {',
     '    tls internal',
     '    respond "DAMP - All systems ready!"',
@@ -35,10 +36,17 @@ function generateCaddyfile(projects: Project[]): string {
 
   // Add reverse proxy rules for each project
   for (const project of projects) {
-    lines.push(`# Project: ${project.name}`);
-    lines.push(`https://${project.domain} {`);
+    // Use project's configured forwarded port (stored in project state)
+    const internalPort = project.forwardedPort;
+
+    // HTTPS upstream with TLS insecure skip verify for self-signed certs
+    lines.push(`${project.domain} {`);
     lines.push('    tls internal');
-    lines.push(`    reverse_proxy ${project.containerName}:${project.forwardedPort}`);
+    lines.push(`    reverse_proxy https://${project.containerName}:${internalPort} {`);
+    lines.push('        transport http {');
+    lines.push('            tls_insecure_skip_verify');
+    lines.push('        }');
+    lines.push('    }');
     lines.push('}');
     lines.push('');
   }

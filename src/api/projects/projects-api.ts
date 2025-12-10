@@ -137,8 +137,7 @@ export async function getBatchContainerStatus(
  */
 export async function discoverPort(containerName: string): Promise<number | null> {
   ensureProjectsApi();
-  const result = await projectsApi.discoverPort(containerName);
-  return result as number | null;
+  return await projectsApi.discoverPort(containerName);
 }
 
 /**

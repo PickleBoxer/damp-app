@@ -7,6 +7,7 @@ import { ipcMain, BrowserWindow } from 'electron';
 import type { CreateProjectInput, UpdateProjectInput } from '../../../types/project';
 import { projectStateManager } from '../../../services/projects/project-state-manager';
 import * as CHANNELS from './projects-channels';
+import { getPortScanRange } from '../../../constants/ports';
 
 /**
  * Add project event listeners
@@ -224,14 +225,15 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
 
   /**
    * Discover forwarded localhost port for a container
-   * Scans ports 8080-8090 and checks X-Container-Name header
+   * Scans dynamic port range and checks X-Container-Name header
    */
   ipcMain.handle(CHANNELS.PROJECTS_DISCOVER_PORT, async (_event, containerName: string) => {
     try {
       console.log(`[Main] Discovering port for container: ${containerName}`);
 
-      // Scan ports 8080-8090
-      for (let port = 8080; port <= 8090; port++) {
+      // Scan ports using dynamic range from constants
+      const { start, end } = getPortScanRange();
+      for (let port = start; port <= end; port++) {
         try {
           // Use native fetch with timeout (Node.js 18+)
           const controller = new AbortController();

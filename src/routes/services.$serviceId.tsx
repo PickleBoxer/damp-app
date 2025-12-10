@@ -16,16 +16,21 @@ import {
 import {
   Download,
   ShieldCheck,
-  ShieldAlert,
   Copy,
   Check,
   Network,
   MonitorSmartphone,
   ExternalLink,
-  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Item, ItemContent, ItemTitle, ItemMedia, ItemActions } from '@/components/ui/item';
+import { Badge } from '@/components/ui/badge';
 
 // Helper function to get status text
 function getStatusText(service: ServiceInfo): string {
@@ -209,9 +214,6 @@ function formatAsLaravelEnv(service: ServiceInfo, host: string, port: string): s
 
 // Connection info component
 function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
-  const [dockerOpen, setDockerOpen] = useState(true);
-  const [hostOpen, setHostOpen] = useState(false);
-
   const containerName = `damp-${service.definition.id}`;
   const port = getServicePort(service, 0);
   const internalPort = service.definition.default_config.ports?.[0]?.[1] || port;
@@ -227,95 +229,71 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
   const hostEnvConfig = formatAsLaravelEnv(service, 'localhost', port);
 
   return (
-    <div className="space-y-3">
+    <Accordion type="single" collapsible className="w-full" defaultValue="docker-network">
       {/* Docker Network Section */}
-      <Collapsible open={dockerOpen} onOpenChange={setDockerOpen}>
-        <div className="border-border bg-card overflow-hidden rounded-md border">
-          <CollapsibleTrigger className="hover:bg-accent/50 flex w-full items-center justify-between px-4 py-3 transition-colors">
-            <div className="flex items-center gap-2">
-              <Network className="text-muted-foreground h-4 w-4" />
-              <span className="text-sm font-medium">Docker Network</span>
-              <span className="text-muted-foreground text-xs">(Container to Container)</span>
+      <AccordionItem value="docker-network">
+        <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+          <div className="flex items-center gap-2">
+            <Network className="h-4 w-4" />
+            <span className="text-sm font-medium">Docker Network</span>
+            <span className="text-muted-foreground text-xs">(Container to Container)</span>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 p-4">
+          <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
+          <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
+            <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
+              {dockerConnection}
+            </code>
+            <div className="px-2">
+              <CopyButton text={dockerConnection} label="Connection string" />
             </div>
-            <ChevronDown
-              className={`text-muted-foreground h-4 w-4 transition-transform ${dockerOpen ? 'rotate-180' : ''}`}
-            />
-          </CollapsibleTrigger>
+          </div>
 
-          <CollapsibleContent>
-            <div className="border-border space-y-3 border-t px-4 py-3">
-              <div>
-                <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
-                <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
-                  <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
-                    {dockerConnection}
-                  </code>
-                  <div className="px-2">
-                    <CopyButton text={dockerConnection} label="Connection string" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
-                <div className="bg-background border-border relative overflow-hidden rounded-md border">
-                  <div className="absolute top-3 right-3 z-10">
-                    <CopyButton text={dockerEnvConfig} label=".env configuration" />
-                  </div>
-                  <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-sm leading-relaxed whitespace-pre-wrap outline-none select-text">
-                    {dockerEnvConfig}
-                  </pre>
-                </div>
-              </div>
+          <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
+          <div className="bg-background border-border relative overflow-hidden rounded-md border">
+            <div className="absolute top-3 right-3 z-10">
+              <CopyButton text={dockerEnvConfig} label=".env configuration" />
             </div>
-          </CollapsibleContent>
-        </div>
-      </Collapsible>
+            <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-sm leading-relaxed whitespace-pre-wrap outline-none select-text">
+              {dockerEnvConfig}
+            </pre>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* Host Machine Section */}
-      <Collapsible open={hostOpen} onOpenChange={setHostOpen}>
-        <div className="border-border bg-card overflow-hidden rounded-md border">
-          <CollapsibleTrigger className="hover:bg-accent/50 flex w-full items-center justify-between px-4 py-3 transition-colors">
-            <div className="flex items-center gap-2">
-              <MonitorSmartphone className="text-muted-foreground h-4 w-4" />
-              <span className="text-sm font-medium">Host Machine</span>
-              <span className="text-muted-foreground text-xs">(Local Development)</span>
+      <AccordionItem value="host-machine">
+        <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+          <div className="flex items-center gap-2">
+            <MonitorSmartphone className="text-muted-foreground h-4 w-4" />
+            <span className="text-sm font-medium">Host Machine</span>
+            <span className="text-muted-foreground text-xs">(Local Development)</span>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 p-4">
+          <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
+          <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
+            <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
+              {hostConnection}
+            </code>
+            <div className="px-2">
+              <CopyButton text={hostConnection} label="Connection string" />
             </div>
-            <ChevronDown
-              className={`text-muted-foreground h-4 w-4 transition-transform ${hostOpen ? 'rotate-180' : ''}`}
-            />
-          </CollapsibleTrigger>
+          </div>
 
-          <CollapsibleContent>
-            <div className="border-border space-y-3 border-t px-4 py-3">
-              <div>
-                <p className="text-muted-foreground mb-2 text-xs">Connection string:</p>
-                <div className="bg-background border-border flex items-center justify-between overflow-hidden rounded-md border">
-                  <code className="text-foreground flex-1 truncate p-2 font-mono text-sm outline-none select-text">
-                    {hostConnection}
-                  </code>
-                  <div className="px-2">
-                    <CopyButton text={hostConnection} label="Connection string" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
-                <div className="bg-background border-border relative overflow-hidden rounded-md border">
-                  <div className="absolute top-3 right-3 z-10">
-                    <CopyButton text={hostEnvConfig} label=".env configuration" />
-                  </div>
-                  <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-sm leading-relaxed whitespace-pre-wrap outline-none select-text">
-                    {hostEnvConfig}
-                  </pre>
-                </div>
-              </div>
+          <p className="text-muted-foreground mb-2 text-xs">Environment configuration:</p>
+          <div className="bg-background border-border relative overflow-hidden rounded-md border">
+            <div className="absolute top-3 right-3 z-10">
+              <CopyButton text={hostEnvConfig} label=".env configuration" />
             </div>
-          </CollapsibleContent>
-        </div>
-      </Collapsible>
-    </div>
+            <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-sm leading-relaxed whitespace-pre-wrap outline-none select-text">
+              {hostEnvConfig}
+            </pre>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
@@ -438,35 +416,24 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
       <ServiceInfoCard service={service} />
 
       <ScrollArea className="flex-1">
-        <div className="space-y-4 p-4">
+        <div className="space-y-4">
           {isCaddy && service.state.installed && (
-            <>
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  {certInstalled ? (
-                    <>
-                      <ShieldCheck className="text-primary h-4 w-4" />
-                      <span className="text-sm font-medium">SSL Certificate</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldAlert className="text-muted-foreground h-4 w-4" />
-                      <span className="text-muted-foreground text-sm font-medium">
-                        SSL Certificate
-                      </span>
-                    </>
-                  )}
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                    certInstalled
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border-input bg-background border'
-                  }`}
-                >
-                  {certInstalled ? 'Installed' : 'Not Installed'}
-                </span>
-              </div>
+            <div className="space-y-4 p-4">
+              <Item variant="outline">
+                <ItemMedia>
+                  <ShieldCheck className="text-primary size-5" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle className={certInstalled ? '' : 'text-muted-foreground'}>
+                    SSL Certificate
+                  </ItemTitle>
+                </ItemContent>
+                <ItemActions>
+                  <Badge variant={certInstalled ? 'default' : 'secondary'}>
+                    {certInstalled ? 'Installed' : 'Not Installed'}
+                  </Badge>
+                </ItemActions>
+              </Item>
 
               <div className="bg-primary/5 space-y-2 rounded-lg p-4">
                 <p className="text-muted-foreground text-sm">
@@ -475,16 +442,14 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
                   certificate to your system's trusted store.
                 </p>
               </div>
-            </>
+            </div>
           )}
 
           {/* Connection Information */}
           {!isCaddy &&
             service.state.installed &&
             service.definition.default_config.ports.length > 0 && (
-              <div className="space-y-3">
-                <ConnectionInfo service={service} />
-              </div>
+              <ConnectionInfo service={service} />
             )}
         </div>
       </ScrollArea>
@@ -499,10 +464,10 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
         )}
         {isCaddy && service.state.installed && (
           <Button
-            variant="secondary"
+            variant="ghost"
             onClick={handleDownloadCertificate}
             disabled={isDownloading}
-            className="w-full"
+            className="w-full border"
             size="sm"
           >
             <Download className="mr-2 h-4 w-4" />
@@ -518,7 +483,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 function ServiceDetailPage() {
   const { serviceId } = Route.useParams();
   const isVisible = useDocumentVisibility();
-  
+
   // Use polling to keep health status updated (only when tab is visible)
   const { data: service } = useService(serviceId as ServiceId, {
     refetchInterval: isVisible ? 3000 : false, // Poll every 3 seconds when visible

@@ -28,8 +28,8 @@ Caddy Started → Start Container → Sync All Projects → Reload Caddy Config
 
 The `syncProjectsToCaddy()` function generates a Caddyfile with:
 
-- A bootstrap entry for `https://damp.local` (triggers SSL cert generation)
-- Reverse proxy rules for each project
+- Bootstrap entries for both HTTP and HTTPS on `damp.local`
+- Reverse proxy rules for each project (both HTTP and HTTPS)
 
 **Example Generated Caddyfile:**
 
@@ -37,22 +37,37 @@ The `syncProjectsToCaddy()` function generates a Caddyfile with:
 # DAMP Reverse Proxy Configuration
 # Auto-generated - Do not edit manually
 
-# SSL Bootstrap
+# Bootstrap - HTTPS
 https://damp.local {
     tls internal
     respond "DAMP - All systems ready!"
 }
 
-# Project: my-laravel-site
-https://my-laravel-site.local {
-    tls internal
-    reverse_proxy my_laravel_site_devcontainer:8080
+# Bootstrap - HTTP
+http://damp.local {
+    respond "DAMP - All systems ready!"
 }
 
-# Project: my-php-app
+# Project: my-laravel-site (HTTPS)
+https://my-laravel-site.local {
+    tls internal
+    reverse_proxy my_laravel_site_devcontainer:{project.forwardedPort}
+}
+
+# Project: my-laravel-site (HTTP)
+http://my-laravel-site.local {
+    reverse_proxy my_laravel_site_devcontainer:{project.forwardedPort}
+}
+
+# Project: my-php-app (HTTPS)
 https://my-php-app.local {
     tls internal
-    reverse_proxy my_php_app_devcontainer:8080
+    reverse_proxy my_php_app_devcontainer:{project.forwardedPort}
+}
+
+# Project: my-php-app (HTTP)
+http://my-php-app.local {
+    reverse_proxy my_php_app_devcontainer:{project.forwardedPort}
 }
 ```
 
@@ -60,20 +75,20 @@ https://my-php-app.local {
 
 - All projects use the shared `damp-network` Docker network
 - Caddy container is also on `damp-network`
-- Container names are used as DNS: `{project_name}_devcontainer:8080`
-- Projects expose port `8080` internally (configured in devcontainer)
+- Container names are used as DNS: `{project_name}_devcontainer:{project.forwardedPort}`
+- Projects expose their configured `forwardedPort` internally (default: 8443, configurable in devcontainer)
 
 ### 3. Domain Resolution
 
 - Hosts file entries are managed by `project-state-manager.ts`
 - Format: `127.0.0.1 {project.domain}` (e.g., `127.0.0.1 my-project.local`)
-- Caddy listens on `443` (HTTPS) and routes requests based on domain
+- Caddy listens on both `80` (HTTP) and `443` (HTTPS) and routes requests based on domain
 
 ### 4. SSL Certificates
 
 - Caddy automatically generates SSL certificates using its internal CA
 - Certificates are installed to system trust store during Caddy installation
-- All `.local` domains are served over HTTPS
+- All `.local` domains are available via both HTTP and HTTPS
 
 ## Integration Points
 
@@ -186,13 +201,13 @@ if (!result.success) {
    ```bash
    docker exec damp-web cat /etc/caddy/Caddyfile
    ```
-4. Verify reverse proxy rule exists for `https://test-site.local`
+4. Verify reverse proxy rules exist for both `http://test-site.local` and `https://test-site.local`
 
 ### Verify Routing
 
 1. Start project's devcontainer in VS Code
 2. Ensure container is on `damp-network`
-3. Visit `https://test-site.local` in browser
+3. Visit `http://test-site.local` or `https://test-site.local` in browser
 4. Should see your project (not Caddy error page)
 
 ### Verify Sync on Startup

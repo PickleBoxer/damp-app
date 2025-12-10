@@ -120,7 +120,7 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
     "overrideCommand": false,
 
     "containerEnv": {
-        "SSL_MODE": "off",
+        "SSL_MODE": "full",
         "PHP_OPCACHE_ENABLE": "0"
     },
 

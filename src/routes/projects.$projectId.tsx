@@ -35,7 +35,12 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { VscDebugStop, VscDebugStart } from 'react-icons/vsc';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { VscTerminal, VscVscode } from 'react-icons/vsc';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -62,6 +67,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useState } from 'react';
 import { getSettings } from '@/helpers/settings_helpers';
+import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@/components/ui/item';
 
 function ProjectDetailPage() {
   const navigate = useNavigate();
@@ -419,72 +425,74 @@ function ProjectDetailPage() {
                   </div>
                 </div>
 
-                {/* Collapsible Configuration and PHP Extensions */}
-                {/* Configuration Section */}
-                <Collapsible>
-                  <CollapsibleTrigger className="hover:bg-accent flex w-full items-center justify-between rounded-md border px-4 py-2 text-sm font-semibold">
-                    Configuration
-                    <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="px-4 py-2">
-                    <div className="space-y-2 pt-2 text-sm">
-                      <div className="grid grid-cols-[140px_1fr] gap-2">
-                        <span className="text-muted-foreground">Domain</span>
-                        <span className="font-mono">{project.domain}</span>
-                      </div>
-                      <div className="grid grid-cols-[140px_1fr] gap-2">
-                        <span className="text-muted-foreground">Project Path</span>
-                        <span className="font-mono break-all">{project.path}</span>
-                      </div>
-                      <div className="grid grid-cols-[140px_1fr] gap-2">
-                        <span className="text-muted-foreground">Volume Name</span>
-                        <span className="font-mono">{project.volumeName}</span>
-                      </div>
-                      <div className="grid grid-cols-[140px_1fr] gap-2">
-                        <span className="text-muted-foreground">Network</span>
-                        <span className="font-mono">{project.networkName}</span>
-                      </div>
-                      <div className="grid grid-cols-[140px_1fr] gap-2">
-                        <span className="text-muted-foreground">Container Port</span>
-                        <span>{project.forwardedPort}</span>
-                      </div>
-                      {forwardedLocalhostPort && (
+                {/* Configuration and PHP Extensions */}
+                <Accordion type="single" collapsible className="w-full">
+                  {/* Configuration Section */}
+                  <AccordionItem value="configuration">
+                    <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+                      <span className="text-sm font-medium">Configuration</span>
+                    </AccordionTrigger>
+                    <AccordionContent className="space-y-2 p-4">
+                      <div className="space-y-2 pt-2 text-sm">
                         <div className="grid grid-cols-[140px_1fr] gap-2">
-                          <span className="text-muted-foreground">Localhost Port</span>
-                          <span className="font-mono">
-                            localhost:{forwardedLocalhostPort}
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              VS Code forwarded
-                            </Badge>
-                          </span>
+                          <span className="text-muted-foreground">Domain</span>
+                          <span className="font-mono">{project.domain}</span>
                         </div>
-                      )}
-                      <div className="grid grid-cols-[140px_1fr] gap-2">
-                        <span className="text-muted-foreground">Claude AI</span>
-                        <span>{project.enableClaudeAi ? 'Enabled' : 'Disabled'}</span>
+                        <div className="grid grid-cols-[140px_1fr] gap-2">
+                          <span className="text-muted-foreground">Project Path</span>
+                          <span className="font-mono break-all">{project.path}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_1fr] gap-2">
+                          <span className="text-muted-foreground">Volume Name</span>
+                          <span className="font-mono">{project.volumeName}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_1fr] gap-2">
+                          <span className="text-muted-foreground">Network</span>
+                          <span className="font-mono">{project.networkName}</span>
+                        </div>
+                        <div className="grid grid-cols-[140px_1fr] gap-2">
+                          <span className="text-muted-foreground">Container Port</span>
+                          <span>{project.forwardedPort}</span>
+                        </div>
+                        {forwardedLocalhostPort && (
+                          <div className="grid grid-cols-[140px_1fr] gap-2">
+                            <span className="text-muted-foreground">Localhost Port</span>
+                            <span className="font-mono">
+                              localhost:{forwardedLocalhostPort}
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                VS Code forwarded
+                              </Badge>
+                            </span>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-[140px_1fr] gap-2">
+                          <span className="text-muted-foreground">Claude AI</span>
+                          <span>{project.enableClaudeAi ? 'Enabled' : 'Disabled'}</span>
+                        </div>
                       </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+                    </AccordionContent>
+                  </AccordionItem>
 
-                {/* PHP Extensions Section */}
-                {project.phpExtensions && project.phpExtensions.length > 0 && (
-                  <Collapsible>
-                    <CollapsibleTrigger className="hover:bg-accent flex w-full items-center justify-between rounded-md border px-4 py-2 text-sm font-semibold">
-                      PHP Extensions ({project.phpExtensions.length})
-                      <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="px-4 py-2">
-                      <div className="flex flex-wrap gap-2 pt-2">
-                        {project.phpExtensions.map(ext => (
-                          <Badge key={ext} variant="secondary">
-                            {ext}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
+                  {/* PHP Extensions Section */}
+                  {project.phpExtensions && project.phpExtensions.length > 0 && (
+                    <AccordionItem value="php-extensions">
+                      <AccordionTrigger className="hover:bg-muted/50 bg-card p-2">
+                        <span className="text-sm font-medium">
+                          PHP Extensions ({project.phpExtensions.length})
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="p-4">
+                        <div className="flex flex-wrap gap-2">
+                          {project.phpExtensions.map(ext => (
+                            <Badge key={ext} variant="secondary">
+                              {ext}
+                            </Badge>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )}
+                </Accordion>
               </TabsContent>
 
               {/* Volume Sync Tab */}
@@ -596,21 +604,26 @@ function ProjectDetailPage() {
                   </Alert>
 
                   {/* Status Badge */}
-                  <div className="flex items-center justify-between rounded-md border p-3">
-                    <span className="text-sm font-medium">Status</span>
-                    <Badge
-                      variant={
-                        ngrokStatus === 'active'
-                          ? 'default'
-                          : ngrokStatus === 'error'
-                            ? 'destructive'
-                            : 'secondary'
-                      }
-                      className="capitalize"
-                    >
-                      {ngrokStatus}
-                    </Badge>
-                  </div>
+                  <Item variant="outline" size="sm">
+                    <ItemMedia></ItemMedia>
+                    <ItemContent>
+                      <ItemTitle>Status</ItemTitle>
+                    </ItemContent>
+                    <ItemActions>
+                      <Badge
+                        variant={
+                          ngrokStatus === 'active'
+                            ? 'default'
+                            : ngrokStatus === 'error'
+                              ? 'destructive'
+                              : 'secondary'
+                        }
+                        className="capitalize"
+                      >
+                        {ngrokStatus}
+                      </Badge>
+                    </ItemActions>
+                  </Item>
 
                   {/* Public URL Display (when active) */}
                   {ngrokStatus === 'active' && ngrokPublicUrl && (
