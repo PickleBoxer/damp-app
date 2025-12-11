@@ -2,10 +2,11 @@ import React from 'react';
 import DragWindowRegion from '@/components/DragWindowRegion';
 import IconNav from '@/components/IconNav';
 import Footer from '@/components/template/Footer';
+import CaddyStatusBanner from '@/components/CaddyStatusBanner';
 import { Toaster } from 'sonner';
 import { useTheme } from '@/hooks/use-theme';
 
-export default function BaseLayout({ children }: { children: React.ReactNode }) {
+export default function BaseLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { resolvedTheme } = useTheme();
 
   return (
@@ -13,7 +14,10 @@ export default function BaseLayout({ children }: { children: React.ReactNode }) 
       <DragWindowRegion />
       <div className="flex flex-1 overflow-hidden">
         <IconNav />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="relative flex flex-1 flex-col overflow-auto">
+          <CaddyStatusBanner />
+          {children}
+        </main>
       </div>
       <Footer />
       <Toaster
