@@ -1,6 +1,6 @@
 import React from 'react';
 import DragWindowRegion from '@/components/DragWindowRegion';
-import IconNav from '@/components/IconNav';
+import Sidebar from '@/components/Sidebar';
 import Footer from '@/components/template/Footer';
 import CaddyStatusBanner from '@/components/CaddyStatusBanner';
 import { Toaster } from 'sonner';
@@ -13,7 +13,7 @@ export default function BaseLayout({ children }: Readonly<{ children: React.Reac
     <div className="flex h-screen flex-col overflow-hidden select-none">
       <DragWindowRegion />
       <div className="flex flex-1 overflow-hidden">
-        <IconNav />
+        <Sidebar />
         <main className="relative flex flex-1 flex-col overflow-auto">
           <CaddyStatusBanner />
           {children}

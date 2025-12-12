@@ -3,6 +3,7 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
+import { z } from 'zod';
 import {
   LOGS_START_CHANNEL,
   LOGS_STOP_CHANNEL,
@@ -12,6 +13,12 @@ import {
 } from './logs-channels';
 import { dockerManager } from '../../../services/docker/docker-manager';
 import { projectStateManager } from '../../../services/projects/project-state-manager';
+import { createLogger } from '../../../utils/logger';
+
+const logger = createLogger('logs-ipc');
+
+// Validation schemas
+const projectIdSchema = z.string().uuid();
 
 /**
  * Active log stream cleanup functions
@@ -27,6 +34,9 @@ async function handleStartLogs(
   projectId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Validate projectId
+    projectIdSchema.parse(projectId);
+
     // Stop existing stream if any
     const existingStop = activeStreams.get(projectId);
     if (existingStop) {
@@ -70,12 +80,17 @@ async function handleStartLogs(
     // Store stop function
     activeStreams.set(projectId, stopFn);
 
-    console.log(`[Logs] Started streaming for project ${project.name}`);
+    logger.debug('Started streaming for project', { projectName: project.name });
 
     return { success: true };
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      const errorMessage = error.issues.map(issue => issue.message).join(', ');
+      logger.error('Invalid project ID', { error: errorMessage });
+      return { success: false, error: `Invalid project ID: ${errorMessage}` };
+    }
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[Logs] Failed to start streaming:`, errorMessage);
+    logger.error('Failed to start streaming', { error: errorMessage });
     return {
       success: false,
       error: errorMessage,
@@ -87,11 +102,14 @@ async function handleStartLogs(
  * Stop streaming logs for a project
  */
 async function handleStopLogs(_event: IpcMainInvokeEvent, projectId: string): Promise<void> {
+  // Validate projectId
+  projectIdSchema.parse(projectId);
+
   const stopFn = activeStreams.get(projectId);
   if (stopFn) {
     stopFn();
     activeStreams.delete(projectId);
-    console.log(`[Logs] Stopped streaming for project ${projectId}`);
+    logger.debug('Stopped streaming for project', { projectId });
   }
 }
 
@@ -153,13 +171,19 @@ async function handleTailFile(
 /**
  * Register all log-related IPC listeners
  */
+// Prevent duplicate listener registration
+let listenersAdded = false;
+
 export function addLogsEventListeners(): void {
+  if (listenersAdded) return;
+  listenersAdded = true;
+
   ipcMain.handle(LOGS_START_CHANNEL, handleStartLogs);
   ipcMain.handle(LOGS_STOP_CHANNEL, handleStopLogs);
   ipcMain.handle(LOGS_READ_FILE_CHANNEL, handleReadFile);
   ipcMain.handle(LOGS_TAIL_FILE_CHANNEL, handleTailFile);
 
-  console.log('[Logs] IPC listeners registered');
+  logger.info('Logs IPC listeners registered');
 }
 
 /**
@@ -168,7 +192,7 @@ export function addLogsEventListeners(): void {
 export function cleanupAllLogStreams(): void {
   for (const [projectId, stopFn] of activeStreams.entries()) {
     stopFn();
-    console.log(`[Logs] Cleaned up stream for project ${projectId}`);
+    logger.debug('Cleaned up stream for project', { projectId });
   }
   activeStreams.clear();
 }

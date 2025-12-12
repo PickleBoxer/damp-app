@@ -12,6 +12,9 @@ import {
   SHELL_OPEN_HOME_TERMINAL_CHANNEL,
   SHELL_OPEN_TINKER_CHANNEL,
 } from './shell-channels';
+import { createLogger } from '../../../utils/logger';
+
+const logger = createLogger('shell-ipc');
 
 const execAsync = promisify(exec);
 
@@ -100,7 +103,13 @@ function getTinkerCommand(path: string, settings?: ShellSettings): string {
   return `x-terminal-emulator --working-directory="${path}" -e "bash -c 'php artisan tinker; exec bash'"`;
 }
 
+// Prevent duplicate listener registration
+let listenersAdded = false;
+
 export function addShellEventListeners() {
+  if (listenersAdded) return;
+  listenersAdded = true;
+
   /**
    * Open project folder in file manager
    */
@@ -116,7 +125,7 @@ export function addShellEventListeners() {
         return { success: true };
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open folder';
-        console.error('Shell open folder error:', message);
+        logger.error('Shell open folder error', { error: message });
         return { success: false, error: message };
       }
     }
@@ -135,7 +144,7 @@ export function addShellEventListeners() {
         return { success: true };
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open editor';
-        console.error('Shell open editor error:', message);
+        logger.error('Shell open editor error', { error: message });
         return {
           success: false,
           error: message.includes('not found')
@@ -159,7 +168,7 @@ export function addShellEventListeners() {
         return { success: true };
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open terminal';
-        console.error('Shell open terminal error:', message);
+        logger.error('Shell open terminal error', { error: message });
         return { success: false, error: message };
       }
     }
@@ -178,7 +187,7 @@ export function addShellEventListeners() {
         return { success: true };
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open terminal';
-        console.error('Shell open home terminal error:', message);
+        logger.error('Shell open home terminal error', { error: message });
         return { success: false, error: message };
       }
     }
@@ -197,7 +206,7 @@ export function addShellEventListeners() {
         return { success: true };
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open tinker';
-        console.error('Shell open tinker error:', message);
+        logger.error('Shell open tinker error', { error: message });
         return { success: false, error: message };
       }
     }

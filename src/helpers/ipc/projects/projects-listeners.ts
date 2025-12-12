@@ -4,16 +4,29 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
+import { z } from 'zod';
 import * as https from 'node:https';
 import type { CreateProjectInput, UpdateProjectInput } from '../../../types/project';
 import { projectStateManager } from '../../../services/projects/project-state-manager';
 import * as CHANNELS from './projects-channels';
 import { getPortScanRange } from '../../../constants/ports';
+import { createLogger } from '../../../utils/logger';
+
+const logger = createLogger('projects-ipc');
+
+// Validation schemas
+const projectIdSchema = z.string().uuid();
+const projectIdsSchema = z.array(z.string().uuid());
+
+// Prevent duplicate listener registration
+let listenersAdded = false;
 
 /**
  * Add project event listeners
  */
 export function addProjectsListeners(mainWindow: BrowserWindow): void {
+  if (listenersAdded) return;
+  listenersAdded = true;
   // Initialize project manager on first use
   let initPromise: Promise<void> | null = null;
   const ensureInitialized = async () => {
@@ -38,7 +51,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await projectStateManager.getAllProjects();
     } catch (error) {
-      console.error('Failed to get all projects:', error);
+      logger.error('Failed to get all projects', { error });
       throw error;
     }
   });
@@ -51,7 +64,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await projectStateManager.getProject(projectId);
     } catch (error) {
-      console.error(`Failed to get project ${projectId}:`, error);
+      logger.error('Failed to get project', { projectId, error });
       throw error;
     }
   });
@@ -65,12 +78,14 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
 
       // Progress callback to send updates to renderer
       const onProgress = (progress: unknown) => {
-        mainWindow.webContents.send(CHANNELS.PROJECTS_COPY_PROGRESS, input.name, progress);
+        if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+          mainWindow.webContents.send(CHANNELS.PROJECTS_COPY_PROGRESS, input.name, progress);
+        }
       };
 
       return await projectStateManager.createProject(input, onProgress);
     } catch (error) {
-      console.error('Failed to create project:', error);
+      logger.error('Failed to create project', { error });
       throw error;
     }
   });
@@ -83,7 +98,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await projectStateManager.updateProject(input);
     } catch (error) {
-      console.error(`Failed to update project ${input.id}:`, error);
+      logger.error('Failed to update project', { projectId: input.id, error });
       throw error;
     }
   });
@@ -96,9 +111,16 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
     async (_event, projectId: string, removeVolume = false, removeFolder = false) => {
       try {
         await ensureInitialized();
+        // Validate projectId
+        projectIdSchema.parse(projectId);
         return await projectStateManager.deleteProject(projectId, removeVolume, removeFolder);
       } catch (error) {
-        console.error(`Failed to delete project ${projectId}:`, error);
+        if (error instanceof z.ZodError) {
+          const errorMessage = error.issues.map(issue => issue.message).join(', ');
+          logger.error('Invalid project ID', { error: errorMessage });
+          throw new Error(`Invalid project ID: ${errorMessage}`);
+        }
+        logger.error('Failed to delete project', { projectId, error });
         throw error;
       }
     }
@@ -110,9 +132,16 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(CHANNELS.PROJECTS_REORDER, async (_event, projectIds: string[]) => {
     try {
       await ensureInitialized();
+      // Validate projectIds array
+      projectIdsSchema.parse(projectIds);
       return await projectStateManager.reorderProjects(projectIds);
     } catch (error) {
-      console.error('Failed to reorder projects:', error);
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map(issue => issue.message).join(', ');
+        logger.error('Invalid project IDs', { error: errorMessage });
+        throw new Error(`Invalid project IDs: ${errorMessage}`);
+      }
+      logger.error('Failed to reorder projects', { error });
       throw error;
     }
   });
@@ -126,12 +155,14 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
 
       // Progress callback to send updates to renderer
       const onProgress = (progress: unknown) => {
-        mainWindow.webContents.send(CHANNELS.PROJECTS_COPY_PROGRESS, projectId, progress);
+        if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+          mainWindow.webContents.send(CHANNELS.PROJECTS_COPY_PROGRESS, projectId, progress);
+        }
       };
 
       return await projectStateManager.copyProjectToVolume(projectId, onProgress);
     } catch (error) {
-      console.error(`Failed to copy project ${projectId} to volume:`, error);
+      logger.error('Failed to copy project to volume', { projectId, error });
       throw error;
     }
   });
@@ -144,7 +175,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await projectStateManager.selectFolder(defaultPath);
     } catch (error) {
-      console.error('Failed to select folder:', error);
+      logger.error('Failed to select folder', { error });
       throw error;
     }
   });
@@ -157,7 +188,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await projectStateManager.detectLaravel(folderPath);
     } catch (error) {
-      console.error(`Failed to detect Laravel in ${folderPath}:`, error);
+      logger.error('Failed to detect Laravel', { folderPath, error });
       throw error;
     }
   });
@@ -170,7 +201,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await projectStateManager.devcontainerExists(folderPath);
     } catch (error) {
-      console.error(`Failed to check devcontainer existence in ${folderPath}:`, error);
+      logger.error('Failed to check devcontainer existence', { folderPath, error });
       throw error;
     }
   });
@@ -213,7 +244,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
 
       return results;
     } catch (error) {
-      console.error('Failed to get batch container status:', error);
+      logger.error('Failed to get batch container status', { error });
       // Return default status for all projects on error
       return projectIds.map(projectId => ({
         projectId,
@@ -301,7 +332,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
     };
 
     try {
-      console.log(`[Main] Discovering port for container: ${containerName}`);
+      logger.debug('Discovering port for container', { containerName });
 
       // Scan ports using dynamic range from constants
       const { start, end } = getPortScanRange();
@@ -309,22 +340,22 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
         // Try HTTP first (faster, no TLS handshake)
         const httpResult = await makeRequest('http', port);
         if (httpResult === containerName) {
-          console.log(`[Main] Found container on HTTP port ${port}`);
+          logger.debug('Found container on HTTP port', { port });
           return port;
         }
 
         // Fallback to HTTPS (for self-signed certs via Caddy)
         const httpsResult = await makeRequest('https', port);
         if (httpsResult === containerName) {
-          console.log(`[Main] Found container on HTTPS port ${port}`);
+          logger.debug('Found container on HTTPS port', { port });
           return port;
         }
       }
 
-      console.log(`[Main] No port found for container: ${containerName}`);
+      logger.debug('No port found for container', { containerName });
       return null;
     } catch (error) {
-      console.error('[Main] Port discovery error:', error);
+      logger.error('Port discovery error', { error });
       return null;
     }
   });

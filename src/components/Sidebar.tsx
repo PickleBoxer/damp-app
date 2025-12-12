@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/components/lib/utils';
 
-export default function IconNav() {
+export default function Sidebar() {
   const { t } = useTranslation();
   const location = useRouterState({ select: s => s.location });
   const isActive = (to: string) => {
@@ -47,9 +47,9 @@ export default function IconNav() {
                   <Link
                     to={item.to}
                     className={cn(
-                      'flex h-[35px] w-[35px] items-center justify-center transition-colors text-muted-foreground',
+                      'text-muted-foreground flex h-[35px] w-[35px] items-center justify-center transition-colors',
                       'hover:text-foreground',
-                      active && 'text-foreground border-r-2 border-foreground'
+                      active && 'text-foreground border-foreground border-r-2'
                     )}
                   >
                     <Icon className="size-4" />

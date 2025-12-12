@@ -4,59 +4,67 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ServiceId, CustomConfig, InstallOptions } from '../../../types/service';
+import type {
+  ServiceId,
+  CustomConfig,
+  InstallOptions,
+  ServiceInfo,
+  PullProgress,
+} from '../../../types/service';
 import * as CHANNELS from './services-channels';
 
 export interface ServicesContext {
   /**
    * Get all services with their current state
    */
-  getAllServices: () => Promise<unknown>;
+  getAllServices: () => Promise<ServiceInfo[]>;
 
   /**
    * Get a specific service by ID
    */
-  getService: (serviceId: ServiceId) => Promise<unknown>;
+  getService: (serviceId: ServiceId) => Promise<ServiceInfo>;
 
   /**
    * Install a service
    */
-  installService: (serviceId: ServiceId, options?: InstallOptions) => Promise<unknown>;
+  installService: (serviceId: ServiceId, options?: InstallOptions) => Promise<ServiceInfo>;
 
   /**
    * Uninstall a service
    */
-  uninstallService: (serviceId: ServiceId, removeVolumes?: boolean) => Promise<unknown>;
+  uninstallService: (serviceId: ServiceId, removeVolumes?: boolean) => Promise<ServiceInfo>;
 
   /**
    * Start a service
    */
-  startService: (serviceId: ServiceId) => Promise<unknown>;
+  startService: (serviceId: ServiceId) => Promise<ServiceInfo>;
 
   /**
    * Stop a service
    */
-  stopService: (serviceId: ServiceId) => Promise<unknown>;
+  stopService: (serviceId: ServiceId) => Promise<ServiceInfo>;
 
   /**
    * Restart a service
    */
-  restartService: (serviceId: ServiceId) => Promise<unknown>;
+  restartService: (serviceId: ServiceId) => Promise<ServiceInfo>;
 
   /**
    * Update service configuration
    */
-  updateConfig: (serviceId: ServiceId, customConfig: CustomConfig) => Promise<unknown>;
+  updateConfig: (serviceId: ServiceId, customConfig: CustomConfig) => Promise<ServiceInfo>;
 
   /**
    * Download Caddy SSL certificate
    */
-  downloadCaddyCertificate: () => Promise<unknown>;
+  downloadCaddyCertificate: () => Promise<{ success: boolean; path?: string; error?: string }>;
 
   /**
    * Subscribe to installation progress events
    */
-  onInstallProgress: (callback: (serviceId: ServiceId, progress: unknown) => void) => () => void;
+  onInstallProgress: (
+    callback: (serviceId: ServiceId, progress: PullProgress) => void
+  ) => () => void;
 }
 
 /**
@@ -87,7 +95,7 @@ export function exposeServicesContext(): void {
     downloadCaddyCertificate: () => ipcRenderer.invoke(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT),
 
     onInstallProgress: callback => {
-      const listener = (_event: unknown, serviceId: ServiceId, progress: unknown) => {
+      const listener = (_event: unknown, serviceId: ServiceId, progress: PullProgress) => {
         callback(serviceId, progress);
       };
       ipcRenderer.on(CHANNELS.SERVICES_INSTALL_PROGRESS, listener);

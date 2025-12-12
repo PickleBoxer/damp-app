@@ -10,17 +10,22 @@ import { ngrokManager } from '../../../services/ngrok/ngrok-manager';
 import { projectStorage } from '../../../services/projects/project-storage';
 import { createLogger } from '../../../utils/logger';
 
-const logger = createLogger('ngrok-listeners');
+const logger = createLogger('ngrok-ipc');
 
 // Validation schemas
 const projectIdSchema = z.string().uuid();
 const authTokenSchema = z.string().min(20, 'Auth token must be at least 20 characters');
 const regionSchema = z.enum(['us', 'eu', 'ap', 'au', 'sa', 'jp', 'in']).optional();
 
+// Prevent duplicate listener registration
+let listenersAdded = false;
+
 /**
  * Register ngrok IPC listeners
  */
 export function addNgrokListeners(): void {
+  if (listenersAdded) return;
+  listenersAdded = true;
   /**
    * Start ngrok tunnel for a project
    */

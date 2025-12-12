@@ -4,29 +4,36 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { CreateProjectInput, UpdateProjectInput } from '../../../types/project';
+import type {
+  CreateProjectInput,
+  UpdateProjectInput,
+  Project,
+  FolderSelectionResult,
+  LaravelDetectionResult,
+  VolumeCopyProgress,
+} from '../../../types/project';
 import * as CHANNELS from './projects-channels';
 
 export interface ProjectsContext {
   /**
    * Get all projects
    */
-  getAllProjects: () => Promise<unknown>;
+  getAllProjects: () => Promise<Project[]>;
 
   /**
    * Get a specific project by ID
    */
-  getProject: (projectId: string) => Promise<unknown>;
+  getProject: (projectId: string) => Promise<Project | null>;
 
   /**
    * Create a new project
    */
-  createProject: (input: CreateProjectInput) => Promise<unknown>;
+  createProject: (input: CreateProjectInput) => Promise<Project>;
 
   /**
    * Update a project
    */
-  updateProject: (input: UpdateProjectInput) => Promise<unknown>;
+  updateProject: (input: UpdateProjectInput) => Promise<Project>;
 
   /**
    * Delete a project
@@ -35,32 +42,32 @@ export interface ProjectsContext {
     projectId: string,
     removeVolume?: boolean,
     removeFolder?: boolean
-  ) => Promise<unknown>;
+  ) => Promise<void>;
 
   /**
    * Reorder projects
    */
-  reorderProjects: (projectIds: string[]) => Promise<unknown>;
+  reorderProjects: (projectIds: string[]) => Promise<void>;
 
   /**
    * Copy project files to volume
    */
-  copyProjectToVolume: (projectId: string) => Promise<unknown>;
+  copyProjectToVolume: (projectId: string) => Promise<void>;
 
   /**
    * Open folder selection dialog
    */
-  selectFolder: (defaultPath?: string) => Promise<unknown>;
+  selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
 
   /**
    * Detect Laravel in folder
    */
-  detectLaravel: (folderPath: string) => Promise<unknown>;
+  detectLaravel: (folderPath: string) => Promise<LaravelDetectionResult>;
 
   /**
    * Check if devcontainer exists
    */
-  devcontainerExists: (folderPath: string) => Promise<unknown>;
+  devcontainerExists: (folderPath: string) => Promise<boolean>;
 
   /**
    * Get container status for multiple projects in a single call (optimized)
@@ -83,7 +90,9 @@ export interface ProjectsContext {
   /**
    * Subscribe to volume copy progress events
    */
-  onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
+  onCopyProgress: (
+    callback: (projectId: string, progress: VolumeCopyProgress) => void
+  ) => () => void;
 }
 
 /**
@@ -126,7 +135,7 @@ export function exposeProjectsContext(): void {
       ipcRenderer.invoke(CHANNELS.PROJECTS_DISCOVER_PORT, containerName),
 
     onCopyProgress: callback => {
-      const listener = (_event: unknown, projectId: string, progress: unknown) => {
+      const listener = (_event: unknown, projectId: string, progress: VolumeCopyProgress) => {
         callback(projectId, progress);
       };
       ipcRenderer.on(CHANNELS.PROJECTS_COPY_PROGRESS, listener);

@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import Docker from 'dockerode';
+import { z } from 'zod';
 import {
   DOCKER_STATUS_CHANNEL,
   DOCKER_INFO_CHANNEL,
@@ -10,23 +11,38 @@ import {
 } from './docker-channels';
 import type { DockerStatus, DockerInfo } from './docker-context';
 import { dockerManager } from '../../../services/docker/docker-manager';
+import { DOCKER_TIMEOUTS } from './docker-constants';
+import { createLogger } from '../../../utils/logger';
+
+const logger = createLogger('docker-ipc');
 
 const docker = new Docker();
 
+// Validation schemas
+const containerNameSchema = z.string().min(1).max(255);
+
+// Prevent duplicate listener registration
+let listenersAdded = false;
+
 export function addDockerListeners() {
+  if (listenersAdded) return;
+  listenersAdded = true;
   ipcMain.handle(DOCKER_STATUS_CHANNEL, async (): Promise<DockerStatus> => {
     try {
       // Ping Docker daemon with timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Docker ping timeout (3s)')), 3000)
+        setTimeout(
+          () => reject(new Error(`Docker ping timeout (${DOCKER_TIMEOUTS.PING}ms)`)),
+          DOCKER_TIMEOUTS.PING
+        )
       );
 
       await Promise.race([docker.ping(), timeoutPromise]);
-      console.log('[DockerGateway] Docker is running');
+      logger.debug('Docker is running');
       return { isRunning: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[DockerGateway] Docker error:', errorMessage);
+      logger.error('Docker error', { error: errorMessage });
       return {
         isRunning: false,
         error: errorMessage,
@@ -38,11 +54,14 @@ export function addDockerListeners() {
     try {
       // Get Docker info with timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Docker info timeout (3s)')), 3000)
+        setTimeout(
+          () => reject(new Error(`Docker info timeout (${DOCKER_TIMEOUTS.INFO}ms)`)),
+          DOCKER_TIMEOUTS.INFO
+        )
       );
 
       const info = await Promise.race([docker.info(), timeoutPromise]);
-      console.log('[DockerGateway] Docker info retrieved');
+      logger.debug('Docker info retrieved');
 
       // Get running containers for CPU and memory calculation
       let cpuUsagePercent = 0;
@@ -51,7 +70,11 @@ export function addDockerListeners() {
       try {
         // List containers with timeout
         const listTimeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('List containers timeout (3s)')), 3000)
+          setTimeout(
+            () =>
+              reject(new Error(`List containers timeout (${DOCKER_TIMEOUTS.LIST_CONTAINERS}ms)`)),
+            DOCKER_TIMEOUTS.LIST_CONTAINERS
+          )
         );
         const containers = await Promise.race([
           docker.listContainers({ all: false }),
@@ -66,7 +89,13 @@ export function addDockerListeners() {
 
               // Get stats with timeout (2s per container)
               const statsTimeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('Container stats timeout (2s)')), 2000)
+                setTimeout(
+                  () =>
+                    reject(
+                      new Error(`Container stats timeout (${DOCKER_TIMEOUTS.CONTAINER_STATS}ms)`)
+                    ),
+                  DOCKER_TIMEOUTS.CONTAINER_STATS
+                )
               );
               const stats = await Promise.race([
                 container.stats({ stream: false }),
@@ -100,7 +129,7 @@ export function addDockerListeners() {
           memoryUsed = allStats.reduce((sum, stat) => sum + stat.memory, 0);
         }
       } catch (error) {
-        console.warn('[DockerGateway] Failed to get container stats:', error);
+        logger.warn('Failed to get container stats', { error });
       }
 
       // Extract relevant stats
@@ -112,7 +141,7 @@ export function addDockerListeners() {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[DockerGateway] Docker info error:', errorMessage);
+      logger.error('Docker info error', { error: errorMessage });
       throw new Error(`Failed to get Docker info: ${errorMessage}`);
     }
   });
@@ -122,7 +151,7 @@ export function addDockerListeners() {
       return dockerManager.getNetworkName();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[DockerGateway] Docker network name error:', errorMessage);
+      logger.error('Docker network name error', { error: errorMessage });
       throw new Error(`Failed to get network name: ${errorMessage}`);
     }
   });
@@ -132,7 +161,7 @@ export function addDockerListeners() {
       await dockerManager.ensureNetworkExists();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[DockerGateway] Docker ensure network error:', errorMessage);
+      logger.error('Docker ensure network error', { error: errorMessage });
       throw new Error(`Failed to ensure network exists: ${errorMessage}`);
     }
   });
@@ -141,11 +170,18 @@ export function addDockerListeners() {
     DOCKER_CONNECT_TO_NETWORK_CHANNEL,
     async (_event, containerIdOrName: string): Promise<void> => {
       try {
-        await dockerManager.connectContainerToNetwork(containerIdOrName);
+        // Validate input
+        const validated = containerNameSchema.parse(containerIdOrName);
+        await dockerManager.connectContainerToNetwork(validated);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errorMessage = error.issues.map(issue => issue.message).join(', ');
+          logger.error('Invalid container name', { error: errorMessage });
+          throw new Error(`Invalid container name: ${errorMessage}`);
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('[DockerGateway] Docker connect container error:', errorMessage);
-        throw new Error(`Failed to connect container ${containerIdOrName}: ${errorMessage}`);
+        logger.error('Docker connect container error', { error: errorMessage });
+        throw new Error(`Failed to connect container: ${errorMessage}`);
       }
     }
   );
@@ -154,11 +190,18 @@ export function addDockerListeners() {
     DOCKER_DISCONNECT_FROM_NETWORK_CHANNEL,
     async (_event, containerIdOrName: string): Promise<void> => {
       try {
-        await dockerManager.disconnectContainerFromNetwork(containerIdOrName);
+        // Validate input
+        const validated = containerNameSchema.parse(containerIdOrName);
+        await dockerManager.disconnectContainerFromNetwork(validated);
       } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errorMessage = error.issues.map(issue => issue.message).join(', ');
+          logger.error('Invalid container name', { error: errorMessage });
+          throw new Error(`Invalid container name: ${errorMessage}`);
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('[DockerGateway] Docker disconnect container error:', errorMessage);
-        throw new Error(`Failed to disconnect container ${containerIdOrName}: ${errorMessage}`);
+        logger.error('Docker disconnect container error', { error: errorMessage });
+        throw new Error(`Failed to disconnect container: ${errorMessage}`);
       }
     }
   );

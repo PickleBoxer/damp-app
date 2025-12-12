@@ -10,6 +10,34 @@ interface LogContext {
 }
 
 /**
+ * ANSI color codes for terminal output
+ */
+const COLORS = {
+  reset: '\x1b[0m',
+  blue: '\x1b[34m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  red: '\x1b[31m',
+  cyan: '\x1b[36m',
+} as const;
+
+/**
+ * Get color for log level
+ */
+function getLevelColor(level: LogLevel): string {
+  switch (level) {
+    case 'debug':
+      return COLORS.blue;
+    case 'info':
+      return COLORS.green;
+    case 'warn':
+      return COLORS.yellow;
+    case 'error':
+      return COLORS.red;
+  }
+}
+
+/**
  * Format log message with timestamp and context
  */
 function formatMessage(
@@ -18,16 +46,18 @@ function formatMessage(
   message: string,
   context?: LogContext
 ): string {
-  const timestamp = new Date().toISOString();
   let contextStr = '';
   if (context) {
     try {
       contextStr = ` ${JSON.stringify(context)}`;
-    } catch (error) {
+    } catch {
       contextStr = ' [Context serialization failed]';
     }
   }
-  return `[${timestamp}][${level.toUpperCase()}][${module}] ${message}${contextStr}`;
+  const color = getLevelColor(level);
+  const levelStr = `${color}[${level.toUpperCase()}]${COLORS.reset}`;
+  const moduleStr = `${COLORS.cyan}[${module}]${COLORS.reset}`;
+  return `${levelStr}${moduleStr} ${message}${contextStr}`;
 }
 
 /**

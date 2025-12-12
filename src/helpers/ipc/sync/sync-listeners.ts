@@ -4,11 +4,24 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
+import { z } from 'zod';
 import Docker from 'dockerode';
 import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_PROGRESS } from './sync-channels';
 import type { SyncOptions, SyncResult } from './sync-context';
+import { createLogger } from '../../../utils/logger';
+
+const logger = createLogger('sync-ipc');
 
 const docker = new Docker();
+
+// Validation schemas
+const projectIdSchema = z.string().uuid();
+const syncOptionsSchema = z
+  .object({
+    includeNodeModules: z.boolean().optional(),
+    includeVendor: z.boolean().optional(),
+  })
+  .optional();
 
 /**
  * Add sync event listeners
@@ -54,11 +67,22 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(
     SYNC_FROM_VOLUME,
     async (_event, projectId: string, options: SyncOptions = {}): Promise<SyncResult> => {
+      // Validate inputs
+      try {
+        projectIdSchema.parse(projectId);
+        syncOptionsSchema.parse(options);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errorMessage = error.issues.map(issue => issue.message).join(', ');
+          return { success: false, error: `Invalid input: ${errorMessage}` };
+        }
+      }
+
       // Check if Docker is running
       try {
         await docker.ping();
       } catch (error) {
-        console.error('Docker ping failed:', error);
+        logger.error('Docker ping failed', { error });
         return {
           success: false,
           error: 'Docker is not running. Please start Docker Desktop.',
@@ -109,7 +133,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
             }
           })
           .catch((error: unknown) => {
-            console.error('Failed to sync from volume:', error);
+            logger.error('Failed to sync from volume', { error });
             // Notify that sync has failed
             if (
               mainWindow &&
@@ -139,6 +163,17 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(
     SYNC_TO_VOLUME,
     async (_event, projectId: string, options: SyncOptions = {}): Promise<SyncResult> => {
+      // Validate inputs
+      try {
+        projectIdSchema.parse(projectId);
+        syncOptionsSchema.parse(options);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errorMessage = error.issues.map(issue => issue.message).join(', ');
+          return { success: false, error: `Invalid input: ${errorMessage}` };
+        }
+      }
+
       // Check if Docker is running
       try {
         await docker.ping();
@@ -191,7 +226,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
             }
           })
           .catch((error: unknown) => {
-            console.error('Failed to sync to volume:', error);
+            logger.error('Failed to sync to volume', { error });
             // Notify that sync has failed
             if (
               mainWindow &&

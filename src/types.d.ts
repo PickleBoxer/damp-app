@@ -35,33 +35,48 @@ interface DockerContext {
 }
 
 interface ServicesContext {
-  getAllServices: () => Promise<unknown>;
-  getService: (serviceId: string) => Promise<unknown>;
-  installService: (serviceId: string, options?: unknown) => Promise<unknown>;
-  uninstallService: (serviceId: string, removeVolumes?: boolean) => Promise<unknown>;
-  startService: (serviceId: string) => Promise<unknown>;
-  stopService: (serviceId: string) => Promise<unknown>;
-  restartService: (serviceId: string) => Promise<unknown>;
-  updateConfig: (serviceId: string, customConfig: unknown) => Promise<unknown>;
-  downloadCaddyCertificate: () => Promise<unknown>;
-  onInstallProgress: (callback: (serviceId: string, progress: unknown) => void) => () => void;
+  getAllServices: () => Promise<import('./types/service').ServiceInfo[]>;
+  getService: (serviceId: string) => Promise<import('./types/service').ServiceInfo>;
+  installService: (
+    serviceId: string,
+    options?: import('./types/service').InstallOptions
+  ) => Promise<import('./types/service').ServiceInfo>;
+  uninstallService: (
+    serviceId: string,
+    removeVolumes?: boolean
+  ) => Promise<import('./types/service').ServiceInfo>;
+  startService: (serviceId: string) => Promise<import('./types/service').ServiceInfo>;
+  stopService: (serviceId: string) => Promise<import('./types/service').ServiceInfo>;
+  restartService: (serviceId: string) => Promise<import('./types/service').ServiceInfo>;
+  updateConfig: (
+    serviceId: string,
+    customConfig: import('./types/service').CustomConfig
+  ) => Promise<import('./types/service').ServiceInfo>;
+  downloadCaddyCertificate: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  onInstallProgress: (
+    callback: (serviceId: string, progress: import('./types/service').PullProgress) => void
+  ) => () => void;
 }
 
 interface ProjectsContext {
-  getAllProjects: () => Promise<unknown>;
-  getProject: (projectId: string) => Promise<unknown>;
-  createProject: (input: unknown) => Promise<unknown>;
-  updateProject: (input: unknown) => Promise<unknown>;
+  getAllProjects: () => Promise<import('./types/project').Project[]>;
+  getProject: (projectId: string) => Promise<import('./types/project').Project | null>;
+  createProject: (
+    input: import('./types/project').CreateProjectInput
+  ) => Promise<import('./types/project').Project>;
+  updateProject: (
+    input: import('./types/project').UpdateProjectInput
+  ) => Promise<import('./types/project').Project>;
   deleteProject: (
     projectId: string,
     removeVolume?: boolean,
     removeFolder?: boolean
-  ) => Promise<unknown>;
-  reorderProjects: (projectIds: string[]) => Promise<unknown>;
-  copyProjectToVolume: (projectId: string) => Promise<unknown>;
-  selectFolder: (defaultPath?: string) => Promise<unknown>;
-  detectLaravel: (folderPath: string) => Promise<unknown>;
-  devcontainerExists: (folderPath: string) => Promise<unknown>;
+  ) => Promise<void>;
+  reorderProjects: (projectIds: string[]) => Promise<void>;
+  copyProjectToVolume: (projectId: string) => Promise<void>;
+  selectFolder: (defaultPath?: string) => Promise<import('./types/project').FolderSelectionResult>;
+  detectLaravel: (folderPath: string) => Promise<import('./types/project').LaravelDetectionResult>;
+  devcontainerExists: (folderPath: string) => Promise<boolean>;
   getBatchContainerStatus: (projectIds: string[]) => Promise<
     Array<{
       projectId: string;
@@ -71,7 +86,9 @@ interface ProjectsContext {
     }>
   >;
   discoverPort: (containerName: string) => Promise<number | null>;
-  onCopyProgress: (callback: (projectId: string, progress: unknown) => void) => () => void;
+  onCopyProgress: (
+    callback: (projectId: string, progress: import('./types/project').VolumeCopyProgress) => void
+  ) => () => void;
 }
 
 interface ShellContext {

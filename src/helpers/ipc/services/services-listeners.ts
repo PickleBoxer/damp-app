@@ -7,18 +7,25 @@ import { ipcMain, BrowserWindow } from 'electron';
 import type { ServiceId, InstallOptions, CustomConfig } from '../../../types/service';
 import { serviceStateManager } from '../../../services/state/service-state-manager';
 import * as CHANNELS from './services-channels';
+import { createLogger } from '../../../utils/logger';
+
+const logger = createLogger('services-ipc');
+
+// Prevent duplicate listener registration
+let listenersAdded = false;
 
 /**
  * Add service event listeners
  */
 export function addServicesListeners(mainWindow: BrowserWindow): void {
-  // Initialize service manager on first use
-  let initialized = false;
+  if (listenersAdded) return;
+  listenersAdded = true;
+
+  // Initialize service manager on first use - fix race condition
+  let initPromise: Promise<void> | null = null;
   const ensureInitialized = async () => {
-    if (!initialized) {
-      await serviceStateManager.initialize();
-      initialized = true;
-    }
+    initPromise ??= serviceStateManager.initialize();
+    await initPromise;
   };
 
   /**
@@ -29,7 +36,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await serviceStateManager.getAllServices();
     } catch (error) {
-      console.error('Failed to get all services:', error);
+      logger.error('Failed to get all services', { error });
       throw error;
     }
   });
@@ -42,7 +49,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await serviceStateManager.getService(serviceId);
     } catch (error) {
-      console.error(`Failed to get service ${serviceId}:`, error);
+      logger.error('Failed to get service', { serviceId, error });
       throw error;
     }
   });
@@ -58,12 +65,14 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
 
         // Progress callback to send updates to renderer
         const onProgress = (progress: unknown) => {
-          mainWindow.webContents.send(CHANNELS.SERVICES_INSTALL_PROGRESS, serviceId, progress);
+          if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send(CHANNELS.SERVICES_INSTALL_PROGRESS, serviceId, progress);
+          }
         };
 
         return await serviceStateManager.installService(serviceId, options, onProgress);
       } catch (error) {
-        console.error(`Failed to install service ${serviceId}:`, error);
+        logger.error('Failed to install service', { serviceId, error });
         throw error;
       }
     }
@@ -93,7 +102,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await serviceStateManager.startService(serviceId);
     } catch (error) {
-      console.error(`Failed to start service ${serviceId}:`, error);
+      logger.error('Failed to start service', { serviceId, error });
       throw error;
     }
   });
@@ -106,7 +115,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await serviceStateManager.stopService(serviceId);
     } catch (error) {
-      console.error(`Failed to stop service ${serviceId}:`, error);
+      logger.error('Failed to stop service', { serviceId, error });
       throw error;
     }
   });
@@ -119,7 +128,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
       return await serviceStateManager.restartService(serviceId);
     } catch (error) {
-      console.error(`Failed to restart service ${serviceId}:`, error);
+      logger.error('Failed to restart service', { serviceId, error });
       throw error;
     }
   });
@@ -175,5 +184,5 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
     }
   });
 
-  console.log('Service IPC listeners registered');
+  logger.info('Service IPC listeners registered');
 }

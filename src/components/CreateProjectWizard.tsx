@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -74,8 +71,8 @@ function validateSiteName(name: string): {
 function sanitizeProjectName(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/(?:^-+)|(?:-+$)/g, ''); // Remove leading/trailing hyphens
 }
 
 interface CreateProjectWizardProps {
@@ -180,47 +177,48 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     phpExtensions: [],
   });
   const [nameError, setNameError] = useState<string | undefined>();
-  const [extensionsExpanded, setExtensionsExpanded] = useState(false);
   const [additionalExpanded, setAdditionalExpanded] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<TerminalLog[]>([]);
   const [showTerminal, setShowTerminal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  // Reset wizard state when dialog closes
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      if (!newOpen) {
+        // Reset all state when closing
+        setStep('type');
+        setFormData({
+          type: ProjectType.BasicPhp,
+          phpVersion: '8.3',
+          phpVariant: 'fpm-apache',
+          nodeVersion: 'none',
+          enableClaudeAi: false,
+          phpExtensions: [],
+        });
+        setNameError(undefined);
+        setAdditionalExpanded(false);
+        setTerminalLogs([]);
+        setShowTerminal(false);
+        setIsCreating(false);
+      }
+      onOpenChange(newOpen);
+    },
+    [onOpenChange]
+  );
+
   // Add keyboard listener to close dialog when creation is finished
   useEffect(() => {
     if (!isCreating && showTerminal && terminalLogs.length > 0) {
-      const handleKeyPress = (e: KeyboardEvent) => {
+      const handleKeyPress = () => {
         // Close on any key press
         handleOpenChange(false);
       };
 
-      window.addEventListener('keydown', handleKeyPress);
-      return () => window.removeEventListener('keydown', handleKeyPress);
+      globalThis.addEventListener('keydown', handleKeyPress);
+      return () => globalThis.removeEventListener('keydown', handleKeyPress);
     }
-  }, [isCreating, showTerminal, terminalLogs.length]);
-
-  // Reset wizard state when dialog closes
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      // Reset all state when closing
-      setStep('type');
-      setFormData({
-        type: ProjectType.BasicPhp,
-        phpVersion: '8.3',
-        phpVariant: 'fpm-apache',
-        nodeVersion: 'none',
-        enableClaudeAi: false,
-        phpExtensions: [],
-      });
-      setNameError(undefined);
-      setExtensionsExpanded(false);
-      setAdditionalExpanded(false);
-      setTerminalLogs([]);
-      setShowTerminal(false);
-      setIsCreating(false);
-    }
-    onOpenChange(newOpen);
-  };
+  }, [isCreating, showTerminal, terminalLogs.length, handleOpenChange]);
 
   const createProjectMutation = useCreateProject();
 
@@ -248,7 +246,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
 
         // For existing projects, extract folder name from path
         if (prev.type === ProjectType.Existing && result.path) {
-          const folderName = result.path.split(/[\\\/]/).pop() || '';
+          const folderName = result.path.split(/[\\/]/).pop() || '';
           newData.name = folderName;
 
           // Clear any validation errors since we have a valid folder name
@@ -306,8 +304,6 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       },
     ]);
 
-    let result: any = null;
-
     try {
       // Add initial steps
       setTerminalLogs(prev => [
@@ -329,7 +325,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         },
       ]);
 
-      result = await createProjectMutation.mutateAsync({
+      await createProjectMutation.mutateAsync({
         name: formData.name,
         path: formData.path,
         type: formData.type || ProjectType.BasicPhp,
@@ -875,10 +871,13 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                         </span>
                         {formData.type !== ProjectType.Existing && ' (folder name)'}
                       </>
-                    ) : formData.type === ProjectType.Existing ? (
-                      'Select project folder first'
                     ) : (
-                      'This will become the domain and folder name'
+                      (() => {
+                        if (formData.type === ProjectType.Existing) {
+                          return 'Select project folder first';
+                        }
+                        return 'This will become the domain and folder name';
+                      })()
                     )}
                   </p>
                 )}
@@ -923,11 +922,15 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                         PHP Version
                       </Label>
                       <p className="text-muted-foreground text-xs">
-                        {formData.type === ProjectType.Laravel
-                          ? 'Laravel requires PHP 8.2 or higher'
-                          : formData.phpVariant === 'frankenphp'
-                            ? 'FrankenPHP requires PHP 8.3 or higher'
-                            : 'Select the PHP runtime version for your project'}
+                        {(() => {
+                          if (formData.type === ProjectType.Laravel) {
+                            return 'Laravel requires PHP 8.2 or higher';
+                          }
+                          if (formData.phpVariant === 'frankenphp') {
+                            return 'FrankenPHP requires PHP 8.3 or higher';
+                          }
+                          return 'Select the PHP runtime version for your project';
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -937,7 +940,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                       setFormData(prev => ({ ...prev, phpVersion: value as PhpVersion }))
                     }
                   >
-                    <SelectTrigger className="w-[80px] rounded-md">
+                    <SelectTrigger className="w-20 rounded-md">
                       <SelectValue placeholder="Select version" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -981,7 +984,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                       setFormData(prev => ({ ...prev, nodeVersion: value as NodeVersion }))
                     }
                   >
-                    <SelectTrigger className="w-[80px] rounded-md">
+                    <SelectTrigger className="w-20 rounded-md">
                       <SelectValue placeholder="Select version" />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
@@ -1026,7 +1029,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         return (
           <div className="space-y-4">
             {/* PHP Variant Selection */}
-            <div className="rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 p-4 dark:border-purple-800 dark:from-purple-950/30 dark:to-violet-950/30">
+            <div className="rounded-lg border border-purple-200 bg-linear-to-r from-purple-50 to-violet-50 p-4 dark:border-purple-800 dark:from-purple-950/30 dark:to-violet-950/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-md bg-purple-600/10">
@@ -1075,7 +1078,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
             </div>
 
             {/* Additional Extensions */}
-            <div className="rounded-lg border bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-4 dark:from-blue-950/20 dark:to-indigo-950/20">
+            <div className="rounded-lg border bg-linear-to-br from-blue-50/50 to-indigo-50/50 p-4 dark:from-blue-950/20 dark:to-indigo-950/20">
               <Collapsible open={additionalExpanded} onOpenChange={setAdditionalExpanded}>
                 <CollapsibleTrigger className="flex w-full items-start justify-between text-sm">
                   <div className="flex items-start gap-3">
