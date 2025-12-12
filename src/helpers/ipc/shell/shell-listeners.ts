@@ -7,7 +7,6 @@ import { projectStorage } from '../../../services/projects/project-storage';
 import type { ShellOperationResult, ShellSettings } from './shell-context';
 import {
   SHELL_OPEN_FOLDER_CHANNEL,
-  SHELL_OPEN_BROWSER_CHANNEL,
   SHELL_OPEN_EDITOR_CHANNEL,
   SHELL_OPEN_TERMINAL_CHANNEL,
   SHELL_OPEN_HOME_TERMINAL_CHANNEL,
@@ -101,14 +100,6 @@ function getTinkerCommand(path: string, settings?: ShellSettings): string {
   return `x-terminal-emulator --working-directory="${path}" -e "bash -c 'php artisan tinker; exec bash'"`;
 }
 
-/**
- * Get default browser command
- * Uses system default browser via Electron shell
- */
-async function openInBrowser(url: string): Promise<void> {
-  await shell.openExternal(url);
-}
-
 export function addShellEventListeners() {
   /**
    * Open project folder in file manager
@@ -126,25 +117,6 @@ export function addShellEventListeners() {
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to open folder';
         console.error('Shell open folder error:', message);
-        return { success: false, error: message };
-      }
-    }
-  );
-
-  /**
-   * Open project domain in browser
-   */
-  ipcMain.handle(
-    SHELL_OPEN_BROWSER_CHANNEL,
-    async (_event, projectId: string): Promise<ShellOperationResult> => {
-      try {
-        const project = getValidatedProject(projectId);
-        const url = project.domain.startsWith('http') ? project.domain : `http://${project.domain}`;
-        await openInBrowser(url);
-        return { success: true };
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to open browser';
-        console.error('Shell open browser error:', message);
         return { success: false, error: message };
       }
     }

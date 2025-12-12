@@ -8,10 +8,6 @@ export async function openProjectFolder(projectId: string) {
   return await window.shell.openFolder(projectId);
 }
 
-export async function openProjectInBrowser(projectId: string) {
-  return await window.shell.openBrowser(projectId);
-}
-
 export async function openProjectInEditor(projectId: string) {
   const settings = getSettings();
   return await window.shell.openEditor(projectId, {

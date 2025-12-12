@@ -76,7 +76,6 @@ interface ProjectsContext {
 
 interface ShellContext {
   openFolder: (projectId: string) => Promise<{ success: boolean; error?: string }>;
-  openBrowser: (projectId: string) => Promise<{ success: boolean; error?: string }>;
   openEditor: (
     projectId: string,
     settings?: { defaultEditor: string; defaultTerminal: string }

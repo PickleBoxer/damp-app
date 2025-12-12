@@ -46,7 +46,6 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
   openProjectFolder,
-  openProjectInBrowser,
   openProjectInEditor,
   openProjectTerminal,
   openProjectTinker,
@@ -121,11 +120,20 @@ function ProjectDetailPage() {
   };
 
   const handleOpenBrowser = async () => {
-    const result = await openProjectInBrowser(project.id);
-    if (result.success) {
-      toast.success('Opening in browser...');
-    } else {
-      toast.error(result.error || 'Failed to open browser');
+    const url = project.domain.startsWith('http') ? project.domain : `http://${project.domain}`;
+    try {
+      const result = await window.electronWindow.openExternal(url);
+      if (result.success) {
+        toast.success('Opening in browser...');
+      } else {
+        toast.error('Failed to open browser', {
+          description: result.error || 'An unknown error occurred',
+        });
+      }
+    } catch (error) {
+      toast.error('Failed to open browser', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
     }
   };
 
