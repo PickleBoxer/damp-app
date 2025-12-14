@@ -44,13 +44,6 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
   },
-  "[markdown]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit"
-    }
-  },
 
   // Prettier specific settings
   "prettier.requireConfig": true,
@@ -65,5 +58,13 @@
   },
   "search.exclude": {
     "**/routeTree.gen.ts": true
+  },
+
+  // Tailwind CSS support
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
   }
 }

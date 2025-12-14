@@ -1,0 +1,138 @@
+import { app, BrowserWindow } from 'electron';
+import registerListeners from './ipc/listeners-register';
+// "electron-squirrel-startup" seems broken when packaging with vite
+import started from 'electron-squirrel-startup';
+import path from 'node:path';
+import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
+import { TrayMenu } from './electron/TrayMenu';
+import { ngrokManager } from './services/ngrok/ngrok-manager';
+import { createLogger } from '@main/utils/logger';
+
+const logger = createLogger('main');
+
+// Handle creating/removing shortcuts on Windows when installing/uninstalling.
+if (started) {
+  app.quit();
+}
+
+const inDevelopment = process.env.NODE_ENV === 'development';
+
+function createWindow() {
+  const preload = path.join(__dirname, 'preload.js');
+  // Create the browser window.
+  const mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    show: false, // Do not show immediately
+    webPreferences: {
+      devTools: inDevelopment,
+      contextIsolation: true,
+      nodeIntegration: false,
+      nodeIntegrationInSubFrames: false,
+      webviewTag: true,
+      preload: preload,
+    },
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    trafficLightPosition: process.platform === 'darwin' ? { x: 5, y: 5 } : undefined,
+  });
+  registerListeners(mainWindow);
+
+  // and load the index.html of the app.
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+  }
+
+  // Minimize the window initially
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.minimize(); // Or use mainWindow.show() if you want to show it
+  });
+
+  // Open the DevTools.
+  if (inDevelopment) {
+    mainWindow.webContents.openDevTools();
+  }
+}
+
+// This method will be called when Electron has finished
+// initialization and is ready to create browser windows.
+// Some APIs can only be used after this event occurs.
+// app.on('ready', createWindow);
+// The Tray object can only be instantiated after the 'ready' event is fired
+
+app.whenReady().then(async () => {
+  if (inDevelopment) {
+    try {
+      await installExtension(REACT_DEVELOPER_TOOLS);
+      logger.info('React DevTools loaded');
+    } catch (err) {
+      logger.error('Failed to load React DevTools', { error: err });
+    }
+  }
+
+  createWindow();
+
+  // Use TrayMenu class for tray setup
+  void new TrayMenu();
+  logger.info('Tray menu initialized');
+
+  // Setup automatic cleanup for stopped tunnels (every 60 seconds, only when needed)
+  const cleanupInterval = setInterval(() => {
+    // Only run cleanup if there are tracked tunnels
+    if (ngrokManager.hasActiveTunnels()) {
+      ngrokManager.cleanupStoppedTunnels().catch((error: unknown) => {
+        logger.error('Failed to cleanup stopped tunnels', { error });
+      });
+    }
+  }, 60000);
+
+  // Clear interval on quit
+  app.on('before-quit', () => {
+    clearInterval(cleanupInterval);
+  });
+});
+
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+// Cleanup ngrok tunnels before app quits
+app.on('before-quit', event => {
+  event.preventDefault();
+  logger.info('Application quitting, cleaning up ngrok tunnels...');
+
+  // Set a timeout to force quit if cleanup takes too long
+  const forceQuitTimeout = setTimeout(() => {
+    logger.error('Ngrok cleanup timed out, forcing quit');
+    app.exit(1);
+  }, 5000);
+
+  ngrokManager
+    .stopAllTunnels()
+    .then(() => {
+      logger.info('Ngrok tunnels cleaned up successfully');
+    })
+    .catch((error: unknown) => {
+      logger.error('Failed to cleanup ngrok tunnels on quit', { error });
+    })
+    .finally(() => {
+      clearTimeout(forceQuitTimeout);
+      app.exit(0);
+    });
+});
+
+// On macOS, re-create a window when dock icon is clicked and there are no other windows open
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
+});
+
+// In this file you can include the rest of your app's specific main process
+// code. You can also put them in separate files and import them here.
