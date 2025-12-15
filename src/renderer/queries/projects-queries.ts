@@ -3,6 +3,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
 import type {
   Project,
@@ -13,6 +14,7 @@ import type {
 
 // Direct access to IPC API exposed via preload script
 const projectsApi = (globalThis as unknown as Window).projects;
+const dockerEventsApi = (globalThis as unknown as Window).dockerEvents;
 
 /**
  * Query keys for projects
@@ -64,12 +66,13 @@ export function useProjects() {
  *
  * This is a major performance optimization that reduces IPC overhead:
  * - Instead of N IPC calls (one per project), makes only 1 batch IPC call
- * - Reduces polling frequency from N×interval to 1×interval
+ * - Docker events provide real-time updates (primary mechanism)
+ * - Polling at 60s serves as fallback safety net
  * - Automatically pauses polling when page is not visible
  *
  * @param projectIds - Array of project IDs to check status for
  * @param options.enabled - Whether to actively fetch status (default: true)
- * @param options.pollingInterval - How often to poll in ms (default: 10000, 0 = no polling)
+ * @param options.pollingInterval - How often to poll in ms (default: 60000, 0 = no polling)
  */
 export function useProjectsBatchStatus(
   projectIds: string[],
@@ -82,7 +85,7 @@ export function useProjectsBatchStatus(
       return await projectsApi.getBatchContainerStatus(projectIds);
     },
     enabled: options?.enabled !== false && projectIds.length > 0,
-    refetchInterval: options?.pollingInterval ?? 10000, // Poll every 10 seconds by default
+    refetchInterval: options?.pollingInterval ?? 60000, // Events are primary, polling is fallback safety net
     staleTime: 5000, // Consider data fresh for 5 seconds
     gcTime: 60000, // Keep in cache for 60 seconds
     refetchOnWindowFocus: true, // Refetch when returning to app
@@ -251,4 +254,39 @@ export function useReorderProjects() {
  */
 export async function selectFolder(defaultPath?: string): Promise<FolderSelectionResult> {
   return await projectsApi.selectFolder(defaultPath);
+}
+
+/**
+ * Hook to subscribe to Docker container events and invalidate affected project queries
+ *
+ * This replaces constant polling with event-driven updates:
+ * - Listens to real-time container start/stop/die/health events from Docker daemon
+ * - Invalidates batch status queries when a relevant container event occurs
+ * - Enables reducing polling interval from 10s to 30s (or disabling it entirely)
+ * - Non-blocking: events trigger background refetches via React Query
+ *
+ * Usage: Call once at the app root level or in ProjectsPage layout
+ */
+export function useDockerContainerEvents() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Subscribe to Docker container events
+    const unsubscribe = dockerEventsApi.onEvent(event => {
+      // Log event for debugging
+      console.debug('[Docker Event]', event.action, event.containerName);
+
+      // Invalidate all batch status queries
+      // This will trigger refetches for any active queries watching container status
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.batchStatus([]), // Invalidate all batch status queries
+        refetchType: 'active', // Only refetch queries that are currently active (visible on screen)
+      });
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      unsubscribe();
+    };
+  }, [queryClient]);
 }

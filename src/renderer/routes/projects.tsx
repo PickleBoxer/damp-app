@@ -1,5 +1,14 @@
-import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatches,
+  ErrorComponent,
+  useRouter,
+  type ErrorComponentProps,
+} from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
+import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { Plus, GripVertical, Loader2 } from 'lucide-react';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import { FaLink } from 'react-icons/fa6';
@@ -12,9 +21,10 @@ import {
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
 import {
-  useProjects,
+  projectsQueryOptions,
   useReorderProjects,
   useProjectsBatchStatus,
+  useDockerContainerEvents,
 } from '@renderer/queries/projects-queries';
 import { useActiveSyncs } from '@renderer/queries/sync-queries';
 import { useDocumentVisibility } from '@renderer/hooks/use-document-visibility';
@@ -123,7 +133,12 @@ function ProjectsPage() {
     : undefined;
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
-  const { data: projects, isLoading: isProjectsLoading } = useProjects();
+  // Use suspense query - data is guaranteed by loader
+  const { data: projects } = useSuspenseQuery(projectsQueryOptions());
+
+  // Subscribe to Docker container events for real-time status updates
+  useDockerContainerEvents();
+
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
   const isVisible = useDocumentVisibility();
@@ -135,10 +150,10 @@ function ProjectsPage() {
   const projectIds = useMemo(() => projects?.map(p => p.id) || [], [projects]);
 
   // Fetch all container statuses in a single batch call (OPTIMIZED)
-  // Only polls when page is visible to save resources
+  // Docker events provide real-time updates, polling at 60s is fallback
   const { data: batchStatus, isLoading: isStatusLoading } = useProjectsBatchStatus(projectIds, {
     enabled: projectIds.length > 0 && isVisible,
-    pollingInterval: isVisible ? 10000 : 0, // Only poll when visible, 0 disables polling
+    pollingInterval: isVisible ? 60000 : 0, // Events are primary, 60s polling is fallback
   });
 
   // Create a map for quick lookup of status by project ID
@@ -221,25 +236,8 @@ function ProjectsPage() {
 
             <ScrollArea className="h-0 flex-1 [&_[data-radix-scroll-area-viewport]>:first-child]:block!">
               <div className="flex w-full flex-1 flex-col">
-                {/* Loading State */}
-                {isProjectsLoading && (
-                  <>
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="border-b p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-muted h-10 w-10 animate-pulse" />
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="bg-muted h-4 w-24 animate-pulse rounded" />
-                            <div className="bg-muted h-3 w-32 animate-pulse rounded" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-
                 {/* Sortable Project List */}
-                {!isProjectsLoading && projects && projects.length > 0 && (
+                {projects && projects.length > 0 && (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -287,7 +285,33 @@ function ProjectsPage() {
   );
 }
 
+function ProjectsErrorComponent({ error }: Readonly<ErrorComponentProps>) {
+  const router = useRouter();
+  const queryErrorResetBoundary = useQueryErrorResetBoundary();
+
+  return (
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="space-y-4 text-center">
+        <p className="text-destructive text-sm font-medium">Failed to load projects</p>
+        <p className="text-muted-foreground text-xs">{error.message}</p>
+        <Button
+          onClick={() => {
+            queryErrorResetBoundary.reset();
+            router.invalidate();
+          }}
+          variant="outline"
+          size="sm"
+        >
+          Retry
+        </Button>
+        <ErrorComponent error={error} />
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute('/projects')({
-  // No loader - projects load in background with skeleton UI
+  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(projectsQueryOptions()),
+  errorComponent: ProjectsErrorComponent,
   component: ProjectsPage,
 });

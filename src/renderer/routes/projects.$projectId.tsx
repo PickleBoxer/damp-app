@@ -1,4 +1,11 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  useNavigate,
+  ErrorComponent,
+  useRouter,
+  type ErrorComponentProps,
+} from '@tanstack/react-router';
+import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Button } from '@renderer/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
@@ -7,7 +14,7 @@ import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
 import { IoInformationCircle, IoWarning } from 'react-icons/io5';
 import { TbWorld } from 'react-icons/tb';
 import {
-  useProjects,
+  projectQueryOptions,
   useDeleteProject,
   useProjectsBatchStatus,
   useProjectPort,
@@ -41,14 +48,13 @@ import {
   Copy,
   ExternalLink,
 } from 'lucide-react';
-import { VscDebugStop, VscDebugStart } from 'react-icons/vsc';
+import { VscDebugStop, VscDebugStart, VscTerminal, VscVscode } from 'react-icons/vsc';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@renderer/components/ui/accordion';
-import { VscTerminal, VscVscode } from 'react-icons/vsc';
 import { Badge } from '@renderer/components/ui/badge';
 import { toast } from 'sonner';
 import {
@@ -73,8 +79,10 @@ import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
 function ProjectDetailPage() {
   const navigate = useNavigate();
   const { projectId } = Route.useParams();
-  const { data: projects, isLoading, error } = useProjects();
-  const project = projects?.find(p => p.id === projectId);
+
+  // Use suspense query - data is guaranteed by loader
+  const { data: project } = useSuspenseQuery(projectQueryOptions(projectId));
+
   const deleteProjectMutation = useDeleteProject();
   const syncFromVolumeMutation = useSyncFromVolume();
   const syncToVolumeMutation = useSyncToVolume();
@@ -97,56 +105,19 @@ function ProjectDetailPage() {
   const { data: ngrokStatusData } = useNgrokStatus(projectId, { enabled: isVisible });
 
   // Use batch status (same as list view) - non-blocking, shares cache
+  // Docker events provide real-time updates, polling at 60s is fallback
   const { data: batchStatus } = useProjectsBatchStatus([projectId], {
-    enabled: isVisible && !!project,
-    pollingInterval: isVisible && project ? 10000 : 0, // 0 disables polling when not visible
+    enabled: isVisible,
+    pollingInterval: isVisible ? 60000 : 0, // Events are primary, 60s polling is fallback
   });
 
   // Lazy load port discovery - only when container is running (OPTIMIZED)
   // This is the ONLY potentially slow operation, but it's lazy and non-blocking
   const { data: forwardedLocalhostPort } = useProjectPort(projectId, {
-    enabled: !!project && (batchStatus?.[0]?.running || false), // Only discover port when container is actually running
+    enabled: batchStatus?.[0]?.running || false, // Only discover port when container is actually running
   });
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-          <p className="text-muted-foreground text-sm">Loading project...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div className="text-center">
-          <p className="text-destructive text-sm font-medium">Failed to load project</p>
-          <p className="text-muted-foreground mt-1 text-xs">{error.message}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Not found state
-  if (!project) {
-    return (
-      <div className="flex h-full items-center justify-center p-8">
-        <div className="text-center">
-          <p className="text-sm font-medium">Project not found</p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Project with ID "{projectId}" does not exist
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Derived state (after hooks)
+  // Derived state
   const isDockerRunning = dockerStatus?.isRunning ?? false;
   const ngrokStatus = ngrokStatusData?.status || 'stopped';
   const ngrokPublicUrl = ngrokStatusData?.publicUrl;
@@ -942,6 +913,34 @@ function ProjectDetailPage() {
   );
 }
 
+function ProjectDetailErrorComponent({ error }: Readonly<ErrorComponentProps>) {
+  const router = useRouter();
+  const queryErrorResetBoundary = useQueryErrorResetBoundary();
+
+  return (
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="space-y-4 text-center">
+        <p className="text-destructive text-sm font-medium">Failed to load project</p>
+        <p className="text-muted-foreground text-xs">{error.message}</p>
+        <Button
+          onClick={() => {
+            queryErrorResetBoundary.reset();
+            router.invalidate();
+          }}
+          variant="outline"
+          size="sm"
+        >
+          Retry
+        </Button>
+        <ErrorComponent error={error} />
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute('/projects/$projectId')({
+  loader: ({ context: { queryClient }, params: { projectId } }) =>
+    queryClient.ensureQueryData(projectQueryOptions(projectId)),
+  errorComponent: ProjectDetailErrorComponent,
   component: ProjectDetailPage,
 });

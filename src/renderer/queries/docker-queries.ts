@@ -24,7 +24,6 @@ export function useDockerStatus() {
     queryFn: () => dockerApi.getStatus(),
     refetchInterval: 5000, // Poll every 5 seconds
     staleTime: 1000,
-    refetchOnWindowFocus: true,
   });
 }
 
@@ -37,8 +36,5 @@ export function useDockerInfo() {
     queryKey: dockerKeys.info(),
     queryFn: () => dockerApi.getInfo(),
     refetchInterval: 15000, // Poll every 15 seconds
-    staleTime: 10000, // Cache for 10 seconds
-    refetchOnWindowFocus: true,
-    retry: 1, // Only retry once on failure
   });
 }

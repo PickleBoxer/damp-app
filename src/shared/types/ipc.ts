@@ -55,6 +55,25 @@ export interface DockerContext {
 }
 
 /**
+ * Docker container event
+ */
+export interface DockerContainerEvent {
+  containerId: string;
+  containerName: string;
+  action: 'start' | 'stop' | 'die' | 'health_status' | 'kill' | 'pause' | 'unpause' | 'restart';
+  timestamp: number;
+}
+
+/**
+ * Docker events monitoring context
+ */
+export interface DockerEventsContext {
+  start: () => Promise<{ success: boolean; error?: string }>;
+  stop: () => Promise<{ success: boolean }>;
+  onEvent: (callback: (event: DockerContainerEvent) => void) => () => void;
+}
+
+/**
  * Service lifecycle management context
  */
 export interface ServicesContext {

@@ -12,6 +12,7 @@ declare interface Window {
   themeMode: import('./types/ipc').ThemeModeContext;
   electronWindow: import('./types/ipc').ElectronWindow;
   docker: import('./types/ipc').DockerContext;
+  dockerEvents: import('./types/ipc').DockerEventsContext;
   services: import('./types/ipc').ServicesContext;
   projects: import('./types/ipc').ProjectsContext;
   shell: import('./types/ipc').ShellContext;

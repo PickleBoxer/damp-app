@@ -153,7 +153,7 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
         {/* Log Output */}
         <ScrollArea
           ref={scrollAreaRef}
-          className="flex-1 bg-black/95 font-mono text-xs"
+          className="h-0 flex-1 bg-black/95 font-mono text-xs"
           onScrollCapture={handleScrollChange}
         >
           <div ref={scrollViewportRef} className="p-4">
