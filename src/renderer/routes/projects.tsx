@@ -15,8 +15,8 @@ import {
   useProjects,
   useReorderProjects,
   useProjectsBatchStatus,
-} from '@renderer/queries/projects/projects-queries';
-import { useActiveSyncs } from '@renderer/queries/sync/sync-queries';
+} from '@renderer/queries/projects-queries';
+import { useActiveSyncs } from '@renderer/queries/sync-queries';
 import { useDocumentVisibility } from '@renderer/hooks/use-document-visibility';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';

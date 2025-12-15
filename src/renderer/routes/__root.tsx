@@ -1,16 +1,24 @@
-import { Outlet, createRootRouteWithContext } from '@tanstack/react-router';
+import { Outlet, createRootRouteWithContext, Link } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import type { RouterContext } from '@renderer/utils/routes';
-import { useSyncProgress } from '@renderer/queries/sync/sync-queries';
+import { useSyncProgress } from '@renderer/queries/sync-queries';
 import DragWindowRegion from '@renderer/components/DragWindowRegion';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+} from '@renderer/components/ui/empty';
+import { Button } from '@renderer/components/ui/button';
 import Sidebar from '@renderer/components/layout/Sidebar';
 import Footer from '@renderer/components/layout/Footer';
 import CaddyStatusBanner from '@renderer/components/CaddyStatusBanner';
 import { Toaster } from 'sonner';
 import { useTheme } from '@renderer/hooks/use-theme';
+import type { QueryClient } from '@tanstack/react-query';
 
-function Root() {
+function RootComponent() {
   // Register sync progress listener once at app level
   useSyncProgress();
   const { resolvedTheme } = useTheme();
@@ -50,6 +58,21 @@ function Root() {
   );
 }
 
-export const Route = createRootRouteWithContext<RouterContext>()({
-  component: Root,
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient;
+}>()({
+  component: RootComponent,
+  notFoundComponent: () => (
+    <Empty>
+      <EmptyHeader>
+        <EmptyTitle>Page Not Found</EmptyTitle>
+        <EmptyDescription>The page you're looking for doesn't exist.</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Link to="/">
+          <Button>Go Home</Button>
+        </Link>
+      </EmptyContent>
+    </Empty>
+  ),
 });

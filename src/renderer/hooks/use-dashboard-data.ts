@@ -4,8 +4,8 @@
  */
 
 import { useMemo } from 'react';
-import { useServices } from '@renderer/queries/services/services-queries';
-import { useProjects, useProjectsBatchStatus } from '@renderer/queries/projects/projects-queries';
+import { useServices } from '@renderer/queries/services-queries';
+import { useProjects, useProjectsBatchStatus } from '@renderer/queries/projects-queries';
 import { useDocumentVisibility } from './use-document-visibility';
 import type { ServiceInfo } from '@shared/types/service';
 import type { Project } from '@shared/types/project';

@@ -1,11 +1,11 @@
 import { SiDocker } from 'react-icons/si';
-import { useDockerStatus, useDockerInfo } from '@renderer/queries/docker/docker-queries';
-import { useProjects } from '@renderer/queries/projects/projects-queries';
+import { useDockerStatus, useDockerInfo } from '@renderer/queries/docker-queries';
+import { useProjects } from '@renderer/queries/projects-queries';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { Cpu, MemoryStick, RefreshCw, ArrowDownToLine, ArrowUpFromLine, Globe } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useActiveSyncs } from '@renderer/queries/sync/sync-queries';
-import { useActiveNgrokTunnels } from '@renderer/queries/ngrok/ngrok-queries';
+import { useActiveSyncs } from '@renderer/queries/sync-queries';
+import { useActiveNgrokTunnels } from '@renderer/queries/ngrok-queries';
 import { useNavigate } from '@tanstack/react-router';
 
 /**

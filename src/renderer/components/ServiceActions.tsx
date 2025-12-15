@@ -9,8 +9,8 @@ import {
   useStopService,
   useRestartService,
   useUninstallService,
-} from '@renderer/queries/services/services-queries';
-import { useDockerStatus } from '@renderer/queries/docker/docker-queries';
+} from '@renderer/queries/services-queries';
+import { useDockerStatus } from '@renderer/queries/docker-queries';
 
 interface ServiceActionsProps {
   service: ServiceInfo;

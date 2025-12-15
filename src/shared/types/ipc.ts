@@ -170,6 +170,13 @@ export interface AppContext {
 }
 
 /**
+ * Sync status update payload
+ */
+export interface SyncStatus {
+  status: 'started' | 'completed' | 'failed';
+}
+
+/**
  * Volume synchronization context
  */
 export interface SyncContext {
@@ -182,11 +189,7 @@ export interface SyncContext {
     options?: { includeNodeModules?: boolean; includeVendor?: boolean }
   ) => Promise<{ success: boolean; error?: string }>;
   onSyncProgress: (
-    callback: (
-      projectId: string,
-      direction: 'to' | 'from',
-      progress: { status: 'started' | 'completed' | 'failed' }
-    ) => void
+    callback: (projectId: string, direction: 'to' | 'from', progress: SyncStatus) => void
   ) => () => void;
 }
 

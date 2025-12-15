@@ -4,8 +4,12 @@
 
 import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { Project, CreateProjectInput, UpdateProjectInput } from '@shared/types/project';
-import { selectFolder, subscribeToCopyProgress } from './projects-helpers';
+import type {
+  Project,
+  CreateProjectInput,
+  UpdateProjectInput,
+  FolderSelectionResult,
+} from '@shared/types/project';
 
 // Direct access to IPC API exposed via preload script
 const projectsApi = (globalThis as unknown as Window).projects;
@@ -242,6 +246,9 @@ export function useReorderProjects() {
 }
 
 /**
- * Re-export value-adding API functions (dialog interactions & event subscriptions)
+ * Open folder selection dialog
+ * Direct access to dialog interaction
  */
-export { selectFolder, subscribeToCopyProgress };
+export async function selectFolder(defaultPath?: string): Promise<FolderSelectionResult> {
+  return await projectsApi.selectFolder(defaultPath);
+}

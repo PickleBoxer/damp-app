@@ -11,18 +11,18 @@ import {
   useDeleteProject,
   useProjectsBatchStatus,
   useProjectPort,
-} from '@renderer/queries/projects/projects-queries';
-import { useDockerStatus } from '@renderer/queries/docker/docker-queries';
+} from '@renderer/queries/projects-queries';
+import { useDockerStatus } from '@renderer/queries/docker-queries';
 import {
   useSyncFromVolume,
   useSyncToVolume,
   useProjectSyncStatus,
-} from '@renderer/queries/sync/sync-queries';
+} from '@renderer/queries/sync-queries';
 import {
   useNgrokStatus,
   useStartNgrokTunnel,
   useStopNgrokTunnel,
-} from '@renderer/queries/ngrok/ngrok-queries';
+} from '@renderer/queries/ngrok-queries';
 import { useDocumentVisibility } from '@renderer/hooks/use-document-visibility';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';

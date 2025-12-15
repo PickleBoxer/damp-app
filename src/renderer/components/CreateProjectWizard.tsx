@@ -24,11 +24,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { useCreateProject } from '@renderer/queries/projects/projects-queries';
 import {
+  useCreateProject,
   selectFolder as selectProjectFolder,
-  subscribeToCopyProgress,
-} from '@renderer/queries/projects/projects-helpers';
+} from '@renderer/queries/projects-queries';
 import {
   ProjectCreationTerminal,
   type TerminalLog,
@@ -207,16 +206,18 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
 
   // Subscribe to copy progress events
   useEffect(() => {
-    const unsubscribe = subscribeToCopyProgress((projectId, progress) => {
-      const log: TerminalLog = {
-        id: `${Date.now()}-${Math.random()}`,
-        timestamp: new Date(),
-        message: progress.message,
-        type: progress.stage === 'complete' ? 'success' : 'progress',
-        stage: progress.stage,
-      };
-      setTerminalLogs(prev => [...prev, log]);
-    });
+    const unsubscribe = (globalThis as unknown as Window).projects.onCopyProgress(
+      (projectId, progress) => {
+        const log: TerminalLog = {
+          id: `${Date.now()}-${Math.random()}`,
+          timestamp: new Date(),
+          message: progress.message,
+          type: progress.stage === 'complete' ? 'success' : 'progress',
+          stage: progress.stage,
+        };
+        setTerminalLogs(prev => [...prev, log]);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -694,7 +695,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                     <Switch
                       id="use-volt"
                       checked={formData.laravelOptions?.useVolt || false}
-                      onCheckedChange={checked =>
+                      onCheckedChange={(checked: boolean) =>
                         setFormData(prev => ({
                           ...prev,
                           laravelOptions: {
@@ -796,7 +797,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   <Switch
                     id="install-boost"
                     checked={formData.laravelOptions?.installBoost || false}
-                    onCheckedChange={checked =>
+                    onCheckedChange={(checked: boolean) =>
                       setFormData(prev => ({
                         ...prev,
                         laravelOptions: {
@@ -947,7 +948,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   </div>
                   <Select
                     value={formData.phpVersion}
-                    onValueChange={value =>
+                    onValueChange={(value: string) =>
                       setFormData(prev => ({ ...prev, phpVersion: value as PhpVersion }))
                     }
                   >
@@ -991,7 +992,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   </div>
                   <Select
                     value={formData.nodeVersion}
-                    onValueChange={value =>
+                    onValueChange={(value: string) =>
                       setFormData(prev => ({ ...prev, nodeVersion: value as NodeVersion }))
                     }
                   >
@@ -1026,7 +1027,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   </div>
                   <Switch
                     checked={formData.enableClaudeAi || false}
-                    onCheckedChange={checked =>
+                    onCheckedChange={(checked: boolean) =>
                       setFormData(prev => ({ ...prev, enableClaudeAi: checked }))
                     }
                   />
@@ -1059,7 +1060,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                 </div>
                 <Select
                   value={formData.phpVariant}
-                  onValueChange={value => {
+                  onValueChange={(value: string) => {
                     setFormData(prev => {
                       const newData = { ...prev, phpVariant: value as PhpVariant };
                       // Auto-upgrade PHP version if FrankenPHP selected and version is < 8.3
@@ -1165,7 +1166,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   type="button"
                   onClick={async () => {
                     try {
-                      await window.electronWindow.openExternal(
+                      await (globalThis as unknown as Window).electronWindow.openExternal(
                         'https://serversideup.net/open-source/docker-php/docs/getting-started'
                       );
                     } catch (error) {

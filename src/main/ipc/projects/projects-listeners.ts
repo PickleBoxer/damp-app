@@ -6,7 +6,11 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import { z } from 'zod';
 import * as https from 'node:https';
-import type { CreateProjectInput, UpdateProjectInput } from '@shared/types/project';
+import type {
+  CreateProjectInput,
+  UpdateProjectInput,
+  VolumeCopyProgress,
+} from '@shared/types/project';
 import { projectStateManager } from '@main/services/projects/project-state-manager';
 import * as CHANNELS from './projects-channels';
 import { getPortScanRange } from '@shared/constants/ports';
@@ -76,7 +80,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
 
       // Progress callback to send updates to renderer
-      const onProgress = (progress: unknown) => {
+      const onProgress = (progress: VolumeCopyProgress) => {
         if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
           mainWindow.webContents.send(CHANNELS.PROJECTS_COPY_PROGRESS, input.name, progress);
         }
@@ -153,7 +157,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       await ensureInitialized();
 
       // Progress callback to send updates to renderer
-      const onProgress = (progress: unknown) => {
+      const onProgress = (progress: VolumeCopyProgress) => {
         if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
           mainWindow.webContents.send(CHANNELS.PROJECTS_COPY_PROGRESS, projectId, progress);
         }

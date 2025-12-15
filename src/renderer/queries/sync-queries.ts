@@ -5,7 +5,6 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
-import { onSyncProgress } from './sync-helpers';
 
 // Direct access to IPC API exposed via preload script
 const syncApi = (globalThis as unknown as Window).sync;
@@ -19,10 +18,6 @@ export interface SyncOptions {
 export interface SyncResult {
   success: boolean;
   error?: string;
-}
-
-export interface SyncStatus {
-  status: 'started' | 'completed' | 'failed';
 }
 
 /**
@@ -162,7 +157,7 @@ export function useSyncProgress() {
 
   useEffect(() => {
     // Setup status listener
-    const cleanup = onSyncProgress((projectId, direction, progress) => {
+    const cleanup = syncApi.onSyncProgress((projectId, direction, progress) => {
       // Update active syncs in cache
       queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
         const newMap = new Map(oldMap || []);

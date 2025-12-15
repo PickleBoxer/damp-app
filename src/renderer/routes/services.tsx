@@ -7,7 +7,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
-import { useServices } from '@renderer/queries/services/services-queries';
+import { useServices } from '@renderer/queries/services-queries';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import type { ServiceType } from '@shared/types/service';

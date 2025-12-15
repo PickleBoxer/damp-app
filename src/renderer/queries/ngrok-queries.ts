@@ -1,11 +1,12 @@
 /**
- * Ngrok React Query hooks
- * Provides hooks for managing ngrok tunnels with React Query
+ * TanStack Query hooks for ngrok tunnel management
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { startNgrokTunnel, stopNgrokTunnel, getNgrokStatus } from './ngrok-helpers';
 import { toast } from 'sonner';
+
+// Direct access to IPC API exposed via preload script
+const ngrokApi = (globalThis as unknown as Window).ngrok;
 
 export type NgrokStatus = 'starting' | 'active' | 'stopped' | 'error';
 
@@ -36,7 +37,7 @@ export function useStartNgrokTunnel() {
       authToken: string;
       region?: string;
     }) => {
-      const result = await startNgrokTunnel(projectId, authToken, region);
+      const result = await ngrokApi.startTunnel(projectId, authToken, region);
       if (!result.success) {
         throw new Error(result.error || 'Failed to start ngrok tunnel');
       }
@@ -85,7 +86,7 @@ export function useStopNgrokTunnel() {
 
   return useMutation({
     mutationFn: async (projectId: string) => {
-      const result = await stopNgrokTunnel(projectId);
+      const result = await ngrokApi.stopTunnel(projectId);
       if (!result.success) {
         throw new Error(result.error || 'Failed to stop ngrok tunnel');
       }
@@ -125,7 +126,7 @@ export function useNgrokStatus(projectId: string, options?: { enabled?: boolean 
   return useQuery({
     queryKey: ngrokKeys.status(projectId),
     queryFn: async () => {
-      const result = await getNgrokStatus(projectId);
+      const result = await ngrokApi.getStatus(projectId);
       if (!result.success) {
         throw new Error(result.error || 'Failed to get ngrok status');
       }
@@ -171,13 +172,13 @@ export function useActiveNgrokTunnels(projectIds: string[]) {
       // Fetch all statuses in parallel (only for projects, Docker will cache state)
       const statusPromises = projectIds.map(async projectId => {
         try {
-          const result = await getNgrokStatus(projectId);
+          const result = await ngrokApi.getStatus(projectId);
           if (result.success && result.data) {
             const status = result.data.status;
             if (status === 'active' || status === 'starting') {
               return {
                 id: projectId,
-                status: status,
+                status: status as NgrokStatus,
                 publicUrl: result.data.publicUrl,
               };
             }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { Button } from '@renderer/components/ui/button';
-import { useService } from '@renderer/queries/services/services-queries';
+import { useService } from '@renderer/queries/services-queries';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 import { HealthBadge } from '@renderer/components/HealthBadge';
 import { useDocumentVisibility } from '@renderer/hooks/use-document-visibility';

@@ -8,8 +8,6 @@ import type { ProjectsContext } from '@shared/types/ipc';
 import type {
   CreateProjectInput,
   UpdateProjectInput,
-  FolderSelectionResult,
-  LaravelDetectionResult,
   VolumeCopyProgress,
 } from '@shared/types/project';
 import * as CHANNELS from './projects-channels';

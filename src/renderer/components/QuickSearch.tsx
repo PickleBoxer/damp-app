@@ -9,8 +9,8 @@ import {
 } from '@renderer/components/ui/dialog';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Kbd } from '@renderer/components/ui/kbd';
-import { useProjects } from '@renderer/queries/projects/projects-queries';
-import { useServices } from '@renderer/queries/services/services-queries';
+import { useProjects } from '@renderer/queries/projects-queries';
+import { useServices } from '@renderer/queries/services-queries';
 import { isMacOS } from '@shared/utils/platform';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 

@@ -25,7 +25,7 @@ import {
 import { Marquee3D } from '@renderer/components/ui/marquee-3d';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import { useDashboardData } from '@renderer/hooks/use-dashboard-data';
-import { useDockerStatus } from '@renderer/queries/docker/docker-queries';
+import { useDockerStatus } from '@renderer/queries/docker-queries';
 import {
   Play,
   Square,
@@ -41,7 +41,7 @@ import {
   useStartService,
   useStopService,
   useInstallService,
-} from '@renderer/queries/services/services-queries';
+} from '@renderer/queries/services-queries';
 import { toast } from 'sonner';
 
 function DashboardPage() {

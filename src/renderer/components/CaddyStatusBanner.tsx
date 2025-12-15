@@ -6,12 +6,8 @@
 import { Button } from '@renderer/components/ui/button';
 import { AlertTriangle, Loader2, Download, Play } from 'lucide-react';
 import { toast } from 'sonner';
-import { useDockerStatus } from '@renderer/queries/docker/docker-queries';
-import {
-  useService,
-  useInstallService,
-  useStartService,
-} from '@renderer/queries/services/services-queries';
+import { useDockerStatus } from '@renderer/queries/docker-queries';
+import { useService, useInstallService, useStartService } from '@renderer/queries/services-queries';
 import { ServiceId } from '@shared/types/service';
 import { useQueryClient } from '@tanstack/react-query';
 
