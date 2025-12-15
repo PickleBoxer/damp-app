@@ -6,7 +6,6 @@
 import { useMemo } from 'react';
 import { useServices } from '@renderer/queries/services-queries';
 import { useProjects, useProjectsBatchStatus } from '@renderer/queries/projects-queries';
-import { useDocumentVisibility } from './use-document-visibility';
 import type { ServiceInfo } from '@shared/types/service';
 import type { Project } from '@shared/types/project';
 
@@ -28,11 +27,9 @@ export interface DashboardData {
  * - Stops polling when page is hidden
  */
 export function useDashboardData(): DashboardData {
-  const isVisible = useDocumentVisibility();
-
-  // Fetch services with visibility-aware polling (non-blocking)
+  // Fetch services with polling (non-blocking)
   const { data: services = [], isLoading: isLoadingServices } = useServices({
-    refetchInterval: isVisible ? 10000 : 0,
+    refetchInterval: 10000,
     staleTime: 5000, // Cache data for 5s to prevent unnecessary refetches
   });
 
@@ -44,12 +41,12 @@ export function useDashboardData(): DashboardData {
   // Extract project IDs for batch status check
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
-  // Batch fetch container status with visibility-aware polling (non-blocking)
+  // Batch fetch container status with polling (non-blocking)
   const { data: batchStatus = [], isLoading: isLoadingBatchStatus } = useProjectsBatchStatus(
     projectIds,
     {
-      enabled: isVisible && projectIds.length > 0,
-      pollingInterval: isVisible ? 10000 : 0,
+      enabled: projectIds.length > 0,
+      pollingInterval: 10000,
       staleTime: 5000,
     }
   );

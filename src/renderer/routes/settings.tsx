@@ -19,6 +19,10 @@ import { toast } from 'sonner';
 import { Globe, Monitor, Sun, Moon, CheckCircle, XCircle } from 'lucide-react';
 import { Input } from '@renderer/components/ui/input';
 
+export const Route = createFileRoute('/settings')({
+  component: SettingsPage,
+});
+
 function SettingsPage() {
   // Validate ngrok auth token format
   const validateNgrokToken = (token: string): boolean => {
@@ -311,7 +315,3 @@ function SettingsPage() {
     </ScrollArea>
   );
 }
-
-export const Route = createFileRoute('/settings')({
-  component: SettingsPage,
-});

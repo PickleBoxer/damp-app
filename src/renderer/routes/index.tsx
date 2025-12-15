@@ -44,6 +44,10 @@ import {
 } from '@renderer/queries/services-queries';
 import { toast } from 'sonner';
 
+export const Route = createFileRoute('/')({
+  component: DashboardPage,
+});
+
 function DashboardPage() {
   const { runningServices, runningProjects, allServices, allProjects } = useDashboardData();
 
@@ -489,7 +493,3 @@ function ServiceStatusCard({
     </Card>
   );
 }
-
-export const Route = createFileRoute('/')({
-  component: DashboardPage,
-});

@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  ErrorComponent,
+  useRouter,
+  type ErrorComponentProps,
+} from '@tanstack/react-router';
 import { Button } from '@renderer/components/ui/button';
-import { useService } from '@renderer/queries/services-queries';
+import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { serviceQueryOptions } from '@renderer/queries/services-queries';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 import { HealthBadge } from '@renderer/components/HealthBadge';
-import { useDocumentVisibility } from '@renderer/hooks/use-document-visibility';
 import ServiceActions from '@renderer/components/ServiceActions';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
@@ -24,6 +29,13 @@ import { Item, ItemContent, ItemTitle, ItemMedia, ItemActions } from '@renderer/
 import { Badge } from '@renderer/components/ui/badge';
 import { Card, CardContent } from '@renderer/components/ui/card';
 import { Separator } from '@renderer/components/ui/separator';
+
+export const Route = createFileRoute('/services/$serviceId')({
+  loader: ({ context: { queryClient }, params: { serviceId } }) =>
+    queryClient.ensureQueryData(serviceQueryOptions(serviceId as ServiceId)),
+  errorComponent: ServiceDetailErrorComponent,
+  component: ServiceDetailPage,
+});
 
 // Helper function to get status text
 function getStatusText(service: ServiceInfo): string {
@@ -540,21 +552,35 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 
 function ServiceDetailPage() {
   const { serviceId } = Route.useParams();
-  const isVisible = useDocumentVisibility();
 
-  // Use polling to keep health status updated (only when tab is visible)
-  const { data: service } = useService(serviceId as ServiceId, {
-    refetchInterval: isVisible ? 3000 : false, // Poll every 3 seconds when visible
-  });
-
-  if (!service) {
-    return null;
-  }
+  // Use suspense query - data is guaranteed by loader
+  const { data: service } = useSuspenseQuery(serviceQueryOptions(serviceId as ServiceId));
 
   // Render service details
   return <ServiceDetails service={service} />;
 }
 
-export const Route = createFileRoute('/services/$serviceId')({
-  component: ServiceDetailPage,
-});
+function ServiceDetailErrorComponent({ error }: Readonly<ErrorComponentProps>) {
+  const router = useRouter();
+  const queryErrorResetBoundary = useQueryErrorResetBoundary();
+
+  return (
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="space-y-4 text-center">
+        <p className="text-destructive text-sm font-medium">Failed to load service</p>
+        <p className="text-muted-foreground text-xs">{error.message}</p>
+        <Button
+          onClick={() => {
+            queryErrorResetBoundary.reset();
+            router.invalidate();
+          }}
+          variant="outline"
+          size="sm"
+        >
+          Retry
+        </Button>
+        <ErrorComponent error={error} />
+      </div>
+    </div>
+  );
+}

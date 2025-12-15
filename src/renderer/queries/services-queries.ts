@@ -12,11 +12,8 @@ const servicesApi = (globalThis as unknown as Window).services;
 
 // Query keys
 export const servicesKeys = {
-  all: ['services'] as const,
-  lists: () => [...servicesKeys.all, 'list'] as const,
-  list: (filters?: string) => [...servicesKeys.lists(), filters] as const,
-  details: () => [...servicesKeys.all, 'detail'] as const,
-  detail: (id: ServiceId) => [...servicesKeys.details(), id] as const,
+  list: () => ['services'] as const,
+  detail: (id: ServiceId) => ['services', id] as const,
 };
 
 /**
@@ -24,7 +21,7 @@ export const servicesKeys = {
  */
 export const servicesQueryOptions = () =>
   queryOptions({
-    queryKey: servicesKeys.lists(),
+    queryKey: servicesKeys.list(),
     queryFn: () => servicesApi.getAllServices(),
   });
 
@@ -88,7 +85,7 @@ export function useInstallService() {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(variables.serviceId),
       });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
 
       // Clear progress for this service
       setProgress(prev => ({
@@ -131,7 +128,7 @@ export function useUninstallService() {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(variables.serviceId),
       });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
     },
   });
 }
@@ -148,7 +145,7 @@ export function useStartService() {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(serviceId),
       });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
     },
   });
 }
@@ -165,7 +162,7 @@ export function useStopService() {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(serviceId),
       });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
     },
   });
 }
@@ -182,7 +179,7 @@ export function useRestartService() {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(serviceId),
       });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
     },
   });
 }
@@ -205,7 +202,7 @@ export function useUpdateServiceConfig() {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(variables.serviceId),
       });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.lists() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
     },
   });
 }

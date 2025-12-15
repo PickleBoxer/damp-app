@@ -20,12 +20,10 @@ const dockerEventsApi = (globalThis as unknown as Window).dockerEvents;
  * Query keys for projects
  */
 export const projectKeys = {
-  all: ['projects'] as const,
-  lists: () => [...projectKeys.all, 'list'] as const,
-  details: () => [...projectKeys.all, 'detail'] as const,
-  detail: (id: string) => [...projectKeys.details(), id] as const,
-  batchStatus: (ids: string[]) => [...projectKeys.all, 'batch-status', ids] as const,
-  port: (id: string) => [...projectKeys.all, 'port', id] as const,
+  lists: () => ['projects'] as const,
+  detail: (id: string) => ['projects', id] as const,
+  batchStatus: (ids: string[]) => ['projects', 'batch-status', ids] as const,
+  port: (id: string) => ['projects', 'port', id] as const,
 };
 
 /**

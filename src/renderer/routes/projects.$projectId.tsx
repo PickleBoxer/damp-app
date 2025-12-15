@@ -30,7 +30,6 @@ import {
   useStartNgrokTunnel,
   useStopNgrokTunnel,
 } from '@renderer/queries/ngrok-queries';
-import { useDocumentVisibility } from '@renderer/hooks/use-document-visibility';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';
 import { ProjectLogs } from '@renderer/components/ProjectLogs';
@@ -76,6 +75,13 @@ import { getSettings } from '@renderer/utils/settings';
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
 import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
 
+export const Route = createFileRoute('/projects/$projectId')({
+  loader: ({ context: { queryClient }, params: { projectId } }) =>
+    queryClient.ensureQueryData(projectQueryOptions(projectId)),
+  errorComponent: ProjectDetailErrorComponent,
+  component: ProjectDetailPage,
+});
+
 function ProjectDetailPage() {
   const navigate = useNavigate();
   const { projectId } = Route.useParams();
@@ -93,7 +99,6 @@ function ProjectDetailPage() {
   const [consoleExpanded, setConsoleExpanded] = useState(false);
   const [includeNodeModules, setIncludeNodeModules] = useState(false);
   const [includeVendor, setIncludeVendor] = useState(false);
-  const isVisible = useDocumentVisibility();
 
   // Check Docker status
   const { data: dockerStatus } = useDockerStatus();
@@ -102,13 +107,12 @@ function ProjectDetailPage() {
   const syncStatus = useProjectSyncStatus(projectId);
 
   // Get ngrok tunnel status
-  const { data: ngrokStatusData } = useNgrokStatus(projectId, { enabled: isVisible });
+  const { data: ngrokStatusData } = useNgrokStatus(projectId);
 
   // Use batch status (same as list view) - non-blocking, shares cache
   // Docker events provide real-time updates, polling at 60s is fallback
   const { data: batchStatus } = useProjectsBatchStatus([projectId], {
-    enabled: isVisible,
-    pollingInterval: isVisible ? 60000 : 0, // Events are primary, 60s polling is fallback
+    pollingInterval: 60000, // Events are primary, 60s polling is fallback
   });
 
   // Lazy load port discovery - only when container is running (OPTIMIZED)
@@ -937,10 +941,3 @@ function ProjectDetailErrorComponent({ error }: Readonly<ErrorComponentProps>) {
     </div>
   );
 }
-
-export const Route = createFileRoute('/projects/$projectId')({
-  loader: ({ context: { queryClient }, params: { projectId } }) =>
-    queryClient.ensureQueryData(projectQueryOptions(projectId)),
-  errorComponent: ProjectDetailErrorComponent,
-  component: ProjectDetailPage,
-});

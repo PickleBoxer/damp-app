@@ -27,7 +27,6 @@ import {
   useDockerContainerEvents,
 } from '@renderer/queries/projects-queries';
 import { useActiveSyncs } from '@renderer/queries/sync-queries';
-import { useDocumentVisibility } from '@renderer/hooks/use-document-visibility';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';
 import type { Project } from '@shared/types/project';
@@ -49,6 +48,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+
+export const Route = createFileRoute('/projects')({
+  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(projectsQueryOptions()),
+  errorComponent: ProjectsErrorComponent,
+  component: ProjectsPage,
+});
 
 interface SortableProjectItemProps {
   project: Project;
@@ -141,7 +146,6 @@ function ProjectsPage() {
 
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
-  const isVisible = useDocumentVisibility();
 
   // Get active syncs
   const { data: activeSyncs } = useActiveSyncs();
@@ -152,8 +156,8 @@ function ProjectsPage() {
   // Fetch all container statuses in a single batch call (OPTIMIZED)
   // Docker events provide real-time updates, polling at 60s is fallback
   const { data: batchStatus, isLoading: isStatusLoading } = useProjectsBatchStatus(projectIds, {
-    enabled: projectIds.length > 0 && isVisible,
-    pollingInterval: isVisible ? 60000 : 0, // Events are primary, 60s polling is fallback
+    enabled: projectIds.length > 0,
+    pollingInterval: 60000, // Events are primary, 60s polling is fallback
   });
 
   // Create a map for quick lookup of status by project ID
@@ -309,9 +313,3 @@ function ProjectsErrorComponent({ error }: Readonly<ErrorComponentProps>) {
     </div>
   );
 }
-
-export const Route = createFileRoute('/projects')({
-  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(projectsQueryOptions()),
-  errorComponent: ProjectsErrorComponent,
-  component: ProjectsPage,
-});

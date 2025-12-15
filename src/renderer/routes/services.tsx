@@ -1,5 +1,13 @@
 import React from 'react';
-import { createFileRoute, Outlet, Link, useMatches } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Outlet,
+  Link,
+  useMatches,
+  ErrorComponent,
+  useRouter,
+  type ErrorComponentProps,
+} from '@tanstack/react-router';
 import { PackageOpen } from 'lucide-react';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import {
@@ -7,7 +15,8 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
-import { useServices } from '@renderer/queries/services-queries';
+import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { servicesQueryOptions } from '@renderer/queries/services-queries';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import { HiOutlineStatusOnline } from 'react-icons/hi';
 import type { ServiceType } from '@shared/types/service';
@@ -19,6 +28,12 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { Button } from '@renderer/components/ui/button';
+
+export const Route = createFileRoute('/services')({
+  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(servicesQueryOptions()),
+  errorComponent: ServicesErrorComponent,
+  component: ServicesPage,
+});
 
 // Service type tabs to display (in order)
 const SERVICE_TYPE_TABS: Array<{ value: ServiceType | 'all'; label: string }> = [
@@ -42,13 +57,8 @@ function ServicesPage() {
     ? (serviceMatch.params as { serviceId: string }).serviceId
     : undefined;
 
-  const {
-    data: services,
-    isLoading,
-    error,
-  } = useServices({
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
-  });
+  // Use suspense query - data is guaranteed by loader
+  const { data: services } = useSuspenseQuery(servicesQueryOptions());
 
   const [selectedType, setSelectedType] = React.useState<ServiceType | 'all'>('all');
 
@@ -85,115 +95,84 @@ function ServicesPage() {
             </Select>
           </div>
 
-          {/* Error State */}
-          {error && (
-            <div className="flex flex-1 items-center justify-center p-8">
-              <div className="text-center">
-                <p className="text-destructive text-sm font-medium">Failed to load services</p>
-                <p className="text-muted-foreground mt-1 text-xs">{error.message}</p>
-              </div>
-            </div>
-          )}
-
-          {!error && (
-            <ScrollArea className="h-0 flex-1 [&_[data-radix-scroll-area-viewport]>:first-child]:block!">
-              <div className="flex w-full flex-1 flex-col">
-                {/* Loading State */}
-                {isLoading && (
-                  <>
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className="border-b p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-muted h-10 w-10 animate-pulse" />
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="bg-muted h-4 w-32 animate-pulse rounded" />
-                            <div className="bg-muted h-3 w-40 animate-pulse rounded" />
+          <ScrollArea className="h-0 flex-1 [&_[data-radix-scroll-area-viewport]>:first-child]:block!">
+            <div className="flex w-full flex-1 flex-col">
+              {/* Service List */}
+              {filteredServices.length > 0 && (
+                <>
+                  {filteredServices.map(service => (
+                    <div
+                      key={service.definition.id}
+                      className={`group/service relative w-full ${
+                        selectedServiceId === service.definition.id ? 'bg-primary/5' : ''
+                      } ${!service.state.installed ? 'opacity-50' : ''}`}
+                    >
+                      <Link
+                        to="/services/$serviceId"
+                        params={{ serviceId: service.definition.id }}
+                        className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
+                      >
+                        <div className="flex w-full flex-1 items-center gap-3">
+                          <ServiceIcon serviceId={service.definition.id} className="h-10 w-10" />
+                          <div className="w-full truncate">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate text-sm font-semibold">
+                                {service.definition.display_name}
+                              </span>
+                              {service.state.installed && (
+                                <HiOutlineStatusOnline
+                                  className={`h-3.5 w-3.5 shrink-0 ${
+                                    service.state.container_status?.running
+                                      ? 'text-green-500'
+                                      : 'text-muted-foreground/40'
+                                  }`}
+                                  title={
+                                    service.state.container_status?.running ? 'Running' : 'Stopped'
+                                  }
+                                />
+                              )}
+                            </div>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {service.definition.description}
+                            </p>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </>
-                )}
+                      </Link>
+                    </div>
+                  ))}
+                </>
+              )}
 
-                {/* Service List */}
-                {!isLoading && filteredServices.length > 0 && (
-                  <>
-                    {filteredServices.map(service => (
-                      <div
-                        key={service.definition.id}
-                        className={`group/service relative w-full ${
-                          selectedServiceId === service.definition.id ? 'bg-primary/5' : ''
-                        } ${!service.state.installed ? 'opacity-50' : ''}`}
-                      >
-                        <Link
-                          to="/services/$serviceId"
-                          params={{ serviceId: service.definition.id }}
-                          className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
-                        >
-                          <div className="flex w-full flex-1 items-center gap-3">
-                            <ServiceIcon serviceId={service.definition.id} className="h-10 w-10" />
-                            <div className="w-full truncate">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="truncate text-sm font-semibold">
-                                  {service.definition.display_name}
-                                </span>
-                                {service.state.installed && (
-                                  <HiOutlineStatusOnline
-                                    className={`h-3.5 w-3.5 shrink-0 ${
-                                      service.state.container_status?.running
-                                        ? 'text-green-500'
-                                        : 'text-muted-foreground/40'
-                                    }`}
-                                    title={
-                                      service.state.container_status?.running
-                                        ? 'Running'
-                                        : 'Stopped'
-                                    }
-                                  />
-                                )}
-                              </div>
-                              <p className="text-muted-foreground truncate text-xs">
-                                {service.definition.description}
-                              </p>
-                            </div>
-                          </div>
-                        </Link>
-                      </div>
-                    ))}
-                  </>
-                )}
-
-                {/* Empty State */}
-                {!isLoading && filteredServices.length === 0 && (
-                  <div
-                    className="flex flex-col items-center justify-center p-8 text-center"
-                    role="status"
-                  >
-                    <PackageOpen
-                      className="text-muted-foreground/40 mb-4 h-12 w-12"
-                      aria-hidden="true"
-                    />
-                    <h3 className="mb-2 text-sm font-semibold">No services found</h3>
-                    <p className="text-muted-foreground mb-4 max-w-sm text-xs">
-                      {selectedType === 'all'
-                        ? 'No services are available. Services may not be installed or configured.'
-                        : `No ${SERVICE_TYPE_TABS.find(t => t.value === selectedType)?.label.toLowerCase()} services found.`}
-                    </p>
-                    {selectedType !== 'all' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedType('all')}
-                        className="h-8 text-xs"
-                      >
-                        Clear filter
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          )}
+              {/* Empty State */}
+              {filteredServices.length === 0 && (
+                <div
+                  className="flex flex-col items-center justify-center p-8 text-center"
+                  role="status"
+                >
+                  <PackageOpen
+                    className="text-muted-foreground/40 mb-4 h-12 w-12"
+                    aria-hidden="true"
+                  />
+                  <h3 className="mb-2 text-sm font-semibold">No services found</h3>
+                  <p className="text-muted-foreground mb-4 max-w-sm text-xs">
+                    {selectedType === 'all'
+                      ? 'No services are available. Services may not be installed or configured.'
+                      : `No ${SERVICE_TYPE_TABS.find(t => t.value === selectedType)?.label.toLowerCase()} services found.`}
+                  </p>
+                  {selectedType !== 'all' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedType('all')}
+                      className="h-8 text-xs"
+                    >
+                      Clear filter
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </ResizablePanel>
 
@@ -209,6 +188,27 @@ function ServicesPage() {
   );
 }
 
-export const Route = createFileRoute('/services')({
-  component: ServicesPage,
-});
+function ServicesErrorComponent({ error }: Readonly<ErrorComponentProps>) {
+  const router = useRouter();
+  const queryErrorResetBoundary = useQueryErrorResetBoundary();
+
+  return (
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="space-y-4 text-center">
+        <p className="text-destructive text-sm font-medium">Failed to load services</p>
+        <p className="text-muted-foreground text-xs">{error.message}</p>
+        <Button
+          onClick={() => {
+            queryErrorResetBoundary.reset();
+            router.invalidate();
+          }}
+          variant="outline"
+          size="sm"
+        >
+          Retry
+        </Button>
+        <ErrorComponent error={error} />
+      </div>
+    </div>
+  );
+}
