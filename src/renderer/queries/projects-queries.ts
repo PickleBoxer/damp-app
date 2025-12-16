@@ -309,9 +309,23 @@ export function useDockerContainerEvents() {
       });
     });
 
-    // Cleanup subscription on unmount
+    // Subscribe to Docker events connection status changes
+    const unsubscribeStatus = dockerEventsApi.onConnectionStatus(status => {
+      // Log connection status changes for debugging
+      if (status.connected) {
+        console.info('[Docker Events] ✓ Connected to Docker events stream');
+      } else {
+        const errorMsg = status.lastError ? `: ${status.lastError}` : '';
+        const attemptMsg =
+          status.reconnectAttempts > 0 ? ` (attempt ${status.reconnectAttempts})` : '';
+        console.warn(`[Docker Events] ✗ Disconnected${errorMsg}${attemptMsg}`);
+      }
+    });
+
+    // Cleanup subscriptions on unmount
     return () => {
       unsubscribe();
+      unsubscribeStatus();
     };
   }, [queryClient]);
 }

@@ -66,12 +66,23 @@ export interface DockerContainerEvent {
 }
 
 /**
+ * Docker events connection status
+ */
+export interface DockerEventsConnectionStatus {
+  connected: boolean;
+  reconnectAttempts: number;
+  lastError?: string;
+  timestamp: number;
+}
+
+/**
  * Docker events monitoring context
  */
 export interface DockerEventsContext {
   start: () => Promise<{ success: boolean; error?: string }>;
   stop: () => Promise<{ success: boolean }>;
   onEvent: (callback: (event: DockerContainerEvent) => void) => () => void;
+  onConnectionStatus: (callback: (status: DockerEventsConnectionStatus) => void) => () => void;
 }
 
 /**
