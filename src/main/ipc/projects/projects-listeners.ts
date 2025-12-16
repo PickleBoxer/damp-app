@@ -230,6 +230,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
               running: false,
               exists: false,
               ports: [],
+              health_status: 'none' as const,
             };
           }
 
@@ -241,6 +242,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
             running: status?.running || false,
             exists: status?.exists || false,
             ports: status?.ports || [],
+            health_status: status?.health_status || 'none',
           };
         })
       );

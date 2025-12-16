@@ -55,7 +55,7 @@ export default function Sidebar() {
                       active && 'text-foreground border-foreground border-r-2'
                     )}
                   >
-                    <Icon className="size-4" />
+                    <Icon className="size-5" />
                     <span className="sr-only">{item.label}</span>
                   </Link>
                 </TooltipTrigger>

@@ -16,7 +16,7 @@ import { TbWorld } from 'react-icons/tb';
 import {
   projectQueryOptions,
   useDeleteProject,
-  useProjectsBatchStatus,
+  useProjectsStatuses,
   useProjectPort,
 } from '@renderer/queries/projects-queries';
 import { useDockerStatus } from '@renderer/queries/docker-queries';
@@ -111,9 +111,7 @@ function ProjectDetailPage() {
 
   // Use batch status (same as list view) - non-blocking, shares cache
   // Docker events provide real-time updates, polling at 60s is fallback
-  const { data: batchStatus } = useProjectsBatchStatus([projectId], {
-    pollingInterval: 60000, // Events are primary, 60s polling is fallback
-  });
+  const { data: batchStatus } = useProjectsStatuses([projectId]);
 
   // Lazy load port discovery - only when container is running (OPTIMIZED)
   // This is the ONLY potentially slow operation, but it's lazy and non-blocking

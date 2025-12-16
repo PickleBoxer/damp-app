@@ -23,8 +23,7 @@ import {
 import {
   projectsQueryOptions,
   useReorderProjects,
-  useProjectsBatchStatus,
-  useDockerContainerEvents,
+  useProjectsStatuses,
 } from '@renderer/queries/projects-queries';
 import { useActiveSyncs } from '@renderer/queries/sync-queries';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
@@ -61,6 +60,7 @@ interface SortableProjectItemProps {
   isRunning?: boolean;
   isLoading?: boolean;
   isSyncing?: boolean;
+  healthStatus?: 'starting' | 'healthy' | 'unhealthy' | 'none';
 }
 
 function SortableProjectItem({
@@ -69,6 +69,7 @@ function SortableProjectItem({
   isRunning,
   isLoading,
   isSyncing,
+  healthStatus,
 }: Readonly<SortableProjectItemProps>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
@@ -105,14 +106,35 @@ function SortableProjectItem({
             <div className="w-full truncate">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold capitalize">{project.name}</span>
-                {!isLoading && (
-                  <HiOutlineStatusOnline
-                    className={`h-3.5 w-3.5 shrink-0 ${
-                      isRunning ? 'text-green-500' : 'text-muted-foreground/40'
-                    }`}
-                    title={isRunning ? 'Running' : 'Stopped'}
-                  />
-                )}
+                {!isLoading &&
+                  (() => {
+                    // Determine status color based on running state and health
+                    let statusColor = 'text-muted-foreground/40'; // Stopped
+                    let statusTitle = 'Stopped';
+
+                    if (isRunning) {
+                      if (healthStatus === 'healthy') {
+                        statusColor = 'text-emerald-500';
+                        statusTitle = 'Running (Healthy)';
+                      } else if (healthStatus === 'unhealthy') {
+                        statusColor = 'text-orange-500';
+                        statusTitle = 'Running (Unhealthy)';
+                      } else if (healthStatus === 'starting') {
+                        statusColor = 'text-orange-500';
+                        statusTitle = 'Running (Health Check Starting)';
+                      } else {
+                        statusColor = 'text-green-500';
+                        statusTitle = 'Running';
+                      }
+                    }
+
+                    return (
+                      <HiOutlineStatusOnline
+                        className={`h-3.5 w-3.5 shrink-0 ${statusColor}`}
+                        title={statusTitle}
+                      />
+                    );
+                  })()}
               </div>
               <p className="text-muted-foreground flex items-center gap-1 text-xs">
                 <FaLink className="h-3 w-3 shrink-0" />
@@ -141,9 +163,6 @@ function ProjectsPage() {
   // Use suspense query - data is guaranteed by loader
   const { data: projects } = useSuspenseQuery(projectsQueryOptions());
 
-  // Subscribe to Docker container events for real-time status updates
-  useDockerContainerEvents();
-
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
 
@@ -155,9 +174,8 @@ function ProjectsPage() {
 
   // Fetch all container statuses in a single batch call (OPTIMIZED)
   // Docker events provide real-time updates, polling at 60s is fallback
-  const { data: batchStatus, isLoading: isStatusLoading } = useProjectsBatchStatus(projectIds, {
+  const { data: batchStatus, isLoading: isStatusLoading } = useProjectsStatuses(projectIds, {
     enabled: projectIds.length > 0,
-    pollingInterval: 60000, // Events are primary, 60s polling is fallback
   });
 
   // Create a map for quick lookup of status by project ID
@@ -263,6 +281,7 @@ function ProjectsPage() {
                             isRunning={projectStatus?.running || false}
                             isLoading={isStatusLoading}
                             isSyncing={isSyncing}
+                            healthStatus={projectStatus?.health_status}
                           />
                         );
                       })}

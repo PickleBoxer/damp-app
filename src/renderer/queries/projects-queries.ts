@@ -22,7 +22,7 @@ const dockerEventsApi = (globalThis as unknown as Window).dockerEvents;
 export const projectKeys = {
   lists: () => ['projects'] as const,
   detail: (id: string) => ['projects', id] as const,
-  batchStatus: (ids: string[]) => ['projects', 'batch-status', ids] as const,
+  statuses: () => ['projects', 'statuses'] as const,
   port: (id: string) => ['projects', 'port', id] as const,
 };
 
@@ -33,7 +33,8 @@ export const projectsQueryOptions = () =>
   queryOptions({
     queryKey: projectKeys.lists(),
     queryFn: () => projectsApi.getAllProjects(),
-    staleTime: 5 * 1000,
+    refetchInterval: 60000, // 60s polling as fallback safety net
+    staleTime: Infinity, // Never consider stale - events drive updates
   });
 
 /**
@@ -49,7 +50,8 @@ export const projectQueryOptions = (projectId: string) =>
       }
       return project;
     },
-    staleTime: 5 * 1000,
+    refetchInterval: 60000, // 60s polling as fallback safety net
+    staleTime: Infinity, // Never consider stale - events drive updates
   });
 
 /**
@@ -62,31 +64,29 @@ export function useProjects() {
 /**
  * Get container status for multiple projects in a single batch call (OPTIMIZED)
  *
- * This is a major performance optimization that reduces IPC overhead:
- * - Instead of N IPC calls (one per project), makes only 1 batch IPC call
+ * This is an event-driven query optimized for real-time updates:
  * - Docker events provide real-time updates (primary mechanism)
- * - Polling at 60s serves as fallback safety net
- * - Automatically pauses polling when page is not visible
+ * - Polling at 60s serves as fallback safety net only
+ * - Non-blocking on app initialization (no stale/gc time limits)
+ * - Single query key for all projects (no array in key)
+ * - Automatically refetches on Docker container events
  *
  * @param projectIds - Array of project IDs to check status for
  * @param options.enabled - Whether to actively fetch status (default: true)
- * @param options.pollingInterval - How often to poll in ms (default: 60000, 0 = no polling)
  */
-export function useProjectsBatchStatus(
-  projectIds: string[],
-  options?: { enabled?: boolean; pollingInterval?: number }
-) {
+export function useProjectsStatuses(projectIds: string[], options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: projectKeys.batchStatus(projectIds),
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+    queryKey: projectKeys.statuses(),
     queryFn: async () => {
       if (projectIds.length === 0) return [];
       return await projectsApi.getBatchContainerStatus(projectIds);
     },
     enabled: options?.enabled !== false && projectIds.length > 0,
-    refetchInterval: options?.pollingInterval ?? 60000, // Events are primary, polling is fallback safety net
-    staleTime: 5000, // Consider data fresh for 5 seconds
-    gcTime: 60000, // Keep in cache for 60 seconds
-    refetchOnWindowFocus: true, // Refetch when returning to app
+    refetchInterval: 60000, // 60s polling as fallback safety net
+    staleTime: Infinity, // Never consider stale - events drive updates
+    gcTime: Infinity, // Keep in cache indefinitely
+    refetchOnWindowFocus: false, // Don't refetch on focus - events handle updates
   });
 }
 
@@ -257,10 +257,11 @@ export async function selectFolder(defaultPath?: string): Promise<FolderSelectio
 /**
  * Hook to subscribe to Docker container events and invalidate affected project queries
  *
- * This replaces constant polling with event-driven updates:
- * - Listens to real-time container start/stop/die/health events from Docker daemon
- * - Invalidates batch status queries when a relevant container event occurs
- * - Enables reducing polling interval from 10s to 30s (or disabling it entirely)
+ * This enables event-driven real-time updates:
+ * - Listens to container start/stop/die/health events from Docker daemon
+ * - Matches event's containerName to find the affected project ID
+ * - Invalidates project-specific queries (detail, port) for targeted refetches
+ * - Invalidates project list and statuses for global updates
  * - Non-blocking: events trigger background refetches via React Query
  *
  * Usage: Call once at the app root level or in ProjectsPage layout
@@ -274,11 +275,37 @@ export function useDockerContainerEvents() {
       // Log event for debugging
       console.debug('[Docker Event]', event.action, event.containerName);
 
-      // Invalidate all batch status queries
-      // This will trigger refetches for any active queries watching container status
+      // Get cached projects to map containerName → projectId
+      const cachedProjects = queryClient.getQueryData<Project[]>(projectKeys.lists());
+
+      // Find the affected project by matching containerName
+      const affectedProject = cachedProjects?.find(
+        project => project.containerName === event.containerName
+      );
+
+      if (affectedProject) {
+        // Invalidate project-specific queries for this container
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.detail(affectedProject.id),
+          refetchType: 'active',
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.port(affectedProject.id),
+          refetchType: 'active',
+        });
+      }
+
+      // Always invalidate projects list (affects all views showing projects)
       queryClient.invalidateQueries({
-        queryKey: projectKeys.batchStatus([]), // Invalidate all batch status queries
-        refetchType: 'active', // Only refetch queries that are currently active (visible on screen)
+        queryKey: projectKeys.lists(),
+        refetchType: 'active',
+      });
+
+      // Invalidate batch status query (fallback for unmatched containers)
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.statuses(),
+        refetchType: 'active',
       });
     });
 

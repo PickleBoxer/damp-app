@@ -2,7 +2,8 @@ import { Outlet, createRootRouteWithContext, Link } from '@tanstack/react-router
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useSyncProgress } from '@renderer/queries/sync-queries';
-import DragWindowRegion from '@renderer/components/DragWindowRegion';
+import { useDockerContainerEvents } from '@renderer/queries/projects-queries';
+import AppHeader from '@renderer/components/layout/AppHeader';
 import {
   Empty,
   EmptyHeader,
@@ -21,11 +22,13 @@ import type { QueryClient } from '@tanstack/react-query';
 function RootComponent() {
   // Register sync progress listener once at app level
   useSyncProgress();
+  // Register Docker container events listener once at app level
+  useDockerContainerEvents();
   const { resolvedTheme } = useTheme();
 
   return (
     <div className="flex h-screen flex-col overflow-hidden select-none">
-      <DragWindowRegion />
+      <AppHeader />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="relative flex flex-1 flex-col">

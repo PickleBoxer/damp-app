@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { useServices } from '@renderer/queries/services-queries';
-import { useProjects, useProjectsBatchStatus } from '@renderer/queries/projects-queries';
+import { useProjects, useProjectsStatuses } from '@renderer/queries/projects-queries';
 import type { ServiceInfo } from '@shared/types/service';
 import type { Project } from '@shared/types/project';
 
@@ -34,20 +34,16 @@ export function useDashboardData(): DashboardData {
   });
 
   // Fetch projects (non-blocking)
-  const { data: projects = [], isLoading: isLoadingProjectsList } = useProjects({
-    staleTime: 5000,
-  });
+  const { data: projects = [], isLoading: isLoadingProjectsList } = useProjects();
 
   // Extract project IDs for batch status check
   const projectIds = useMemo(() => projects.map(p => p.id), [projects]);
 
-  // Batch fetch container status with polling (non-blocking)
-  const { data: batchStatus = [], isLoading: isLoadingBatchStatus } = useProjectsBatchStatus(
+  // Batch fetch container status with event-driven updates (non-blocking)
+  const { data: batchStatus = [], isLoading: isLoadingBatchStatus } = useProjectsStatuses(
     projectIds,
     {
       enabled: projectIds.length > 0,
-      pollingInterval: 10000,
-      staleTime: 5000,
     }
   );
 

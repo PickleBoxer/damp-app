@@ -12,6 +12,7 @@ import type {
   LaravelDetectionResult,
   FolderSelectionResult,
   VolumeCopyProgress,
+  ProjectContainerStatus,
 } from './project';
 import type { ServiceId, ServiceInfo, CustomConfig, InstallOptions, PullProgress } from './service';
 
@@ -109,14 +110,7 @@ export interface ProjectsContext {
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
   detectLaravel: (folderPath: string) => Promise<LaravelDetectionResult>;
   devcontainerExists: (folderPath: string) => Promise<boolean>;
-  getBatchContainerStatus: (projectIds: string[]) => Promise<
-    Array<{
-      projectId: string;
-      running: boolean;
-      exists: boolean;
-      ports: Array<[string, string]>;
-    }>
-  >;
+  getBatchContainerStatus: (projectIds: string[]) => Promise<ProjectContainerStatus[]>;
   discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (
     callback: (projectId: string, progress: VolumeCopyProgress) => void

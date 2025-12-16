@@ -32,7 +32,7 @@ When adding new IPC features:
 ### Custom Title Bar
 
 - Uses `titleBarStyle: "hidden"` (Windows/Linux) or `"hiddenInset"` (macOS)
-- `DragWindowRegion.tsx` provides draggable area with `.draglayer` CSS class
+- `AppHeader.tsx` (in layout folder) provides custom title bar with draggable area using `.draglayer` CSS class
 - Window controls (minimize, maximize, close) via IPC: `window.electronWindow` APIs
 
 ### Theme System
@@ -46,7 +46,7 @@ When adding new IPC features:
 
 - **File-based routing** with TanStack Router Plugin (generates `routeTree.gen.ts`)
 - Uses **memory history** (not browser history) - suitable for Electron
-- Root layout: `src/renderer/routes/__root.tsx` includes all layout components (DragWindowRegion, Sidebar, Footer, etc.)
+- Root layout: `src/renderer/routes/__root.tsx` includes all layout components (AppHeader, Sidebar, Footer, etc.)
 - Router configured in `src/renderer/utils/routes.ts`
 
 ### Shadcn/ui Integration

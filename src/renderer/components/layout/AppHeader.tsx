@@ -1,9 +1,9 @@
 import { isMacOS } from '@shared/utils/platform';
 import { Box } from 'lucide-react';
-import { QuickSearch } from './QuickSearch';
+import { QuickSearch } from '../QuickSearch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 
-export default function DragWindowRegion() {
+export default function AppHeader() {
   return (
     <div className="bg-background relative h-[35px] w-full shrink-0 border-b">
       {/* Draggable layer for empty spaces */}

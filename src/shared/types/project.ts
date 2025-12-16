@@ -211,6 +211,22 @@ export interface LaravelDetectionResult {
 }
 
 /**
+ * Project container status (returned from batch status check)
+ */
+export interface ProjectContainerStatus {
+  /** Project ID */
+  projectId: string;
+  /** Whether container is running */
+  running: boolean;
+  /** Whether container exists */
+  exists: boolean;
+  /** Port mappings [hostPort, containerPort] */
+  ports: Array<[string, string]>;
+  /** Health status of the container */
+  health_status?: 'starting' | 'healthy' | 'unhealthy' | 'none';
+}
+
+/**
  * Volume copy progress (step-based for bulk operations)
  */
 export interface VolumeCopyProgress {
