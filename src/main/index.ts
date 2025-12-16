@@ -6,6 +6,7 @@ import path from 'node:path';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { TrayMenu } from './electron/TrayMenu';
 import { ngrokManager } from './services/ngrok/ngrok-manager';
+import { dockerManager } from './services/docker/docker-manager';
 import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('main');
@@ -72,6 +73,13 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
+
+  // Initialize Docker network (non-blocking)
+  // If Docker is not running, this will fail silently and network will be created on-demand
+  dockerManager.ensureNetworkExists().catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.info('Network initialization skipped', { error: message });
+  });
 
   // Use TrayMenu class for tray setup
   void new TrayMenu();

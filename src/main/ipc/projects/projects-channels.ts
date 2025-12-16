@@ -18,10 +18,6 @@ export const PROJECTS_COPY_TO_VOLUME = 'projects:copy-to-volume';
 // Folder selection
 export const PROJECTS_SELECT_FOLDER = 'projects:select-folder';
 
-// Laravel detection
-export const PROJECTS_DETECT_LARAVEL = 'projects:detect-laravel';
-export const PROJECTS_DEVCONTAINER_EXISTS = 'projects:devcontainer-exists';
-
 // Progress events (for volume copy)
 export const PROJECTS_COPY_PROGRESS = 'projects:copy-progress';
 

@@ -184,32 +184,6 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * Detect Laravel in folder
-   */
-  ipcMain.handle(CHANNELS.PROJECTS_DETECT_LARAVEL, async (_event, folderPath: string) => {
-    try {
-      await ensureInitialized();
-      return await projectStateManager.detectLaravel(folderPath);
-    } catch (error) {
-      logger.error('Failed to detect Laravel', { folderPath, error });
-      throw error;
-    }
-  });
-
-  /**
-   * Check if devcontainer exists
-   */
-  ipcMain.handle(CHANNELS.PROJECTS_DEVCONTAINER_EXISTS, async (_event, folderPath: string) => {
-    try {
-      await ensureInitialized();
-      return await projectStateManager.devcontainerExists(folderPath);
-    } catch (error) {
-      logger.error('Failed to check devcontainer existence', { folderPath, error });
-      throw error;
-    }
-  });
-
-  /**
    * Get container status for multiple projects in a single call (optimized)
    * This reduces IPC overhead by batching status checks
    */
@@ -229,6 +203,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
               projectId,
               running: false,
               exists: false,
+              state: null,
               ports: [],
               health_status: 'none' as const,
             };
@@ -241,6 +216,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
             projectId,
             running: status?.running || false,
             exists: status?.exists || false,
+            state: status?.state || null,
             ports: status?.ports || [],
             health_status: status?.health_status || 'none',
           };
@@ -255,6 +231,7 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
         projectId,
         running: false,
         exists: false,
+        state: null,
         ports: [],
       }));
     }

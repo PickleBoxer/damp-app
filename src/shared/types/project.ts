@@ -220,6 +220,8 @@ export interface ProjectContainerStatus {
   running: boolean;
   /** Whether container exists */
   exists: boolean;
+  /** Container state (created, running, paused, restarting, removing, exited, dead) */
+  state: string | null;
   /** Port mappings [hostPort, containerPort] */
   ports: Array<[string, string]>;
   /** Health status of the container */

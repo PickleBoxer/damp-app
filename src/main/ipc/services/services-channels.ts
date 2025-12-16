@@ -5,7 +5,6 @@
 // Service listing and info
 export const SERVICES_GET_ALL = 'services:get-all';
 export const SERVICES_GET_ONE = 'services:get-one';
-export const SERVICES_CHECK_DOCKER = 'services:check-docker';
 
 // Service operations
 export const SERVICES_INSTALL = 'services:install';

@@ -12,6 +12,7 @@ import type {
   ContainerStatus,
   PortMapping,
 } from '@shared/types/service';
+import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { getAvailablePorts } from './port-checker';
 import * as tar from 'tar-stream';
 
@@ -20,7 +21,6 @@ import * as tar from 'tar-stream';
  */
 class DockerManager {
   private readonly docker: Docker;
-  private readonly networkName = 'damp-network';
 
   constructor() {
     // Initialize Docker client - will use default socket/pipe
@@ -46,15 +46,15 @@ class DockerManager {
   async ensureNetworkExists(): Promise<void> {
     try {
       const networks = await this.docker.listNetworks({
-        filters: { name: [this.networkName] },
+        filters: { name: [DAMP_NETWORK_NAME] },
       });
 
       // Check if network already exists
-      const networkExists = networks.some(net => net.Name === this.networkName);
+      const networkExists = networks.some(net => net.Name === DAMP_NETWORK_NAME);
 
       if (!networkExists) {
         await this.docker.createNetwork({
-          Name: this.networkName,
+          Name: DAMP_NETWORK_NAME,
           Driver: 'bridge',
           CheckDuplicate: true,
           Labels: {
@@ -62,7 +62,7 @@ class DockerManager {
             'com.damp.description': 'Shared network for DAMP services and projects',
           },
         });
-        console.log(`Created Docker network: ${this.networkName}`);
+        console.log(`Created Docker network: ${DAMP_NETWORK_NAME}`);
       }
     } catch (error) {
       throw new Error(
@@ -72,55 +72,18 @@ class DockerManager {
   }
 
   /**
-   * Connect a container to the DAMP network
+   * Check if the DAMP network exists
+   * @returns true if network exists, false otherwise
    */
-  async connectContainerToNetwork(containerIdOrName: string): Promise<void> {
+  async checkNetworkExists(): Promise<boolean> {
     try {
-      const network = this.docker.getNetwork(this.networkName);
-      await network.connect({
-        Container: containerIdOrName,
+      const networks = await this.docker.listNetworks({
+        filters: { name: [DAMP_NETWORK_NAME] },
       });
-      console.log(`Connected container ${containerIdOrName} to ${this.networkName}`);
-    } catch (error) {
-      // Ignore if already connected
-      if (error instanceof Error && error.message.includes('already exists')) {
-        console.log(`Container ${containerIdOrName} already connected to ${this.networkName}`);
-        return;
-      }
-      throw new Error(
-        `Failed to connect container to network: ${error instanceof Error ? error.message : String(error)}`
-      );
+      return networks.some(net => net.Name === DAMP_NETWORK_NAME);
+    } catch {
+      return false;
     }
-  }
-
-  /**
-   * Disconnect a container from the DAMP network
-   */
-  async disconnectContainerFromNetwork(containerIdOrName: string): Promise<void> {
-    try {
-      const network = this.docker.getNetwork(this.networkName);
-      await network.disconnect({
-        Container: containerIdOrName,
-        Force: false,
-      });
-      console.log(`Disconnected container ${containerIdOrName} from ${this.networkName}`);
-    } catch (error) {
-      // Ignore if not connected
-      if (error instanceof Error && error.message.includes('is not connected')) {
-        console.log(`Container ${containerIdOrName} was not connected to ${this.networkName}`);
-        return;
-      }
-      throw new Error(
-        `Failed to disconnect container from network: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  /**
-   * Get the DAMP network name
-   */
-  getNetworkName(): string {
-    return this.networkName;
   }
 
   /**
@@ -228,7 +191,7 @@ class DockerManager {
         },
         NetworkingConfig: {
           EndpointsConfig: {
-            [this.networkName]: {},
+            [DAMP_NETWORK_NAME]: {},
           },
         },
       };
@@ -241,7 +204,7 @@ class DockerManager {
 
       // Create container
       const container = await this.docker.createContainer(containerConfig);
-      console.log(`Container ${container.id} created and connected to ${this.networkName}`);
+      console.log(`Container ${container.id} created and connected to ${DAMP_NETWORK_NAME}`);
       return container.id;
     } catch (error) {
       throw new Error(`Failed to create container: ${error}`);

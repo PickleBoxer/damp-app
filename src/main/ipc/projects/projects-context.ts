@@ -39,12 +39,6 @@ export function exposeProjectsContext(): void {
     selectFolder: (defaultPath?: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_SELECT_FOLDER, defaultPath),
 
-    detectLaravel: (folderPath: string) =>
-      ipcRenderer.invoke(CHANNELS.PROJECTS_DETECT_LARAVEL, folderPath),
-
-    devcontainerExists: (folderPath: string) =>
-      ipcRenderer.invoke(CHANNELS.PROJECTS_DEVCONTAINER_EXISTS, folderPath),
-
     getBatchContainerStatus: (projectIds: string[]) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_GET_BATCH_STATUS, projectIds),
 

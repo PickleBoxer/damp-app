@@ -1,13 +1,10 @@
 import { ipcMain } from 'electron';
 import Docker from 'dockerode';
-import { z } from 'zod';
 import {
   DOCKER_STATUS_CHANNEL,
   DOCKER_INFO_CHANNEL,
-  DOCKER_NETWORK_NAME_CHANNEL,
   DOCKER_ENSURE_NETWORK_CHANNEL,
-  DOCKER_CONNECT_TO_NETWORK_CHANNEL,
-  DOCKER_DISCONNECT_FROM_NETWORK_CHANNEL,
+  DOCKER_NETWORK_STATUS_CHANNEL,
 } from './docker-channels';
 import { dockerManager } from '@main/services/docker/docker-manager';
 import { DOCKER_TIMEOUTS } from './docker-constants';
@@ -16,9 +13,6 @@ import { createLogger } from '@main/utils/logger';
 const logger = createLogger('docker-ipc');
 
 const docker = new Docker();
-
-// Validation schemas
-const containerNameSchema = z.string().min(1).max(255);
 
 // Prevent duplicate listener registration
 let listenersAdded = false;
@@ -156,16 +150,6 @@ export function addDockerListeners() {
     }
   );
 
-  ipcMain.handle(DOCKER_NETWORK_NAME_CHANNEL, async (): Promise<string> => {
-    try {
-      return dockerManager.getNetworkName();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error('Docker network name error', { error: errorMessage });
-      throw new Error(`Failed to get network name: ${errorMessage}`);
-    }
-  });
-
   ipcMain.handle(DOCKER_ENSURE_NETWORK_CHANNEL, async (): Promise<void> => {
     try {
       await dockerManager.ensureNetworkExists();
@@ -177,41 +161,23 @@ export function addDockerListeners() {
   });
 
   ipcMain.handle(
-    DOCKER_CONNECT_TO_NETWORK_CHANNEL,
-    async (_event, containerIdOrName: string): Promise<void> => {
+    DOCKER_NETWORK_STATUS_CHANNEL,
+    async (): Promise<{ exists: boolean; dockerAvailable: boolean }> => {
       try {
-        // Validate input
-        const validated = containerNameSchema.parse(containerIdOrName);
-        await dockerManager.connectContainerToNetwork(validated);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          const errorMessage = error.issues.map(issue => issue.message).join(', ');
-          logger.error('Invalid container name', { error: errorMessage });
-          throw new Error(`Invalid container name: ${errorMessage}`);
-        }
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Docker connect container error', { error: errorMessage });
-        throw new Error(`Failed to connect container: ${errorMessage}`);
-      }
-    }
-  );
+        // First check if Docker is available
+        const dockerAvailable = await dockerManager.isDockerAvailable();
 
-  ipcMain.handle(
-    DOCKER_DISCONNECT_FROM_NETWORK_CHANNEL,
-    async (_event, containerIdOrName: string): Promise<void> => {
-      try {
-        // Validate input
-        const validated = containerNameSchema.parse(containerIdOrName);
-        await dockerManager.disconnectContainerFromNetwork(validated);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          const errorMessage = error.issues.map(issue => issue.message).join(', ');
-          logger.error('Invalid container name', { error: errorMessage });
-          throw new Error(`Invalid container name: ${errorMessage}`);
+        if (!dockerAvailable) {
+          return { exists: false, dockerAvailable: false };
         }
+
+        // Check if network exists
+        const exists = await dockerManager.checkNetworkExists();
+        return { exists, dockerAvailable: true };
+      } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        logger.error('Docker disconnect container error', { error: errorMessage });
-        throw new Error(`Failed to disconnect container: ${errorMessage}`);
+        logger.error('Docker network status error', { error: errorMessage });
+        return { exists: false, dockerAvailable: false };
       }
     }
   );

@@ -1,8 +1,16 @@
 import { SiDocker } from 'react-icons/si';
-import { useDockerStatus, useDockerInfo } from '@renderer/queries/docker-queries';
+import { useDockerStatus, useDockerInfo, useNetworkStatus } from '@renderer/queries/docker-queries';
 import { useProjects } from '@renderer/queries/projects-queries';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { Cpu, MemoryStick, RefreshCw, ArrowDownToLine, ArrowUpFromLine, Globe } from 'lucide-react';
+import {
+  Cpu,
+  MemoryStick,
+  RefreshCw,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Globe,
+  Network,
+} from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useActiveSyncs } from '@renderer/queries/sync-queries';
 import { useActiveNgrokTunnels } from '@renderer/queries/ngrok-queries';
@@ -29,6 +37,7 @@ export default function DockerStatusFooter() {
     refetch: refetchStatus,
   } = useDockerStatus();
   const { data: dockerInfo, refetch: refetchInfo } = useDockerInfo();
+  const { data: networkStatus } = useNetworkStatus(dockerStatus?.isRunning ?? false);
   const { data: activeSyncs } = useActiveSyncs();
   const { data: projects } = useProjects();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -187,6 +196,29 @@ export default function DockerStatusFooter() {
           {dockerStatus?.error ? `Docker Error: ${dockerStatus.error}` : `Docker: ${statusText}`}
         </TooltipContent>
       </Tooltip>
+
+      {/* Network Status - only show when Docker is running */}
+      {dockerStatus?.isRunning && networkStatus && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="hover:bg-accent/50 flex h-full cursor-default items-center px-2 transition-colors">
+              <div className="relative flex items-center justify-center">
+                <Network className="text-muted-foreground size-3" />
+                <div className="absolute -right-0.5 -bottom-0.5 h-1.5 w-1.5">
+                  <span
+                    className={`absolute inset-0 inline-flex h-full w-full rounded-full ${
+                      networkStatus.exists ? 'bg-emerald-500' : 'bg-rose-500'
+                    }`}
+                  ></span>
+                </div>
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            {networkStatus.exists ? 'Network: Connected' : 'Network: Not Found'}
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       {/* Refresh Button */}
       <Tooltip>

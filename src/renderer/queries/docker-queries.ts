@@ -12,6 +12,7 @@ export const dockerKeys = {
   all: ['docker'] as const,
   status: () => [...dockerKeys.all, 'status'] as const,
   info: () => [...dockerKeys.all, 'info'] as const,
+  networkStatus: () => [...dockerKeys.all, 'network-status'] as const,
 };
 
 /**
@@ -36,5 +37,21 @@ export function useDockerInfo() {
     queryKey: dockerKeys.info(),
     queryFn: () => dockerApi.getInfo(),
     refetchInterval: 15000, // Poll every 15 seconds
+  });
+}
+
+/**
+ * Hook to get Docker network status
+ * Only polls when Docker is running and network doesn't exist (every 15 seconds)
+ */
+export function useNetworkStatus(dockerIsRunning: boolean) {
+  return useQuery({
+    queryKey: dockerKeys.networkStatus(),
+    queryFn: () => dockerApi.getNetworkStatus(),
+    refetchInterval: query => {
+      // Only poll if network doesn't exist - stop polling once it exists
+      return query.state.data?.exists === false ? 15000 : false;
+    },
+    enabled: dockerIsRunning, // Only run when Docker is running
   });
 }

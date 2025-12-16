@@ -9,7 +9,6 @@ import type {
   Project,
   CreateProjectInput,
   UpdateProjectInput,
-  LaravelDetectionResult,
   FolderSelectionResult,
   VolumeCopyProgress,
   ProjectContainerStatus,
@@ -49,10 +48,8 @@ export interface DockerContext {
     memTotal: number;
     memUsed: number;
   }>;
-  getNetworkName: () => Promise<string>;
   ensureNetwork: () => Promise<void>;
-  connectToNetwork: (containerIdOrName: string) => Promise<void>;
-  disconnectFromNetwork: (containerIdOrName: string) => Promise<void>;
+  getNetworkStatus: () => Promise<{ exists: boolean; dockerAvailable: boolean }>;
 }
 
 /**
@@ -119,8 +116,6 @@ export interface ProjectsContext {
   reorderProjects: (projectIds: string[]) => Promise<void>;
   copyProjectToVolume: (projectId: string) => Promise<void>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
-  detectLaravel: (folderPath: string) => Promise<LaravelDetectionResult>;
-  devcontainerExists: (folderPath: string) => Promise<boolean>;
   getBatchContainerStatus: (projectIds: string[]) => Promise<ProjectContainerStatus[]>;
   discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (
