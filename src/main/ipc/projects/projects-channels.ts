@@ -13,7 +13,6 @@ export const PROJECTS_DELETE = 'projects:delete';
 
 // Project operations
 export const PROJECTS_REORDER = 'projects:reorder';
-export const PROJECTS_COPY_TO_VOLUME = 'projects:copy-to-volume';
 
 // Folder selection
 export const PROJECTS_SELECT_FOLDER = 'projects:select-folder';
@@ -22,7 +21,7 @@ export const PROJECTS_SELECT_FOLDER = 'projects:select-folder';
 export const PROJECTS_COPY_PROGRESS = 'projects:copy-progress';
 
 // Container status
-export const PROJECTS_GET_BATCH_STATUS = 'projects:get-batch-status';
+export const PROJECTS_GET_STATUS = 'projects:get-status';
 
 // Port discovery
 export const PROJECTS_DISCOVER_PORT = 'projects:discover-port';

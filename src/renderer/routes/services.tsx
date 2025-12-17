@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useMemo } from 'react';
 import {
   createFileRoute,
   Outlet,
@@ -8,17 +8,17 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { PackageOpen } from 'lucide-react';
+import { PackageOpen, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
-import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import { servicesQueryOptions } from '@renderer/queries/services-queries';
+import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { servicesQueryOptions, useServicesStatus } from '@renderer/queries/services-queries';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
-import { HiOutlineStatusOnline } from 'react-icons/hi';
+import { ContainerStateIndicator } from '@/renderer/components/ContainerStateIndicator';
 import type { ServiceType } from '@shared/types/service';
 import {
   Select,
@@ -30,7 +30,10 @@ import {
 import { Button } from '@renderer/components/ui/button';
 
 export const Route = createFileRoute('/services')({
-  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(servicesQueryOptions()),
+  loader: async ({ context: { queryClient } }) => {
+    // Non-blocking prefetch - starts loading but doesn't wait
+    void queryClient.prefetchQuery(servicesQueryOptions());
+  },
   errorComponent: ServicesErrorComponent,
   component: ServicesPage,
 });
@@ -57,16 +60,25 @@ function ServicesPage() {
     ? (serviceMatch.params as { serviceId: string }).serviceId
     : undefined;
 
-  // Use suspense query - data is guaranteed by loader
-  const { data: services } = useSuspenseQuery(servicesQueryOptions());
+  // Use regular query with loading state
+  const { data: services, isLoading, isError, error } = useQuery(servicesQueryOptions());
 
-  const [selectedType, setSelectedType] = React.useState<ServiceType | 'all'>('all');
+  // Fetch service statuses separately (bulk query)
+  const { data: servicesStatus } = useServicesStatus();
+
+  // Create status lookup map for efficient access
+  const statusMap = useMemo(
+    () => new Map((servicesStatus ?? []).map(s => [s.id, s])),
+    [servicesStatus]
+  );
+
+  const [selectedType, setSelectedType] = useState<ServiceType | 'all'>('all');
 
   // Memoize filtered services
-  const filteredServices = React.useMemo(() => {
+  const filteredServices = useMemo(() => {
     if (!services) return [];
     if (selectedType === 'all') return services;
-    return services.filter(s => s.definition.service_type === selectedType);
+    return services.filter(s => s.service_type === selectedType);
   }, [services, selectedType]);
 
   return (
@@ -79,7 +91,7 @@ function ServicesPage() {
             <h2 className="text-sm font-semibold tracking-wide">Services</h2>
             <Select
               value={selectedType}
-              onValueChange={v => setSelectedType(v as ServiceType | 'all')}
+              onValueChange={(v: string) => setSelectedType(v as ServiceType | 'all')}
             >
               <SelectTrigger className="h-7 w-fit gap-1 px-2 py-1 text-xs">
                 <span className="text-[10px] font-medium">Type:</span>
@@ -97,54 +109,64 @@ function ServicesPage() {
 
           <ScrollArea className="h-0 flex-1 [&_[data-radix-scroll-area-viewport]>:first-child]:block!">
             <div className="flex w-full flex-1 flex-col">
+              {/* Loading State */}
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <Loader2 className="text-muted-foreground/40 mb-4 h-12 w-12 animate-spin" />
+                  <p className="text-muted-foreground text-sm">Loading services...</p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {isError && (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <p className="text-destructive mb-2 text-sm font-medium">
+                    Failed to load services
+                  </p>
+                  <p className="text-muted-foreground text-xs">{(error as Error).message}</p>
+                </div>
+              )}
+
               {/* Service List */}
-              {filteredServices.length > 0 && (
+              {!isLoading && !isError && filteredServices.length > 0 && (
                 <>
-                  {filteredServices.map(service => (
-                    <div
-                      key={service.definition.id}
-                      className={`group/service relative w-full ${
-                        selectedServiceId === service.definition.id ? 'bg-primary/5' : ''
-                      } ${!service.state.installed ? 'opacity-50' : ''}`}
-                    >
-                      <Link
-                        to="/services/$serviceId"
-                        params={{ serviceId: service.definition.id }}
-                        className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
+                  {filteredServices.map(service => {
+                    const status = statusMap.get(service.id);
+                    return (
+                      <div
+                        key={service.id}
+                        className={`group/service relative w-full ${
+                          selectedServiceId === service.id ? 'bg-primary/5' : ''
+                        } ${status?.running ? '' : 'opacity-50'}`}
                       >
-                        <div className="flex w-full flex-1 items-center gap-3">
-                          <ServiceIcon serviceId={service.definition.id} className="h-10 w-10" />
-                          <div className="w-full truncate">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="truncate text-sm font-semibold">
-                                {service.definition.display_name}
-                              </span>
-                              {service.state.installed && (
-                                <HiOutlineStatusOnline
-                                  className={`h-3.5 w-3.5 shrink-0 ${
-                                    service.state.container_status?.running
-                                      ? 'text-green-500'
-                                      : 'text-muted-foreground/40'
-                                  }`}
-                                  title={
-                                    service.state.container_status?.running ? 'Running' : 'Stopped'
-                                  }
-                                />
-                              )}
+                        <Link
+                          to="/services/$serviceId"
+                          params={{ serviceId: service.id }}
+                          className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
+                        >
+                          <div className="flex w-full flex-1 items-center gap-3">
+                            <ServiceIcon serviceId={service.id} className="h-10 w-10" />
+                            <div className="w-full truncate">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate text-sm font-semibold">
+                                  {service.display_name}
+                                </span>
+                                <ContainerStateIndicator status={status} />
+                              </div>
+                              <p className="text-muted-foreground truncate text-xs">
+                                {service.description}
+                              </p>
                             </div>
-                            <p className="text-muted-foreground truncate text-xs">
-                              {service.definition.description}
-                            </p>
                           </div>
-                        </div>
-                      </Link>
-                    </div>
-                  ))}
+                        </Link>
+                      </div>
+                    );
+                  })}
                 </>
               )}
 
               {/* Empty State */}
-              {filteredServices.length === 0 && (
+              {!isLoading && !isError && filteredServices.length === 0 && (
                 <div
                   className="flex flex-col items-center justify-center p-8 text-center"
                   role="status"

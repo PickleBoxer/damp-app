@@ -34,9 +34,9 @@ class ServiceStorage {
     } catch {
       // If file doesn't exist or is corrupted, create new
       this.data = {
-        services: {},
+        items: {},
         version: STORAGE_VERSION,
-        last_updated: Date.now(),
+        lastUpdated: Date.now(),
       };
       await this.save();
     }
@@ -65,7 +65,7 @@ class ServiceStorage {
       throw new Error('Storage not initialized');
     }
 
-    this.data.last_updated = Date.now();
+    this.data.lastUpdated = Date.now();
 
     await fs.writeFile(this.storagePath, JSON.stringify(this.data, null, 2), 'utf-8');
 
@@ -80,7 +80,7 @@ class ServiceStorage {
       throw new Error('Storage not initialized');
     }
 
-    return this.data.services[serviceId] || null;
+    return this.data.items[serviceId] || null;
   }
 
   /**
@@ -91,7 +91,7 @@ class ServiceStorage {
       throw new Error('Storage not initialized');
     }
 
-    return this.data.services;
+    return this.data.items;
   }
 
   /**
@@ -102,7 +102,7 @@ class ServiceStorage {
       throw new Error('Storage not initialized');
     }
 
-    this.data.services[serviceId] = state;
+    this.data.items[serviceId] = state;
     await this.save();
   }
 
@@ -114,12 +114,12 @@ class ServiceStorage {
       throw new Error('Storage not initialized');
     }
 
-    const existingState = this.data.services[serviceId];
+    const existingState = this.data.items[serviceId];
     if (!existingState) {
       throw new Error(`Service ${serviceId} not found in storage`);
     }
 
-    this.data.services[serviceId] = {
+    this.data.items[serviceId] = {
       ...existingState,
       ...updates,
     };
@@ -135,7 +135,7 @@ class ServiceStorage {
       throw new Error('Storage not initialized');
     }
 
-    delete this.data.services[serviceId];
+    delete this.data.items[serviceId];
     await this.save();
   }
 
@@ -147,7 +147,7 @@ class ServiceStorage {
       throw new Error('Storage not initialized');
     }
 
-    return serviceId in this.data.services;
+    return serviceId in this.data.items;
   }
 
   /**
@@ -169,7 +169,7 @@ class ServiceStorage {
    */
   async importData(data: ServiceStorageData): Promise<void> {
     // Validate structure
-    if (!data.version || !data.services || typeof data.services !== 'object') {
+    if (!data.version || !data.items || typeof data.items !== 'object') {
       throw new Error('Invalid data: missing required fields');
     }
     this.data = data;
@@ -181,9 +181,9 @@ class ServiceStorage {
    */
   async clear(): Promise<void> {
     this.data = {
-      services: {},
+      items: {},
       version: STORAGE_VERSION,
-      last_updated: Date.now(),
+      lastUpdated: Date.now(),
     };
     await this.save();
   }

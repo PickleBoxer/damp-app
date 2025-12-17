@@ -9,9 +9,9 @@ import type {
   ServiceConfig,
   CustomConfig,
   PullProgress,
-  ContainerStatus,
-  PortMapping,
+  ContainerState,
 } from '@shared/types/service';
+import type { PortMapping } from '@shared/types/container';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { getAvailablePorts } from './port-checker';
 import * as tar from 'tar-stream';
@@ -276,14 +276,118 @@ class DockerManager {
   }
 
   /**
-   * Get container status
+   * Get container status for multiple containers in a single Docker API call
+   * More efficient than calling getContainerState multiple times
    */
-  async getContainerStatus(containerName: string): Promise<ContainerStatus | null> {
-    try {
-      const containers = await this.docker.listContainers({ all: true });
-      const container = containers.find(c => c.Names.includes(`/${containerName}`));
+  async getAllContainerState(containerNames: string[]): Promise<Map<string, ContainerState>> {
+    const statusMap = new Map<string, ContainerState>();
 
-      if (!container) {
+    try {
+      // Single Docker API call to get all containers
+      const containers = await this.docker.listContainers({ all: true });
+
+      // Create lookup set for efficient checking
+      const existingContainerNames = new Set(containers.map(c => c.Names[0]?.replace('/', '')));
+
+      // Process each requested container
+      for (const containerName of containerNames) {
+        if (!existingContainerNames.has(containerName)) {
+          // Container doesn't exist
+          statusMap.set(containerName, {
+            exists: false,
+            running: false,
+            container_id: null,
+            state: null,
+            ports: [],
+            health_status: 'none',
+          });
+        } else {
+          // Container exists, get detailed status using getContainerState
+          const status = await this.getContainerState(containerName);
+          if (status) {
+            statusMap.set(containerName, status);
+          } else {
+            // Fallback if getContainerState returns null
+            statusMap.set(containerName, {
+              exists: false,
+              running: false,
+              container_id: null,
+              state: null,
+              ports: [],
+              health_status: 'none',
+            });
+          }
+        }
+      }
+
+      return statusMap;
+    } catch (error) {
+      console.error(`Failed to get bulk container statuses: ${error}`);
+      // Return default status for all containers on error
+      for (const containerName of containerNames) {
+        statusMap.set(containerName, {
+          exists: false,
+          running: false,
+          container_id: null,
+          state: null,
+          ports: [],
+          health_status: 'none',
+        });
+      }
+      return statusMap;
+    }
+  }
+
+  /**
+   * Get container status by directly inspecting the container
+   * More efficient than listing all containers first
+   */
+  async getContainerState(containerName: string): Promise<ContainerState | null> {
+    try {
+      // Get container directly by name (more efficient than listing all)
+      const container = this.docker.getContainer(containerName);
+
+      // Inspect the container to get detailed status
+      const inspection = await container.inspect();
+
+      // Parse port mappings from inspection
+      const ports: PortMapping[] = [];
+      if (inspection.NetworkSettings?.Ports) {
+        for (const [internalPort, bindings] of Object.entries(inspection.NetworkSettings.Ports)) {
+          if (bindings && bindings.length > 0) {
+            const hostPort = bindings[0].HostPort;
+            const containerPort = internalPort.split('/')[0]; // Remove '/tcp' suffix
+            if (hostPort && containerPort) {
+              ports.push([hostPort, containerPort]);
+            }
+          }
+        }
+      }
+
+      // Parse health status
+      let healthStatus: 'starting' | 'healthy' | 'unhealthy' | 'none' = 'none';
+      if (inspection.State?.Health) {
+        const healthState = inspection.State.Health.Status;
+        if (healthState === 'healthy') {
+          healthStatus = 'healthy';
+        } else if (healthState === 'unhealthy') {
+          healthStatus = 'unhealthy';
+        } else if (healthState === 'starting') {
+          healthStatus = 'starting';
+        }
+      }
+
+      return {
+        exists: true,
+        running: inspection.State.Running,
+        container_id: inspection.Id,
+        state: inspection.State.Status,
+        ports,
+        health_status: healthStatus,
+      };
+    } catch (error) {
+      // Container doesn't exist or other error
+      if (error instanceof Error && error.message.includes('no such container')) {
         return {
           exists: false,
           running: false,
@@ -294,58 +398,7 @@ class DockerManager {
         };
       }
 
-      // Parse port mappings
-      const ports: PortMapping[] = [];
-      if (container.Ports) {
-        for (const port of container.Ports) {
-          if (port.PublicPort && port.PrivatePort) {
-            ports.push([port.PublicPort.toString(), port.PrivatePort.toString()]);
-          }
-        }
-      }
-
-      // After getting the container from listContainers
-      let healthStatus: 'starting' | 'healthy' | 'unhealthy' | 'none' = 'none';
-
-      // For more reliable health status, inspect the container
-      try {
-        const containerObj = this.docker.getContainer(container.Id);
-        const inspection = await containerObj.inspect();
-
-        if (inspection.State?.Health) {
-          const healthState = inspection.State.Health.Status;
-          if (healthState === 'healthy') {
-            healthStatus = 'healthy';
-          } else if (healthState === 'unhealthy') {
-            healthStatus = 'unhealthy';
-          } else if (healthState === 'starting') {
-            healthStatus = 'starting';
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to inspect container: ${error}`);
-        // Fall back to parsing Status string if inspect fails
-        if (container.Status) {
-          if (container.Status.includes('(healthy)')) {
-            healthStatus = 'healthy';
-          } else if (container.Status.includes('(unhealthy)')) {
-            healthStatus = 'unhealthy';
-          } else if (container.Status.includes('(health: starting)')) {
-            healthStatus = 'starting';
-          }
-        }
-      }
-
-      return {
-        exists: true,
-        running: container.State === 'running',
-        container_id: container.Id,
-        state: container.State,
-        ports,
-        health_status: healthStatus,
-      };
-    } catch (error) {
-      console.error(`Failed to get container status: ${error}`);
+      console.error(`Failed to get container status for ${containerName}: ${error}`);
       return null;
     }
   }

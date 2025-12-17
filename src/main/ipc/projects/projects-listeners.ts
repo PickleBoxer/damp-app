@@ -150,27 +150,6 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * Copy project files to volume
-   */
-  ipcMain.handle(CHANNELS.PROJECTS_COPY_TO_VOLUME, async (_event, projectId: string) => {
-    try {
-      await ensureInitialized();
-
-      // Progress callback to send updates to renderer
-      const onProgress = (progress: VolumeCopyProgress) => {
-        if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
-          mainWindow.webContents.send(CHANNELS.PROJECTS_COPY_PROGRESS, projectId, progress);
-        }
-      };
-
-      return await projectStateManager.copyProjectToVolume(projectId, onProgress);
-    } catch (error) {
-      logger.error('Failed to copy project to volume', { projectId, error });
-      throw error;
-    }
-  });
-
-  /**
    * Open folder selection dialog
    */
   ipcMain.handle(CHANNELS.PROJECTS_SELECT_FOLDER, async (_event, defaultPath?: string) => {
@@ -184,56 +163,15 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * Get container status for multiple projects in a single call (optimized)
-   * This reduces IPC overhead by batching status checks
+   * Get container status for all projects
    */
-  ipcMain.handle(CHANNELS.PROJECTS_GET_BATCH_STATUS, async (_event, projectIds: string[]) => {
+  ipcMain.handle(CHANNELS.PROJECTS_GET_STATUS, async () => {
     try {
       await ensureInitialized();
-      const projects = await projectStateManager.getAllProjects();
-      const dockerModule = await getDockerManager();
-
-      // Batch check all container statuses
-      const results = await Promise.all(
-        projectIds.map(async projectId => {
-          const project = projects.find(p => p.id === projectId);
-
-          if (!project) {
-            return {
-              projectId,
-              running: false,
-              exists: false,
-              state: null,
-              ports: [],
-              health_status: 'none' as const,
-            };
-          }
-
-          // Use stored container name
-          const status = await dockerModule.dockerManager.getContainerStatus(project.containerName);
-
-          return {
-            projectId,
-            running: status?.running || false,
-            exists: status?.exists || false,
-            state: status?.state || null,
-            ports: status?.ports || [],
-            health_status: status?.health_status || 'none',
-          };
-        })
-      );
-
-      return results;
+      return await projectStateManager.getProjectsState();
     } catch (error) {
-      logger.error('Failed to get batch container status', { error });
-      // Return default status for all projects on error
-      return projectIds.map(projectId => ({
-        projectId,
-        running: false,
-        exists: false,
-        state: null,
-        ports: [],
-      }));
+      logger.error('Failed to get projects status', { error });
+      throw error;
     }
   });
 

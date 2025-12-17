@@ -2,7 +2,8 @@
  * Service type definitions for Docker container management
  */
 
-import type { Result } from './result';
+import type { Result, StorageData } from './result';
+import type { PortMapping } from './container';
 
 /**
  * Unique identifier for each service
@@ -28,11 +29,6 @@ export enum ServiceId {
  * Service category types
  */
 export type ServiceType = 'web' | 'database' | 'email' | 'cache' | 'storage' | 'search' | 'queue';
-
-/**
- * Port mapping: [external_port, internal_port]
- */
-export type PortMapping = [string, string];
 
 /**
  * Health check configuration for Docker containers
@@ -115,25 +111,20 @@ export interface ServiceDefinition {
 }
 
 /**
- * Current state of a service
+ * Persistent state of a service (user preferences only)
+ * Note: installed, enabled, and container_status are computed from Docker at runtime
  */
 export interface ServiceState {
   /** Service identifier */
   id: ServiceId;
-  /** Whether service is installed */
-  installed: boolean;
-  /** Whether service is enabled */
-  enabled: boolean;
-  /** Custom configuration overrides */
+  /** Custom configuration overrides (ports, env vars, etc.) */
   custom_config: CustomConfig | null;
-  /** Current container status */
-  container_status: ContainerStatus | null;
 }
 
 /**
  * Docker container status
  */
-export interface ContainerStatus {
+export interface ContainerState {
   /** Whether container exists */
   exists: boolean;
   /** Whether container is running */
@@ -184,13 +175,24 @@ export type ServiceResult<T = unknown> = Result<T>;
 
 /**
  * Combined service information (definition + state)
+ * All ServiceDefinition properties are flattened to root level with state properties
  */
-export interface ServiceInfo {
-  /** Service definition from registry */
-  definition: ServiceDefinition;
-  /** Current service state */
-  state: ServiceState;
+export interface ServiceInfo extends ServiceDefinition {
+  /** Whether service is installed */
+  installed: boolean;
+  /** Whether service is enabled */
+  enabled: boolean;
+  /** Custom configuration overrides */
+  custom_config: CustomConfig | null;
+  /** Current container status */
+  container_status: ContainerState | null;
 }
+
+/**
+ * Service definition with basic state flags (no container status)
+ * Used for lightweight list queries without Docker API calls
+ * All ServiceDefinition properties are flattened to root level
+ */
 
 /**
  * Installation options
@@ -205,14 +207,7 @@ export interface InstallOptions {
 /**
  * Service storage data structure (saved to file)
  */
-export interface ServiceStorageData {
-  /** Map of service ID to service state */
-  services: Record<string, ServiceState>;
-  /** Version of storage schema */
-  version: string;
-  /** Last updated timestamp */
-  last_updated: number;
-}
+export type ServiceStorageData = StorageData<ServiceState>;
 
 /**
  * Context passed to post-install hooks

@@ -1,9 +1,6 @@
-/**
- * React Query hooks for projects
- */
+/** TanStack Query hooks for project management */
 
 import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { toast } from 'sonner';
 import type {
   Project,
@@ -14,32 +11,25 @@ import type {
 
 // Direct access to IPC API exposed via preload script
 const projectsApi = (globalThis as unknown as Window).projects;
-const dockerEventsApi = (globalThis as unknown as Window).dockerEvents;
 
-/**
- * Query keys for projects
- */
+/** Query keys for projects */
 export const projectKeys = {
   lists: () => ['projects'] as const,
   detail: (id: string) => ['projects', id] as const,
-  statuses: () => ['projects', 'statuses'] as const,
+  status: () => ['projects', 'status'] as const,
   port: (id: string) => ['projects', 'port', id] as const,
 };
 
-/**
- * Query options for all projects - use this in loaders
- */
+/** Query options for all projects - use in loaders */
 export const projectsQueryOptions = () =>
   queryOptions({
     queryKey: projectKeys.lists(),
     queryFn: () => projectsApi.getAllProjects(),
-    refetchInterval: 60000, // 60s polling as fallback safety net
-    staleTime: Infinity, // Never consider stale - events drive updates
+    staleTime: Infinity, // Pure event-driven - mutations handle updates
+    refetchInterval: false, // No polling - Docker events provide real-time updates
   });
 
-/**
- * Query options for a specific project - use this in loaders
- */
+/** Query options for a specific project - use in loaders */
 export const projectQueryOptions = (projectId: string) =>
   queryOptions({
     queryKey: projectKeys.detail(projectId),
@@ -50,57 +40,43 @@ export const projectQueryOptions = (projectId: string) =>
       }
       return project;
     },
-    refetchInterval: 60000, // 60s polling as fallback safety net
-    staleTime: Infinity, // Never consider stale - events drive updates
+    staleTime: Infinity, // Pure event-driven - Docker events handle updates
+    refetchInterval: false, // No polling - Docker events provide real-time updates
   });
 
-/**
- * Get all projects
- */
+/** Query options for projects status - use in loaders */
+export const projectsStatusQueryOptions = () =>
+  queryOptions({
+    queryKey: projectKeys.status(),
+    queryFn: () => projectsApi.getProjectsState(),
+    staleTime: Infinity, // Pure event-driven - Docker events handle updates
+    refetchInterval: false, // No polling - Docker events provide real-time updates
+  });
+
+/** Fetches all projects */
 export function useProjects() {
   return useQuery(projectsQueryOptions());
 }
 
 /**
- * Get container status for multiple projects in a single batch call (OPTIMIZED)
- *
- * This is an event-driven query optimized for real-time updates:
- * - Docker events provide real-time updates (primary mechanism)
- * - Polling at 60s serves as fallback safety net only
- * - Non-blocking on app initialization (no stale/gc time limits)
- * - Single query key for all projects (no array in key)
- * - Automatically refetches on Docker container events
- *
- * @param projectIds - Array of project IDs to check status for
- * @param options.enabled - Whether to actively fetch status (default: true)
+ * Fetches bulk project container status (running state, health).
+ * Pure event-driven - Docker events provide real-time updates.
  */
-export function useProjectsStatuses(projectIds: string[], options?: { enabled?: boolean }) {
+export function useProjectsStatus(options?: {
+  refetchInterval?: number | false;
+  staleTime?: number;
+}) {
   return useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: projectKeys.statuses(),
-    queryFn: async () => {
-      if (projectIds.length === 0) return [];
-      return await projectsApi.getBatchContainerStatus(projectIds);
-    },
-    enabled: options?.enabled !== false && projectIds.length > 0,
-    refetchInterval: 60000, // 60s polling as fallback safety net
-    staleTime: Infinity, // Never consider stale - events drive updates
-    gcTime: Infinity, // Keep in cache indefinitely
-    refetchOnWindowFocus: false, // Don't refetch on focus - events handle updates
+    ...projectsStatusQueryOptions(),
+    refetchInterval: options?.refetchInterval ?? false, // Pure event-driven by default
+    staleTime: options?.staleTime,
+    refetchOnWindowFocus: true,
   });
 }
 
 /**
- * Discover forwarded localhost port for a project's container (LAZY LOADED)
- *
- * This is separated from status check for performance:
- * - Only runs when explicitly enabled (e.g., when user opens Preview tab)
- * - Port discovery is expensive (~2s to scan dynamic port range)
- * - List views don't need ports, only detail view preview needs it
- * - Long cache time since port rarely changes once container is running
- *
- * @param projectId - Project ID to discover port for
- * @param options.enabled - Whether to actively discover port (default: false)
+ * Discovers forwarded localhost port for a project container.
+ * Lazy-loaded, only runs when enabled (expensive operation ~2s).
  */
 export function useProjectPort(projectId: string | undefined, options?: { enabled?: boolean }) {
   return useQuery({
@@ -121,9 +97,7 @@ export function useProjectPort(projectId: string | undefined, options?: { enable
   });
 }
 
-/**
- * Create a project
- */
+/** Creates a new project */
 export function useCreateProject() {
   const queryClient = useQueryClient();
 
@@ -147,9 +121,7 @@ export function useCreateProject() {
   });
 }
 
-/**
- * Update a project
- */
+/** Updates an existing project */
 export function useUpdateProject() {
   const queryClient = useQueryClient();
 
@@ -171,9 +143,7 @@ export function useUpdateProject() {
   });
 }
 
-/**
- * Delete a project
- */
+/** Deletes a project */
 export function useDeleteProject() {
   const queryClient = useQueryClient();
 
@@ -198,9 +168,7 @@ export function useDeleteProject() {
   });
 }
 
-/**
- * Reorder projects
- */
+/** Reorders projects with optimistic updates */
 export function useReorderProjects() {
   const queryClient = useQueryClient();
 
@@ -246,86 +214,7 @@ export function useReorderProjects() {
   });
 }
 
-/**
- * Open folder selection dialog
- * Direct access to dialog interaction
- */
+/** Opens folder selection dialog */
 export async function selectFolder(defaultPath?: string): Promise<FolderSelectionResult> {
   return await projectsApi.selectFolder(defaultPath);
-}
-
-/**
- * Hook to subscribe to Docker container events and invalidate affected project queries
- *
- * This enables event-driven real-time updates:
- * - Listens to container start/stop/die/health events from Docker daemon
- * - Matches event's containerName to find the affected project ID
- * - Invalidates project-specific queries (detail, port) for targeted refetches
- * - Invalidates project list and statuses for global updates
- * - Non-blocking: events trigger background refetches via React Query
- *
- * Usage: Call once at the app root level or in ProjectsPage layout
- */
-export function useDockerContainerEvents() {
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    // Subscribe to Docker container events
-    const unsubscribe = dockerEventsApi.onEvent(event => {
-      // Log event for debugging
-      console.debug('[Docker Event]', event.action, event.containerName);
-
-      // Get cached projects to map containerName → projectId
-      const cachedProjects = queryClient.getQueryData<Project[]>(projectKeys.lists());
-
-      // Find the affected project by matching containerName
-      const affectedProject = cachedProjects?.find(
-        project => project.containerName === event.containerName
-      );
-
-      if (affectedProject) {
-        // Invalidate project-specific queries for this container
-        queryClient.invalidateQueries({
-          queryKey: projectKeys.detail(affectedProject.id),
-          refetchType: 'active',
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: projectKeys.port(affectedProject.id),
-          refetchType: 'active',
-        });
-      }
-
-      // Always invalidate projects list (affects all views showing projects)
-      queryClient.invalidateQueries({
-        queryKey: projectKeys.lists(),
-        refetchType: 'active',
-      });
-
-      // Invalidate batch status query (fallback for unmatched containers)
-      queryClient.invalidateQueries({
-        queryKey: projectKeys.statuses(),
-        refetchType: 'active',
-      });
-    });
-
-    // Subscribe to Docker events connection status changes
-    const unsubscribeStatus = dockerEventsApi.onConnectionStatus(status => {
-      // Log connection status changes for debugging
-      if (status.connected) {
-        console.info('[Docker Events] ✓ Connected to Docker events stream');
-      } else {
-        const errorMsg = status.lastError ? `: ${status.lastError}` : '';
-        const attemptMsg =
-          status.reconnectAttempts > 0 ? ` (attempt ${status.reconnectAttempts})` : '';
-        console.warn(`[Docker Events] ✗ Disconnected${errorMsg}${attemptMsg}`);
-      }
-    });
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      unsubscribe();
-      unsubscribeStatus();
-    };
-  }, [queryClient]);
 }

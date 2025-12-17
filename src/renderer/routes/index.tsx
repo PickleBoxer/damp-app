@@ -24,8 +24,19 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { Marquee3D } from '@renderer/components/ui/marquee-3d';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
-import { useDashboardData } from '@renderer/hooks/use-dashboard-data';
+import { useDashboardData, type DashboardService } from '@renderer/hooks/use-dashboard-data';
 import { useDockerStatus } from '@renderer/queries/docker-queries';
+import {
+  servicesQueryOptions,
+  servicesStatusQueryOptions,
+  useStartService,
+  useStopService,
+  useInstallService,
+} from '@renderer/queries/services-queries';
+import {
+  projectsQueryOptions,
+  projectsStatusQueryOptions,
+} from '@renderer/queries/projects-queries';
 import {
   Play,
   Square,
@@ -37,19 +48,30 @@ import {
   Download,
   Loader2,
 } from 'lucide-react';
-import {
-  useStartService,
-  useStopService,
-  useInstallService,
-} from '@renderer/queries/services-queries';
 import { toast } from 'sonner';
 
 export const Route = createFileRoute('/')({
+  loader: async ({ context: { queryClient } }) => {
+    // Non-blocking parallel prefetch - starts loading but doesn't wait
+    void Promise.all([
+      queryClient.prefetchQuery(servicesQueryOptions()),
+      queryClient.prefetchQuery(servicesStatusQueryOptions()),
+      queryClient.prefetchQuery(projectsQueryOptions()),
+      queryClient.prefetchQuery(projectsStatusQueryOptions()),
+    ]);
+  },
   component: DashboardPage,
 });
 
 function DashboardPage() {
-  const { runningServices, runningProjects, allServices, allProjects } = useDashboardData();
+  const {
+    runningServices,
+    runningProjects,
+    allServices,
+    allProjects,
+    isLoadingServices,
+    isLoadingProjects,
+  } = useDashboardData();
 
   const { data: dockerStatus } = useDockerStatus();
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
@@ -59,15 +81,13 @@ function DashboardPage() {
   const startMutation = useStartService();
   const stopMutation = useStopService();
 
-  const installedServices = allServices.filter(s => s.state.installed);
+  const installedServices = allServices.filter(s => s.exists);
   const runningCount = runningServices.length;
-  const stoppedServicesCount = installedServices.filter(
-    s => !s.state.container_status?.running
-  ).length;
+  const stoppedServicesCount = installedServices.filter(s => !s.running).length;
 
   // Combine mandatory services with installed services for carousel display
-  const allMandatoryServices = allServices.filter(s => s.definition.required);
-  const otherInstalledServices = installedServices.filter(s => !s.definition.required);
+  const allMandatoryServices = allServices.filter(s => s.required);
+  const otherInstalledServices = installedServices.filter(s => !s.required);
   const displayServices = [...allMandatoryServices, ...otherInstalledServices];
 
   // Initialize and update carousel scroll state
@@ -96,10 +116,10 @@ function DashboardPage() {
   }, [carouselApi]);
 
   const handleStartAll = async () => {
-    const servicesToStart = installedServices.filter(s => !s.state.container_status?.running);
+    const servicesToStart = installedServices.filter(s => !s.running);
 
     try {
-      await Promise.all(servicesToStart.map(s => startMutation.mutateAsync(s.definition.id)));
+      await Promise.all(servicesToStart.map(s => startMutation.mutateAsync(s.id)));
       toast.success('All services started');
     } catch {
       toast.error('Failed to start some services');
@@ -110,7 +130,7 @@ function DashboardPage() {
     const servicesToStop = runningServices;
 
     try {
-      await Promise.all(servicesToStop.map(s => stopMutation.mutateAsync(s.definition.id)));
+      await Promise.all(servicesToStop.map(s => stopMutation.mutateAsync(s.id)));
       toast.success('All services stopped');
     } catch {
       toast.error('Failed to stop some services');
@@ -118,26 +138,26 @@ function DashboardPage() {
   };
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-full w-full">
       <div className="space-y-4 p-6">
         {/* Feature Highlight Banner */}
         <div className="relative flex h-[120px] w-full flex-col items-center justify-center overflow-hidden bg-linear-65 from-orange-400 via-purple-600 to-blue-500">
           <Marquee3D className="pl-95" pauseOnHover>
             {allServices.map(service => (
               <Card
-                key={service.definition.id}
+                key={service.id}
                 className="w-64 border-white/30 bg-white/20 py-0 text-white opacity-90 backdrop-blur-sm"
               >
                 <CardHeader className="flex flex-row items-center gap-4 p-4">
                   <div className="mt-0.5 flex h-6 w-6 items-center justify-center self-start rounded-lg">
-                    <ServiceIcon serviceId={service.definition.id} className="h-4 w-4" />
+                    <ServiceIcon serviceId={service.id} className="h-4 w-4" />
                   </div>
                   <div className="flex flex-1 flex-col justify-center">
                     <CardTitle className="text-base font-semibold text-white drop-shadow-lg">
-                      {service.definition.display_name}
+                      {service.display_name}
                     </CardTitle>
                     <CardDescription className="text-xs text-white drop-shadow-md">
-                      {service.definition.description}
+                      {service.description}
                     </CardDescription>
                   </div>
                 </CardHeader>
@@ -181,12 +201,14 @@ function DashboardPage() {
           <div className="grid flex-1 grid-cols-2 gap-4">
             <div className="flex flex-col items-center justify-center border p-4">
               <p className="text-center text-sm font-medium">Installed Services</p>
-              <p className="text-2xl font-bold">{installedServices.length}</p>
+              <p className="text-2xl font-bold">
+                {isLoadingServices ? 0 : installedServices.length}
+              </p>
             </div>
             <div className="group/services relative flex flex-col">
               <div className="flex h-full flex-col items-center justify-center border p-4">
                 <p className="text-center text-sm font-medium">Running Services</p>
-                <p className="text-2xl font-bold">{runningCount}</p>
+                <p className="text-2xl font-bold">{isLoadingServices ? 0 : runningCount}</p>
               </div>
               {/* Quick Actions */}
               <TooltipProvider>
@@ -276,12 +298,14 @@ function DashboardPage() {
             <div className="grid grid-cols-2 gap-2.5">
               <div className="bg-card flex flex-col items-center justify-center gap-1 rounded-lg p-3">
                 <span className="text-2xl font-bold text-yellow-500">
-                  {allProjects?.length ?? 0}
+                  {isLoadingProjects ? 0 : (allProjects?.length ?? 0)}
                 </span>
                 <span className="text-accent-foreground text-xs">Created</span>
               </div>
               <div className="bg-card flex flex-col items-center justify-center gap-1 rounded-lg p-3">
-                <span className="text-2xl font-bold text-green-500">{runningProjects.length}</span>
+                <span className="text-2xl font-bold text-green-500">
+                  {isLoadingProjects ? 0 : runningProjects.length}
+                </span>
                 <span className="text-accent-foreground text-xs">Running</span>
               </div>
             </div>
@@ -341,14 +365,12 @@ function DashboardPage() {
                 containScroll: 'trimSnaps',
                 skipSnaps: false,
               }}
+              className="w-full"
             >
-              <CarouselContent>
+              <CarouselContent className="-ml-2">
                 {displayServices.map(service => (
-                  <CarouselItem className="flex basis-1/2" key={service.definition.id}>
-                    <ServiceStatusCard
-                      service={service}
-                      isMandatory={service.definition.required}
-                    />
+                  <CarouselItem className="basis-1/2 pl-2" key={service.id}>
+                    <ServiceStatusCard service={service} isMandatory={service.required} />
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -364,31 +386,28 @@ function ServiceStatusCard({
   service,
   isMandatory,
 }: {
-  readonly service: {
-    definition: { id: string; display_name: string; description: string };
-    state: { installed: boolean; container_status: { running: boolean } | null };
-  };
+  readonly service: DashboardService;
   readonly isMandatory?: boolean;
 }) {
   const startMutation = useStartService();
   const stopMutation = useStopService();
   const installMutation = useInstallService();
-  const isInstalled = service.state.installed;
-  const isRunning = service.state.container_status?.running ?? false;
+  const isInstalled = service.exists;
+  const isRunning = service.running;
   const actionLoading =
     startMutation.isPending || stopMutation.isPending || installMutation.isPending;
 
   const handleAction = async (action: 'start' | 'stop' | 'install') => {
     try {
       if (action === 'install') {
-        await installMutation.mutateAsync({ serviceId: service.definition.id });
-        toast.success(`${service.definition.display_name} installed`);
+        await installMutation.mutateAsync({ serviceId: service.id });
+        toast.success(`${service.display_name} installed`);
       } else if (action === 'start') {
-        await startMutation.mutateAsync(service.definition.id);
-        toast.success(`${service.definition.display_name} started`);
+        await startMutation.mutateAsync(service.id);
+        toast.success(`${service.display_name} started`);
       } else {
-        await stopMutation.mutateAsync(service.definition.id);
-        toast.success(`${service.definition.display_name} stopped`);
+        await stopMutation.mutateAsync(service.id);
+        toast.success(`${service.display_name} stopped`);
       }
     } catch {
       toast.error(`Failed to ${action} service`);
@@ -402,13 +421,13 @@ function ServiceStatusCard({
         <div className="flex items-start justify-between gap-3">
           {/* Icon and Title Section */}
           <div className="flex flex-1 items-start gap-3">
-            <ServiceIcon serviceId={service.definition.id} className="mt-0.5 h-5 w-5" />
+            <ServiceIcon serviceId={service.id} className="mt-0.5 h-5 w-5" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <CardTitle className="text-sm leading-none font-semibold">
-                {service.definition.display_name}
+                {service.display_name}
               </CardTitle>
               <CardDescription className="text-xs leading-snug">
-                {service.definition.description}
+                {service.description}
               </CardDescription>
             </div>
           </div>
@@ -484,7 +503,7 @@ function ServiceStatusCard({
             </Button>
           )}
           <Button variant="outline" size="sm" asChild className="px-2">
-            <Link to="/services/$serviceId" params={{ serviceId: service.definition.id }}>
+            <Link to="/services/$serviceId" params={{ serviceId: service.id }}>
               <Settings className="h-3.5 w-3.5" />
             </Link>
           </Button>

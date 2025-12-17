@@ -24,7 +24,7 @@ export function useDockerStatus() {
     queryKey: dockerKeys.status(),
     queryFn: () => dockerApi.getStatus(),
     refetchInterval: 5000, // Poll every 5 seconds
-    staleTime: 1000,
+    initialData: { isRunning: false }, // Assume not running initially
   });
 }
 
@@ -32,11 +32,12 @@ export function useDockerStatus() {
  * Hook to get Docker system info (CPU, RAM, disk)
  * Polls every 15 seconds with 10s cache to reduce overhead
  */
-export function useDockerInfo() {
+export function useDockerInfo(dockerIsRunning: boolean) {
   return useQuery({
     queryKey: dockerKeys.info(),
     queryFn: () => dockerApi.getInfo(),
     refetchInterval: 15000, // Poll every 15 seconds
+    enabled: dockerIsRunning, // Only run when Docker is running
   });
 }
 

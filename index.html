@@ -3,8 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <title>Damp</title>
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self';" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Apply theme synchronously before first paint to prevent flicker -->
+    <script>
+      (function () {
+        try {
+          const theme = localStorage.getItem('theme') || 'system';
+
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else if (theme === 'system') {
+            // Check OS preference synchronously using matchMedia
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+              document.documentElement.classList.add('dark');
+            }
+          }
+          // 'light' theme: no action needed (default state)
+        } catch (error) {
+          // Silently fail - defaults to light theme
+          console.error('Theme initialization failed:', error);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

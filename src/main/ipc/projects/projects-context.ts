@@ -33,14 +33,10 @@ export function exposeProjectsContext(): void {
     reorderProjects: (projectIds: string[]) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_REORDER, projectIds),
 
-    copyProjectToVolume: (projectId: string) =>
-      ipcRenderer.invoke(CHANNELS.PROJECTS_COPY_TO_VOLUME, projectId),
-
     selectFolder: (defaultPath?: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_SELECT_FOLDER, defaultPath),
 
-    getBatchContainerStatus: (projectIds: string[]) =>
-      ipcRenderer.invoke(CHANNELS.PROJECTS_GET_BATCH_STATUS, projectIds),
+    getProjectsState: () => ipcRenderer.invoke(CHANNELS.PROJECTS_GET_STATUS),
 
     discoverPort: (containerName: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_DISCOVER_PORT, containerName),

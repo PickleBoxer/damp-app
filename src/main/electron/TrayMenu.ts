@@ -11,7 +11,7 @@ export class TrayMenu {
 
   constructor() {
     this.tray = new Tray(this.createNativeImage());
-    this.tray.setToolTip('DAMP');
+    this.tray.setToolTip('Damp');
 
     // Left click handler: show app from minimized
     this.tray.on('click', () => {

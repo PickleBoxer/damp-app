@@ -8,9 +8,8 @@ import {
   type ErrorComponentProps,
 } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
-import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { Plus, GripVertical, Loader2 } from 'lucide-react';
-import { HiOutlineStatusOnline } from 'react-icons/hi';
 import { FaLink } from 'react-icons/fa6';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@renderer/components/ui/tooltip';
@@ -23,12 +22,14 @@ import {
 import {
   projectsQueryOptions,
   useReorderProjects,
-  useProjectsStatuses,
+  useProjectsStatus,
 } from '@renderer/queries/projects-queries';
 import { useActiveSyncs } from '@renderer/queries/sync-queries';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';
+import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
 import type { Project } from '@shared/types/project';
+import type { ContainerStateData } from '@shared/types/container';
 import {
   DndContext,
   closestCenter,
@@ -49,7 +50,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 export const Route = createFileRoute('/projects')({
-  loader: ({ context: { queryClient } }) => queryClient.ensureQueryData(projectsQueryOptions()),
+  loader: async ({ context: { queryClient } }) => {
+    // Non-blocking prefetch - starts loading but doesn't wait
+    void queryClient.prefetchQuery(projectsQueryOptions());
+  },
   errorComponent: ProjectsErrorComponent,
   component: ProjectsPage,
 });
@@ -57,19 +61,15 @@ export const Route = createFileRoute('/projects')({
 interface SortableProjectItemProps {
   project: Project;
   isSelected: boolean;
-  isRunning?: boolean;
-  isLoading?: boolean;
+  status?: ContainerStateData;
   isSyncing?: boolean;
-  healthStatus?: 'starting' | 'healthy' | 'unhealthy' | 'none';
 }
 
 function SortableProjectItem({
   project,
   isSelected,
-  isRunning,
-  isLoading,
+  status,
   isSyncing,
-  healthStatus,
 }: Readonly<SortableProjectItemProps>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
@@ -106,35 +106,7 @@ function SortableProjectItem({
             <div className="w-full truncate">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold capitalize">{project.name}</span>
-                {!isLoading &&
-                  (() => {
-                    // Determine status color based on running state and health
-                    let statusColor = 'text-muted-foreground/40'; // Stopped
-                    let statusTitle = 'Stopped';
-
-                    if (isRunning) {
-                      if (healthStatus === 'healthy') {
-                        statusColor = 'text-emerald-500';
-                        statusTitle = 'Running (Healthy)';
-                      } else if (healthStatus === 'unhealthy') {
-                        statusColor = 'text-orange-500';
-                        statusTitle = 'Running (Unhealthy)';
-                      } else if (healthStatus === 'starting') {
-                        statusColor = 'text-orange-500';
-                        statusTitle = 'Running (Health Check Starting)';
-                      } else {
-                        statusColor = 'text-green-500';
-                        statusTitle = 'Running';
-                      }
-                    }
-
-                    return (
-                      <HiOutlineStatusOnline
-                        className={`h-3.5 w-3.5 shrink-0 ${statusColor}`}
-                        title={statusTitle}
-                      />
-                    );
-                  })()}
+                <ContainerStateIndicator status={status} />
               </div>
               <p className="text-muted-foreground flex items-center gap-1 text-xs">
                 <FaLink className="h-3 w-3 shrink-0" />
@@ -160,8 +132,8 @@ function ProjectsPage() {
     : undefined;
   const [isWizardOpen, setIsWizardOpen] = useState(false);
 
-  // Use suspense query - data is guaranteed by loader
-  const { data: projects } = useSuspenseQuery(projectsQueryOptions());
+  // Use regular query with loading state
+  const { data: projects, isLoading, isError, error } = useQuery(projectsQueryOptions());
 
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
@@ -169,20 +141,13 @@ function ProjectsPage() {
   // Get active syncs
   const { data: activeSyncs } = useActiveSyncs();
 
-  // Get all project IDs for batch status check
-  const projectIds = useMemo(() => projects?.map(p => p.id) || [], [projects]);
+  const { data: projectsStatus } = useProjectsStatus();
 
-  // Fetch all container statuses in a single batch call (OPTIMIZED)
-  // Docker events provide real-time updates, polling at 60s is fallback
-  const { data: batchStatus, isLoading: isStatusLoading } = useProjectsStatuses(projectIds, {
-    enabled: projectIds.length > 0,
-  });
-
-  // Create a map for quick lookup of status by project ID
-  const statusMap = useMemo(() => {
-    if (!batchStatus) return new Map();
-    return new Map(batchStatus.map(status => [status.projectId, status]));
-  }, [batchStatus]);
+  // Create status lookup map for efficient access
+  const statusMap = useMemo(
+    () => new Map((projectsStatus ?? []).map(status => [status.id, status])),
+    [projectsStatus]
+  );
 
   // Initialize or update project order when projects change
   const sortedProjects = useMemo(() => {
@@ -258,8 +223,26 @@ function ProjectsPage() {
 
             <ScrollArea className="h-0 flex-1 [&_[data-radix-scroll-area-viewport]>:first-child]:block!">
               <div className="flex w-full flex-1 flex-col">
+                {/* Loading State */}
+                {isLoading && (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <Loader2 className="text-muted-foreground/40 mb-4 h-12 w-12 animate-spin" />
+                    <p className="text-muted-foreground text-sm">Loading projects...</p>
+                  </div>
+                )}
+
+                {/* Error State */}
+                {isError && (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <p className="text-destructive mb-2 text-sm font-medium">
+                      Failed to load projects
+                    </p>
+                    <p className="text-muted-foreground text-xs">{(error as Error).message}</p>
+                  </div>
+                )}
+
                 {/* Sortable Project List */}
-                {projects && projects.length > 0 && (
+                {!isLoading && !isError && projects && projects.length > 0 && (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -271,17 +254,15 @@ function ProjectsPage() {
                       strategy={verticalListSortingStrategy}
                     >
                       {sortedProjects.map(project => {
-                        const projectStatus = statusMap.get(project.id);
+                        const status = statusMap.get(project.id);
                         const isSyncing = activeSyncs?.has(project.id) || false;
                         return (
                           <SortableProjectItem
                             key={project.id}
                             project={project}
                             isSelected={selectedProjectId === project.id}
-                            isRunning={projectStatus?.running || false}
-                            isLoading={isStatusLoading}
+                            status={status}
                             isSyncing={isSyncing}
-                            healthStatus={projectStatus?.health_status}
                           />
                         );
                       })}

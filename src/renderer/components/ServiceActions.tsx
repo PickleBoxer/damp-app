@@ -13,10 +13,10 @@ import {
 import { useDockerStatus } from '@renderer/queries/docker-queries';
 
 interface ServiceActionsProps {
-  service: ServiceInfo;
+  readonly service: ServiceInfo;
 }
 
-export default function ServiceActions({ service }: ServiceActionsProps) {
+export default function ServiceActions({ service }: Readonly<ServiceActionsProps>) {
   const installMutation = useInstallService();
   const startMutation = useStartService();
   const stopMutation = useStopService();
@@ -30,7 +30,7 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
 
   // Show progress in toast during installation
   useEffect(() => {
-    const progress = installMutation.progress[service.definition.id];
+    const progress = installMutation.progress[service.id];
 
     if (installMutation.isPending && progress) {
       const message = progress.progress
@@ -46,7 +46,7 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
       toast.dismiss(toastIdRef.current);
       toastIdRef.current = null;
     }
-  }, [installMutation.progress, installMutation.isPending, service.definition.id]);
+  }, [installMutation.progress, installMutation.isPending, service.id]);
 
   const isLoading =
     installMutation.isPending ||
@@ -60,21 +60,20 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const handleInstall = async () => {
     try {
       const result = await installMutation.mutateAsync({
-        serviceId: service.definition.id,
+        serviceId: service.id,
         options: { start_immediately: true },
       });
       if (result?.success) {
         toast.success(
-          service.definition.post_install_message ||
-            `${service.definition.display_name} installed successfully`
+          service.post_install_message || `${service.display_name} installed successfully`
         );
       } else {
-        toast.error(`Failed to install ${service.definition.display_name}`, {
+        toast.error(`Failed to install ${service.display_name}`, {
           description: result?.error || 'Unknown error occurred',
         });
       }
     } catch (error) {
-      toast.error(`Failed to install ${service.definition.display_name}`, {
+      toast.error(`Failed to install ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     }
@@ -82,16 +81,16 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
 
   const handleStart = async () => {
     try {
-      const result = await startMutation.mutateAsync(service.definition.id);
+      const result = await startMutation.mutateAsync(service.id);
       if (result?.success) {
-        toast.success(`${service.definition.display_name} started successfully`);
+        toast.success(`${service.display_name} started successfully`);
       } else {
-        toast.error(`Failed to start ${service.definition.display_name}`, {
+        toast.error(`Failed to start ${service.display_name}`, {
           description: result?.error || 'Unknown error occurred',
         });
       }
     } catch (error) {
-      toast.error(`Failed to start ${service.definition.display_name}`, {
+      toast.error(`Failed to start ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     }
@@ -99,16 +98,16 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
 
   const handleStop = async () => {
     try {
-      const result = await stopMutation.mutateAsync(service.definition.id);
+      const result = await stopMutation.mutateAsync(service.id);
       if (result?.success) {
-        toast.success(`${service.definition.display_name} stopped successfully`);
+        toast.success(`${service.display_name} stopped successfully`);
       } else {
-        toast.error(`Failed to stop ${service.definition.display_name}`, {
+        toast.error(`Failed to stop ${service.display_name}`, {
           description: result?.error || 'Unknown error occurred',
         });
       }
     } catch (error) {
-      toast.error(`Failed to stop ${service.definition.display_name}`, {
+      toast.error(`Failed to stop ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     }
@@ -116,16 +115,16 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
 
   const handleRestart = async () => {
     try {
-      const result = await restartMutation.mutateAsync(service.definition.id);
+      const result = await restartMutation.mutateAsync(service.id);
       if (result?.success) {
-        toast.success(`${service.definition.display_name} restarted successfully`);
+        toast.success(`${service.display_name} restarted successfully`);
       } else {
-        toast.error(`Failed to restart ${service.definition.display_name}`, {
+        toast.error(`Failed to restart ${service.display_name}`, {
           description: result?.error || 'Unknown error occurred',
         });
       }
     } catch (error) {
-      toast.error(`Failed to restart ${service.definition.display_name}`, {
+      toast.error(`Failed to restart ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     }
@@ -134,25 +133,25 @@ export default function ServiceActions({ service }: ServiceActionsProps) {
   const handleUninstall = async () => {
     try {
       const result = await uninstallMutation.mutateAsync({
-        serviceId: service.definition.id,
+        serviceId: service.id,
         removeVolumes: false,
       });
       if (result?.success) {
-        toast.success(`${service.definition.display_name} uninstalled successfully`);
+        toast.success(`${service.display_name} uninstalled successfully`);
       } else {
-        toast.error(`Failed to uninstall ${service.definition.display_name}`, {
+        toast.error(`Failed to uninstall ${service.display_name}`, {
           description: result?.error || 'Unknown error occurred',
         });
       }
     } catch (error) {
-      toast.error(`Failed to uninstall ${service.definition.display_name}`, {
+      toast.error(`Failed to uninstall ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     }
   };
 
-  const isInstalled = service.state.installed;
-  const isRunning = service.state.container_status?.running ?? false;
+  const isInstalled = status?.exists ?? service.installed;
+  const isRunning = service.container_status?.running ?? false;
 
   return (
     <div className="flex flex-wrap gap-2">

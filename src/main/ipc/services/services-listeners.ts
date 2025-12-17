@@ -55,6 +55,19 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
+   * Get bulk status for all services
+   */
+  ipcMain.handle(CHANNELS.SERVICES_GET_STATUS, async () => {
+    try {
+      await ensureInitialized();
+      return await serviceStateManager.getServicesState();
+    } catch (error) {
+      logger.error('Failed to get services status', { error });
+      throw error;
+    }
+  });
+
+  /**
    * Install a service
    */
   ipcMain.handle(

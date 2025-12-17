@@ -806,40 +806,42 @@ class ProjectStateManager {
   }
 
   /**
-   * Copy local files to volume (manual trigger)
+   * Get container status for all projects using a single Docker API call
    */
-  async copyProjectToVolume(
-    projectId: string,
-    onProgress?: (progress: VolumeCopyProgress) => void
-  ): Promise<ProjectOperationResult> {
+  async getProjectsState() {
     this.ensureInitialized();
 
-    try {
-      const project = projectStorage.getProject(projectId);
-      if (!project) {
-        return {
-          success: false,
-          error: `Project ${projectId} not found`,
-        };
-      }
+    const projects = projectStorage.getAllProjects();
+    const { dockerManager } = await import('@main/services/docker/docker-manager');
 
-      await volumeManager.copyToVolume(project.path, project.volumeName, onProgress);
+    const containerNames: string[] = [];
+    const projectIdToContainerName = new Map<string, string>();
 
-      // Update volumeCopied flag
-      await projectStorage.updateProject(projectId, { volumeCopied: true });
-      logger.info(`Files copied to volume for project ${project.name}`);
-
-      return {
-        success: true,
-        data: { message: 'Files copied to volume successfully' },
-      };
-    } catch (error) {
-      logger.error('Failed to copy files to volume:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      };
+    // Collect all container names
+    for (const project of projects) {
+      containerNames.push(project.containerName);
+      projectIdToContainerName.set(project.id, project.containerName);
     }
+
+    // Single Docker API call to get all container statuses
+    const containersState = await dockerManager.getAllContainerState(containerNames);
+
+    // Build status array for all projects
+    const results = projects.map(project => {
+      const containerName = projectIdToContainerName.get(project.id);
+      const containerState = containerName ? containersState.get(containerName) : null;
+
+      return {
+        id: project.id,
+        running: containerState?.running ?? false,
+        exists: containerState?.exists ?? false,
+        state: containerState?.state ?? null,
+        ports: containerState?.ports ?? [],
+        health_status: containerState?.health_status ?? 'none',
+      };
+    });
+
+    return results;
   }
 }
 

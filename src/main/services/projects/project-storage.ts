@@ -34,7 +34,7 @@ class ProjectStorage {
     } catch {
       // If file doesn't exist or is corrupted, create new
       this.data = {
-        projects: {},
+        items: {},
         version: STORAGE_VERSION,
         lastUpdated: Date.now(),
       };
@@ -50,7 +50,7 @@ class ProjectStorage {
     this.data = JSON.parse(content) as ProjectStorageData;
 
     // Validate version
-    if (!this.data.version || !this.data.projects || typeof this.data.projects !== 'object') {
+    if (!this.data.version || !this.data.items || typeof this.data.items !== 'object') {
       throw new Error('Invalid storage file: missing required fields');
     }
 
@@ -83,7 +83,7 @@ class ProjectStorage {
       throw new Error('Storage not initialized');
     }
 
-    return this.data.projects[projectId] || null;
+    return this.data.items[projectId] || null;
   }
 
   /**
@@ -94,7 +94,7 @@ class ProjectStorage {
       throw new Error('Storage not initialized');
     }
 
-    return Object.values(this.data.projects).sort((a, b) => a.order - b.order);
+    return Object.values(this.data.items).sort((a, b) => a.order - b.order);
   }
 
   /**
@@ -105,7 +105,7 @@ class ProjectStorage {
       throw new Error('Storage not initialized');
     }
 
-    this.data.projects[project.id] = {
+    this.data.items[project.id] = {
       ...project,
       updatedAt: Date.now(),
     };
@@ -120,7 +120,7 @@ class ProjectStorage {
       throw new Error('Storage not initialized');
     }
 
-    const existingProject = this.data.projects[projectId];
+    const existingProject = this.data.items[projectId];
     if (!existingProject) {
       throw new Error(`Project ${projectId} not found in storage`);
     }
@@ -131,7 +131,7 @@ class ProjectStorage {
       throw new Error('Cannot change project id');
     }
 
-    this.data.projects[projectId] = {
+    this.data.items[projectId] = {
       ...existingProject,
       ...safeUpdates,
       updatedAt: Date.now(),
@@ -148,7 +148,7 @@ class ProjectStorage {
       throw new Error('Storage not initialized');
     }
 
-    delete this.data.projects[projectId];
+    delete this.data.items[projectId];
     await this.save();
   }
 
@@ -160,7 +160,7 @@ class ProjectStorage {
       throw new Error('Storage not initialized');
     }
 
-    return projectId in this.data.projects;
+    return projectId in this.data.items;
   }
 
   /**
@@ -171,7 +171,7 @@ class ProjectStorage {
       throw new Error('Storage not initialized');
     }
 
-    const projects = Object.values(this.data.projects);
+    const projects = Object.values(this.data.items);
     if (projects.length === 0) {
       return 0;
     }
@@ -189,9 +189,9 @@ class ProjectStorage {
 
     // Update order for each project
     for (const [index, id] of projectIds.entries()) {
-      if (this.data.projects[id]) {
-        this.data.projects[id].order = index;
-        this.data.projects[id].updatedAt = Date.now();
+      if (this.data.items[id]) {
+        this.data.items[id].order = index;
+        this.data.items[id].updatedAt = Date.now();
       }
     }
 
@@ -217,7 +217,7 @@ class ProjectStorage {
    */
   async importData(data: ProjectStorageData): Promise<void> {
     // Validate structure
-    if (!data.version || !data.projects || typeof data.projects !== 'object') {
+    if (!data.version || !data.items || typeof data.items !== 'object') {
       throw new Error('Invalid data: missing required fields');
     }
     this.data = data;
@@ -229,7 +229,7 @@ class ProjectStorage {
    */
   async clear(): Promise<void> {
     this.data = {
-      projects: {},
+      items: {},
       version: STORAGE_VERSION,
       lastUpdated: Date.now(),
     };

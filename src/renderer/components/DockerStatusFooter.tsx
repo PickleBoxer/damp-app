@@ -36,7 +36,9 @@ export default function DockerStatusFooter() {
     isLoading: statusLoading,
     refetch: refetchStatus,
   } = useDockerStatus();
-  const { data: dockerInfo, refetch: refetchInfo } = useDockerInfo();
+  const { data: dockerInfo, refetch: refetchInfo } = useDockerInfo(
+    dockerStatus?.isRunning ?? false
+  );
   const { data: networkStatus } = useNetworkStatus(dockerStatus?.isRunning ?? false);
   const { data: activeSyncs } = useActiveSyncs();
   const { data: projects } = useProjects();

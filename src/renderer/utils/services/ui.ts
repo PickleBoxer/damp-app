@@ -27,13 +27,13 @@ export function hasServiceUI(serviceId: ServiceId): boolean {
  * Get the web UI URL for a service
  */
 export function getServiceUIUrl(service: ServiceInfo): string | null {
-  const uiConfig = SERVICE_UI_PORTS[service.definition.id];
+  const uiConfig = SERVICE_UI_PORTS[service.id];
   if (!uiConfig) return null;
 
   // Get the actual port from service state (custom or default)
   const actualPort =
-    service.state.custom_config?.ports?.[uiConfig.portIndex]?.[0] ||
-    service.definition.default_config.ports?.[uiConfig.portIndex]?.[0];
+    service.custom_config?.ports?.[uiConfig.portIndex]?.[0] ||
+    service.default_config.ports?.[uiConfig.portIndex]?.[0];
 
   if (!actualPort) return null;
 

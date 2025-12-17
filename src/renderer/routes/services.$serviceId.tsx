@@ -39,11 +39,11 @@ export const Route = createFileRoute('/services/$serviceId')({
 
 // Helper function to get status text
 function getStatusText(service: ServiceInfo): string {
-  if (service.state.container_status?.running) {
+  if (service.container_status?.running) {
     return 'Running';
   }
 
-  if (service.state.installed) {
+  if (service.installed) {
     return 'Stopped';
   }
 
@@ -53,9 +53,9 @@ function getStatusText(service: ServiceInfo): string {
 // Helper function to get the actual external port for a service
 function getServicePort(service: ServiceInfo, portIndex: number = 0): string {
   // Try to get the actual mapped port from state config
-  const actualPort = service.state.custom_config?.ports?.[portIndex]?.[0];
+  const actualPort = service.custom_config?.ports?.[portIndex]?.[0];
   // Fallback to default port from definition
-  const defaultPort = service.definition.default_config.ports?.[portIndex]?.[0];
+  const defaultPort = service.default_config.ports?.[portIndex]?.[0];
 
   return actualPort || defaultPort || 'N/A';
 }
@@ -80,10 +80,7 @@ function CopyButton({ text, label }: { readonly text: string; readonly label: st
 
 // Helper function to get actual environment variables (custom or default)
 function getEnvironmentVars(service: ServiceInfo): string[] {
-  return (
-    service.state.custom_config?.environment_vars ||
-    service.definition.default_config.environment_vars
-  );
+  return service.custom_config?.environment_vars || service.default_config.environment_vars;
 }
 
 // Helper function to parse env vars into an object
@@ -100,10 +97,10 @@ function parseEnvVars(envVars: string[]): Record<string, string> {
 function formatAsLaravelEnv(service: ServiceInfo, host: string, port: string): string {
   const envVars = parseEnvVars(getEnvironmentVars(service));
 
-  switch (service.definition.id) {
+  switch (service.id) {
     case ServiceId.MySQL:
     case ServiceId.MariaDB: {
-      const dbType = service.definition.id === ServiceId.MySQL ? 'mysql' : 'mariadb';
+      const dbType = service.id === ServiceId.MySQL ? 'mysql' : 'mariadb';
       return [
         `DB_CONNECTION=${dbType}`,
         `DB_HOST=${host}`,
@@ -219,9 +216,9 @@ function formatAsLaravelEnv(service: ServiceInfo, host: string, port: string): s
 
 // Connection info component
 function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
-  const containerName = `damp-${service.definition.id}`;
+  const containerName = `damp-${service.id}`;
   const port = getServicePort(service, 0);
-  const internalPort = service.definition.default_config.ports?.[0]?.[1] || port;
+  const internalPort = service.default_config.ports?.[0]?.[1] || port;
 
   // Docker network connection
   const dockerConnection = `${containerName}:${internalPort}`;
@@ -352,8 +349,8 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 // Service Info Card Component
 function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
   const port = getServicePort(service, 0);
-  const isRunning = service.state.container_status?.running;
-  const healthStatus = service.state.container_status?.health_status;
+  const isRunning = service.container_status?.running;
+  const healthStatus = service.container_status?.health_status;
 
   return (
     <div className="bg-muted/30 dark:bg-muted/10 border-border border-b px-4 py-3">
@@ -372,7 +369,7 @@ function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
           </div>
 
           {/* Port Info */}
-          {service.state.installed && service.definition.default_config.ports.length > 0 && (
+          {service.installed && service.default_config.ports.length > 0 && (
             <>
               <div className="bg-border h-4 w-px" />
               <div className="flex items-center gap-1.5">
@@ -450,23 +447,20 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
     }
   };
 
-  const isCaddy = service.definition.id === ServiceId.Caddy;
+  const isCaddy = service.id === ServiceId.Caddy;
   const certInstalled =
-    (service.state.custom_config?.metadata?.certInstalled as boolean | undefined) ?? false;
-  const showUIButton =
-    hasServiceUI(service.definition.id) && service.state.container_status?.running;
+    (service.custom_config?.metadata?.certInstalled as boolean | undefined) ?? false;
+  const showUIButton = hasServiceUI(service.id) && service.container_status?.running;
 
   return (
     <div className="flex h-full flex-col">
       {/* Service Header */}
       <div className="bg-background border-border border-b px-4 py-4">
         <div className="flex items-center gap-3">
-          <ServiceIcon serviceId={service.definition.id} className="h-9 w-9" />
+          <ServiceIcon serviceId={service.id} className="h-9 w-9" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-foreground text-md font-semibold">
-              {service.definition.display_name}
-            </h1>
-            <p className="text-muted-foreground text-xs">{service.definition.description}</p>
+            <h1 className="text-foreground text-md font-semibold">{service.display_name}</h1>
+            <p className="text-muted-foreground text-xs">{service.description}</p>
           </div>
         </div>
       </div>
@@ -476,7 +470,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 
       <ScrollArea className="h-0 flex-1">
         <div className="flex-1 space-y-4">
-          {isCaddy && service.state.installed && (
+          {isCaddy && service.installed && (
             <div className="p-4">
               <Card size="sm" className="mx-auto w-full">
                 <CardContent>
@@ -514,13 +508,11 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
           )}
 
           {/* Connection Information */}
-          {!isCaddy &&
-            service.state.installed &&
-            service.definition.default_config.ports.length > 0 && (
-              <div className="p-4">
-                <ConnectionInfo service={service} />
-              </div>
-            )}
+          {!isCaddy && service.installed && service.default_config.ports.length > 0 && (
+            <div className="p-4">
+              <ConnectionInfo service={service} />
+            </div>
+          )}
         </div>
       </ScrollArea>
 
@@ -532,7 +524,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
             Open Web UI
           </Button>
         )}
-        {isCaddy && service.state.installed && (
+        {isCaddy && service.installed && (
           <Button
             variant="ghost"
             onClick={handleDownloadCertificate}

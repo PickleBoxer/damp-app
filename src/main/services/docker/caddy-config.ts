@@ -6,7 +6,6 @@
 import { dockerManager } from './docker-manager';
 import { projectStorage } from '../projects/project-storage';
 import type { Project } from '@shared/types/project';
-import { FORWARDED_PORT } from '../../constants/ports';
 
 /**
  * Path to Caddyfile inside the Caddy container
@@ -63,9 +62,9 @@ function generateCaddyfile(projects: Project[]): string {
 export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if Caddy container is running
-    const containerStatus = await dockerManager.getContainerStatus(CADDY_CONTAINER_NAME);
+    const containerState = await dockerManager.getContainerState(CADDY_CONTAINER_NAME);
 
-    if (!containerStatus?.running) {
+    if (!containerState?.running) {
       console.log('[Caddy Sync] Skipping - Caddy container not running');
       return { success: true }; // Not an error - just skip
     }
@@ -121,8 +120,8 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
  */
 export async function isCaddyReady(): Promise<boolean> {
   try {
-    const containerStatus = await dockerManager.getContainerStatus(CADDY_CONTAINER_NAME);
-    return containerStatus?.running ?? false;
+    const containerState = await dockerManager.getContainerState(CADDY_CONTAINER_NAME);
+    return containerState?.running ?? false;
   } catch {
     return false;
   }

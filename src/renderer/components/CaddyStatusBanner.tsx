@@ -19,8 +19,8 @@ export default function CaddyStatusBanner() {
   const startMutation = useStartService();
 
   const isDockerRunning = dockerStatus?.isRunning === true;
-  const isCaddyInstalled = caddyService?.state.installed ?? false;
-  const isCaddyRunning = caddyService?.state.container_status?.running ?? false;
+  const isCaddyInstalled = caddyService?.installed ?? false;
+  const isCaddyRunning = caddyService?.container_status?.running ?? false;
 
   // Don't render during loading (non-blocking)
   if (isDockerLoading || isCaddyLoading) {

@@ -100,11 +100,11 @@ export function QuickSearch() {
     // Services (only if loaded successfully)
     ...(!servicesError && services
       ? services.map(service => ({
-          id: service.definition.id,
-          title: service.definition.display_name,
-          subtitle: `Service • ${service.definition.description}`,
+          id: service.id,
+          title: service.display_name,
+          subtitle: `Service • ${service.description}`,
           type: 'service' as const,
-          path: `/services/${service.definition.id}`,
+          path: `/services/${service.id}`,
         }))
       : []),
   ];

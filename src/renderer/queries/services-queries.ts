@@ -1,7 +1,4 @@
-/**
- * TanStack Query hooks for service management
- * Provides reactive data fetching and mutations for services
- */
+/** TanStack Query hooks for service management */
 
 import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
 import type { ServiceId, CustomConfig, InstallOptions, PullProgress } from '@shared/types/service';
@@ -14,29 +11,37 @@ const servicesApi = (globalThis as unknown as Window).services;
 export const servicesKeys = {
   list: () => ['services'] as const,
   detail: (id: ServiceId) => ['services', id] as const,
+  status: () => ['services', 'status'] as const,
 };
 
-/**
- * Query options for all services - use this in loaders
- */
+/** Query options for all services - use in loaders */
 export const servicesQueryOptions = () =>
   queryOptions({
     queryKey: servicesKeys.list(),
     queryFn: () => servicesApi.getAllServices(),
+    staleTime: Infinity, // Pure event-driven - mutations handle updates
+    refetchInterval: false, // No polling - definitions only change on install/uninstall
   });
 
-/**
- * Query options for a specific service - use this in loaders
- */
+/** Query options for service status - use in loaders */
+export const servicesStatusQueryOptions = () =>
+  queryOptions({
+    queryKey: servicesKeys.status(),
+    queryFn: () => servicesApi.getServicesState(),
+    staleTime: Infinity, // Pure event-driven - Docker events handle updates
+    refetchInterval: false, // No polling - Docker events provide real-time updates
+  });
+
+/** Query options for a specific service - use in loaders */
 export const serviceQueryOptions = (serviceId: ServiceId) =>
   queryOptions({
     queryKey: servicesKeys.detail(serviceId),
     queryFn: () => servicesApi.getService(serviceId),
+    staleTime: Infinity, // Pure event-driven - Docker events handle updates
+    refetchInterval: false, // No polling - Docker events provide real-time updates
   });
 
-/**
- * Hook to fetch all services
- */
+/** Fetches all services (definitions only, no Docker status) */
 export function useServices(options?: { refetchInterval?: number; staleTime?: number }) {
   return useQuery({
     ...servicesQueryOptions(),
@@ -46,8 +51,22 @@ export function useServices(options?: { refetchInterval?: number; staleTime?: nu
 }
 
 /**
- * Hook to fetch a specific service
+ * Fetches bulk service container status (running state, health).
+ * Pure event-driven - Docker events provide real-time updates.
  */
+export function useServicesStatus(options?: {
+  refetchInterval?: number | false;
+  staleTime?: number;
+}) {
+  return useQuery({
+    ...servicesStatusQueryOptions(),
+    refetchInterval: options?.refetchInterval ?? false, // Pure event-driven by default
+    staleTime: options?.staleTime,
+    refetchOnWindowFocus: true,
+  });
+}
+
+/** Fetches a specific service */
 export function useService(serviceId: ServiceId, options?: { refetchInterval?: number | false }) {
   return useQuery({
     ...serviceQueryOptions(serviceId),
@@ -56,9 +75,7 @@ export function useService(serviceId: ServiceId, options?: { refetchInterval?: n
   });
 }
 
-/**
- * Hook to install a service
- */
+/** Installs a service with progress tracking */
 export function useInstallService() {
   const queryClient = useQueryClient();
   const [progress, setProgress] = useState<Record<ServiceId, PullProgress | null>>(
@@ -86,6 +103,7 @@ export function useInstallService() {
         queryKey: servicesKeys.detail(variables.serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
 
       // Clear progress for this service
       setProgress(prev => ({
@@ -110,9 +128,7 @@ export function useInstallService() {
   };
 }
 
-/**
- * Hook to uninstall a service
- */
+/** Uninstalls a service */
 export function useUninstallService() {
   const queryClient = useQueryClient();
 
@@ -129,13 +145,12 @@ export function useUninstallService() {
         queryKey: servicesKeys.detail(variables.serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
     },
   });
 }
 
-/**
- * Hook to start a service
- */
+/** Starts a service */
 export function useStartService() {
   const queryClient = useQueryClient();
 
@@ -146,13 +161,12 @@ export function useStartService() {
         queryKey: servicesKeys.detail(serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
     },
   });
 }
 
-/**
- * Hook to stop a service
- */
+/** Stops a service */
 export function useStopService() {
   const queryClient = useQueryClient();
 
@@ -163,13 +177,12 @@ export function useStopService() {
         queryKey: servicesKeys.detail(serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
     },
   });
 }
 
-/**
- * Hook to restart a service
- */
+/** Restarts a service */
 export function useRestartService() {
   const queryClient = useQueryClient();
 
@@ -180,13 +193,12 @@ export function useRestartService() {
         queryKey: servicesKeys.detail(serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
+      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
     },
   });
 }
 
-/**
- * Hook to update service configuration
- */
+/** Updates service configuration */
 export function useUpdateServiceConfig() {
   const queryClient = useQueryClient();
 

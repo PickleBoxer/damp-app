@@ -2,6 +2,8 @@
  * Project type definitions for devcontainer site management
  */
 
+import type { Result, StorageData } from './result';
+
 /**
  * Project type enum
  */
@@ -175,16 +177,9 @@ export interface ProjectTemplate {
 }
 
 /**
- * Project operation result
+ * Project operation result (generic version)
  */
-export interface ProjectOperationResult {
-  /** Whether operation succeeded */
-  success: boolean;
-  /** Error message if failed */
-  error?: string;
-  /** Additional data returned by operation */
-  data?: unknown;
-}
+export type ProjectOperationResult<T = unknown> = Result<T>;
 
 /**
  * Folder selection result (from Electron dialog)
@@ -211,24 +206,6 @@ export interface LaravelDetectionResult {
 }
 
 /**
- * Project container status (returned from batch status check)
- */
-export interface ProjectContainerStatus {
-  /** Project ID */
-  projectId: string;
-  /** Whether container is running */
-  running: boolean;
-  /** Whether container exists */
-  exists: boolean;
-  /** Container state (created, running, paused, restarting, removing, exited, dead) */
-  state: string | null;
-  /** Port mappings [hostPort, containerPort] */
-  ports: Array<[string, string]>;
-  /** Health status of the container */
-  health_status?: 'starting' | 'healthy' | 'unhealthy' | 'none';
-}
-
-/**
  * Volume copy progress (step-based for bulk operations)
  */
 export interface VolumeCopyProgress {
@@ -247,11 +224,4 @@ export interface VolumeCopyProgress {
 /**
  * Project storage data structure
  */
-export interface ProjectStorageData {
-  /** Map of project ID to project */
-  projects: Record<string, Project>;
-  /** Version of storage schema */
-  version: string;
-  /** Last updated timestamp */
-  lastUpdated: number;
-}
+export type ProjectStorageData = StorageData<Project>;

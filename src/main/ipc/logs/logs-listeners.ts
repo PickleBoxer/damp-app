@@ -54,8 +54,8 @@ async function handleStartLogs(
     }
 
     // Check if container exists
-    const containerStatus = await dockerManager.getContainerStatus(project.containerName);
-    if (!containerStatus?.exists) {
+    const containerState = await dockerManager.getContainerState(project.containerName);
+    if (!containerState?.exists) {
       return {
         success: false,
         error: `Container ${project.containerName} does not exist. Start the project first.`,

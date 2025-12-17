@@ -44,13 +44,27 @@ export function useTheme() {
   }, []);
 
   useEffect(() => {
-    // Initialize theme from localStorage or default to system
-    const initTheme = async () => {
+    // Sync Electron nativeTheme with localStorage on mount
+    // DOM class is already correct (set by inline script in index.html)
+    const syncNativeTheme = async () => {
       const localTheme = localStorage.getItem(THEME_KEY) as ThemeMode | null;
-      await setTheme(localTheme || 'system');
+      const targetTheme = localTheme || 'system';
+
+      // Sync Electron nativeTheme.themeSource without changing DOM
+      try {
+        if (targetTheme === 'dark') {
+          await window.themeMode.dark();
+        } else if (targetTheme === 'light') {
+          await window.themeMode.light();
+        } else {
+          await window.themeMode.system();
+        }
+      } catch (error) {
+        console.error('Failed to sync nativeTheme:', error);
+      }
     };
 
-    initTheme();
+    syncNativeTheme();
 
     // Watch for class changes on document element
     const updateThemeState = () => {
@@ -79,7 +93,7 @@ export function useTheme() {
       observer.disconnect();
       cleanup?.();
     };
-  }, [setTheme]);
+  }, []);
 
   return {
     themeMode,

@@ -1,6 +1,6 @@
 {
   "name": "damp-app",
-  "productName": "DAMP",
+  "productName": "Damp",
   "version": "1.0.0",
   "description": "Docker local development environment manager",
   "main": ".vite/build/index.js",

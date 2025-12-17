@@ -16,7 +16,7 @@ import { TbWorld } from 'react-icons/tb';
 import {
   projectQueryOptions,
   useDeleteProject,
-  useProjectsStatuses,
+  useProjectsStatus,
   useProjectPort,
 } from '@renderer/queries/projects-queries';
 import { useDockerStatus } from '@renderer/queries/docker-queries';
@@ -111,20 +111,21 @@ function ProjectDetailPage() {
 
   // Use batch status (same as list view) - non-blocking, shares cache
   // Docker events provide real-time updates, polling at 60s is fallback
-  const { data: batchStatus } = useProjectsStatuses([projectId]);
+  const { data: projectsStatus } = useProjectsStatus();
+  const projectStatus = projectsStatus?.find(s => s.id === projectId);
 
   // Lazy load port discovery - only when container is running (OPTIMIZED)
   // This is the ONLY potentially slow operation, but it's lazy and non-blocking
   const { data: forwardedLocalhostPort } = useProjectPort(projectId, {
-    enabled: batchStatus?.[0]?.running || false, // Only discover port when container is actually running
+    enabled: projectStatus?.running || false, // Only discover port when container is actually running
   });
 
   // Derived state
   const isDockerRunning = dockerStatus?.isRunning ?? false;
   const ngrokStatus = ngrokStatusData?.status || 'stopped';
   const ngrokPublicUrl = ngrokStatusData?.publicUrl;
-  const containerStatus = batchStatus?.[0];
-  const isRunning = containerStatus?.running || false;
+  const containerState = projectStatus;
+  const isRunning = containerState?.running || false;
 
   const handleOpenVSCode = async () => {
     const settings = getSettings();
@@ -576,7 +577,9 @@ function ProjectDetailPage() {
                               aria-label="Sync node_modules"
                               id="sync-node-modules-from"
                               checked={includeNodeModules}
-                              onCheckedChange={checked => setIncludeNodeModules(checked === true)}
+                              onCheckedChange={(checked: boolean) =>
+                                setIncludeNodeModules(checked === true)
+                              }
                             />
                             <label
                               htmlFor="sync-node-modules-from"
@@ -590,7 +593,9 @@ function ProjectDetailPage() {
                               aria-label="Sync vendor"
                               id="sync-vendor-from"
                               checked={includeVendor}
-                              onCheckedChange={checked => setIncludeVendor(checked === true)}
+                              onCheckedChange={(checked: boolean) =>
+                                setIncludeVendor(checked === true)
+                              }
                             />
                             <label
                               htmlFor="sync-vendor-from"
@@ -657,7 +662,9 @@ function ProjectDetailPage() {
                               aria-label="Sync node_modules"
                               id="sync-node-modules-to"
                               checked={includeNodeModules}
-                              onCheckedChange={checked => setIncludeNodeModules(checked === true)}
+                              onCheckedChange={(checked: boolean) =>
+                                setIncludeNodeModules(checked === true)
+                              }
                             />
                             <label
                               htmlFor="sync-node-modules-to"
@@ -671,7 +678,9 @@ function ProjectDetailPage() {
                               aria-label="Sync vendor"
                               id="sync-vendor-to"
                               checked={includeVendor}
-                              onCheckedChange={checked => setIncludeVendor(checked === true)}
+                              onCheckedChange={(checked: boolean) =>
+                                setIncludeVendor(checked === true)
+                              }
                             />
                             <label
                               htmlFor="sync-vendor-to"
@@ -897,7 +906,7 @@ function ProjectDetailPage() {
             <Checkbox
               id="removeFolder"
               checked={removeFolder}
-              onCheckedChange={checked => setRemoveFolder(checked === true)}
+              onCheckedChange={(checked: boolean) => setRemoveFolder(checked === true)}
             />
             <Label htmlFor="removeFolder" className="cursor-pointer text-xs font-normal">
               Delete project folder

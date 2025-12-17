@@ -2,7 +2,7 @@ import { Outlet, createRootRouteWithContext, Link } from '@tanstack/react-router
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useSyncProgress } from '@renderer/queries/sync-queries';
-import { useDockerContainerEvents } from '@renderer/queries/projects-queries';
+import { useDockerEvents } from '@renderer/hooks/use-docker-events';
 import AppHeader from '@renderer/components/layout/AppHeader';
 import {
   Empty,
@@ -22,8 +22,8 @@ import type { QueryClient } from '@tanstack/react-query';
 function RootComponent() {
   // Register sync progress listener once at app level
   useSyncProgress();
-  // Register Docker container events listener once at app level
-  useDockerContainerEvents();
+  // Register Docker container events listener once at app level (projects + services)
+  useDockerEvents();
   const { resolvedTheme } = useTheme();
 
   return (

@@ -11,9 +11,17 @@ import type {
   UpdateProjectInput,
   FolderSelectionResult,
   VolumeCopyProgress,
-  ProjectContainerStatus,
 } from './project';
-import type { ServiceId, ServiceInfo, CustomConfig, InstallOptions, PullProgress } from './service';
+import type {
+  ServiceId,
+  ServiceInfo,
+  ServiceDefinition,
+  CustomConfig,
+  InstallOptions,
+  PullProgress,
+  ServiceOperationResult,
+} from './service';
+import type { ContainerStateData } from './container';
 
 /**
  * Theme mode management context
@@ -86,14 +94,24 @@ export interface DockerEventsContext {
  * Service lifecycle management context
  */
 export interface ServicesContext {
-  getAllServices: () => Promise<ServiceInfo[]>;
+  getAllServices: () => Promise<ServiceDefinition[]>;
   getService: (serviceId: ServiceId) => Promise<ServiceInfo>;
-  installService: (serviceId: ServiceId, options?: InstallOptions) => Promise<ServiceInfo>;
-  uninstallService: (serviceId: ServiceId, removeVolumes?: boolean) => Promise<ServiceInfo>;
-  startService: (serviceId: ServiceId) => Promise<ServiceInfo>;
-  stopService: (serviceId: ServiceId) => Promise<ServiceInfo>;
-  restartService: (serviceId: ServiceId) => Promise<ServiceInfo>;
-  updateConfig: (serviceId: ServiceId, customConfig: CustomConfig) => Promise<ServiceInfo>;
+  getServicesState: () => Promise<ContainerStateData[]>;
+  installService: (
+    serviceId: ServiceId,
+    options?: InstallOptions
+  ) => Promise<ServiceOperationResult>;
+  uninstallService: (
+    serviceId: ServiceId,
+    removeVolumes?: boolean
+  ) => Promise<ServiceOperationResult>;
+  startService: (serviceId: ServiceId) => Promise<ServiceOperationResult>;
+  stopService: (serviceId: ServiceId) => Promise<ServiceOperationResult>;
+  restartService: (serviceId: ServiceId) => Promise<ServiceOperationResult>;
+  updateConfig: (
+    serviceId: ServiceId,
+    customConfig: CustomConfig
+  ) => Promise<ServiceOperationResult>;
   downloadCaddyCertificate: () => Promise<{ success: boolean; path?: string; error?: string }>;
   onInstallProgress: (
     callback: (serviceId: ServiceId, progress: PullProgress) => void
@@ -114,9 +132,8 @@ export interface ProjectsContext {
     removeFolder?: boolean
   ) => Promise<void>;
   reorderProjects: (projectIds: string[]) => Promise<void>;
-  copyProjectToVolume: (projectId: string) => Promise<void>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
-  getBatchContainerStatus: (projectIds: string[]) => Promise<ProjectContainerStatus[]>;
+  getProjectsState: () => Promise<ContainerStateData[]>;
   discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (
     callback: (projectId: string, progress: VolumeCopyProgress) => void
