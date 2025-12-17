@@ -16,10 +16,13 @@ import {
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
 import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import { servicesQueryOptions, useServicesStatus } from '@renderer/queries/services-queries';
+import {
+  servicesQueryOptions,
+  useServiceContainerStatus,
+} from '@renderer/queries/services-queries';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
-import { ContainerStateIndicator } from '@/renderer/components/ContainerStateIndicator';
-import type { ServiceType } from '@shared/types/service';
+import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
+import type { ServiceType, ServiceId } from '@shared/types/service';
 import {
   Select,
   SelectContent,
@@ -50,6 +53,48 @@ const SERVICE_TYPE_TABS: Array<{ value: ServiceType | 'all'; label: string }> = 
   { value: 'queue', label: 'Queue' },
 ];
 
+interface ServiceListItemProps {
+  serviceId: ServiceId;
+  displayName: string;
+  description: string;
+  isSelected: boolean;
+}
+
+function ServiceListItem({
+  serviceId,
+  displayName,
+  description,
+  isSelected,
+}: Readonly<ServiceListItemProps>) {
+  // Each service fetches its own container status
+  const { data: status } = useServiceContainerStatus(serviceId);
+
+  return (
+    <div
+      className={`group/service relative w-full ${
+        isSelected ? 'bg-primary/5' : ''
+      } ${status?.running ? '' : 'opacity-50'}`}
+    >
+      <Link
+        to="/services/$serviceId"
+        params={{ serviceId }}
+        className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
+      >
+        <div className="flex w-full flex-1 items-center gap-3">
+          <ServiceIcon serviceId={serviceId} className="h-10 w-10" />
+          <div className="w-full truncate">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-sm font-semibold">{displayName}</span>
+              <ContainerStateIndicator status={status} />
+            </div>
+            <p className="text-muted-foreground truncate text-xs">{description}</p>
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
 function ServicesPage() {
   const matches = useMatches();
   const serviceMatch = matches.find(
@@ -62,15 +107,6 @@ function ServicesPage() {
 
   // Use regular query with loading state
   const { data: services, isLoading, isError, error } = useQuery(servicesQueryOptions());
-
-  // Fetch service statuses separately (bulk query)
-  const { data: servicesStatus } = useServicesStatus();
-
-  // Create status lookup map for efficient access
-  const statusMap = useMemo(
-    () => new Map((servicesStatus ?? []).map(s => [s.id, s])),
-    [servicesStatus]
-  );
 
   const [selectedType, setSelectedType] = useState<ServiceType | 'all'>('all');
 
@@ -130,38 +166,15 @@ function ServicesPage() {
               {/* Service List */}
               {!isLoading && !isError && filteredServices.length > 0 && (
                 <>
-                  {filteredServices.map(service => {
-                    const status = statusMap.get(service.id);
-                    return (
-                      <div
-                        key={service.id}
-                        className={`group/service relative w-full ${
-                          selectedServiceId === service.id ? 'bg-primary/5' : ''
-                        } ${status?.running ? '' : 'opacity-50'}`}
-                      >
-                        <Link
-                          to="/services/$serviceId"
-                          params={{ serviceId: service.id }}
-                          className="hover:bg-primary/5 flex w-full cursor-pointer items-center gap-4 p-3 text-left transition-colors duration-200"
-                        >
-                          <div className="flex w-full flex-1 items-center gap-3">
-                            <ServiceIcon serviceId={service.id} className="h-10 w-10" />
-                            <div className="w-full truncate">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="truncate text-sm font-semibold">
-                                  {service.display_name}
-                                </span>
-                                <ContainerStateIndicator status={status} />
-                              </div>
-                              <p className="text-muted-foreground truncate text-xs">
-                                {service.description}
-                              </p>
-                            </div>
-                          </div>
-                        </Link>
-                      </div>
-                    );
-                  })}
+                  {filteredServices.map(service => (
+                    <ServiceListItem
+                      key={service.id}
+                      serviceId={service.id}
+                      displayName={service.display_name}
+                      description={service.description}
+                      isSelected={selectedServiceId === service.id}
+                    />
+                  ))}
                 </>
               )}
 

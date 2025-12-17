@@ -18,38 +18,18 @@ const dockerEventsApi = (globalThis as unknown as Window).dockerEvents;
  * Call once at app root (__root.tsx).
  *
  * Optimizations:
- * - Debounces bulk status invalidations (300ms window)
- * - Event type discrimination (health_status vs state changes)
- * - Skips list invalidations (lists contain static definitions)
+ * - Per-container granular invalidation (no bulk queries)
  * - Only invalidates port on container start
+ * - Skips list invalidations (lists contain static definitions)
  */
 export function useDockerEvents() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Debounce timers for bulk status queries
-    const debounceTimers: Record<string, NodeJS.Timeout> = {};
-
-    const scheduleInvalidation = (key: string, invalidateFn: () => void) => {
-      // Clear existing timer for this query key
-      if (debounceTimers[key]) {
-        clearTimeout(debounceTimers[key]);
-      }
-
-      // Schedule invalidation after 300ms of quiet
-      debounceTimers[key] = setTimeout(() => {
-        invalidateFn();
-        delete debounceTimers[key];
-      }, 300);
-    };
-
     // Subscribe to Docker container events
     const unsubscribe = dockerEventsApi.onEvent(event => {
       // Log event for debugging
       console.debug('[Docker Event]', event.action, event.containerName);
-
-      // Categorize event types
-      const isStateChange = ['start', 'stop', 'die', 'kill', 'restart'].includes(event.action);
 
       // Get cached projects to map containerName → projectId
       const cachedProjects = queryClient.getQueryData<Project[]>(projectKeys.lists());
@@ -66,21 +46,17 @@ export function useDockerEvents() {
           refetchType: 'active',
         });
 
+        // ✅ Granular: Invalidate ONLY this project's container status
+        queryClient.invalidateQueries({
+          queryKey: projectKeys.containerStatus(affectedProject.id),
+          refetchType: 'active',
+        });
+
         // Only invalidate port on container start (expensive ~2s operation)
         if (event.action === 'start') {
           queryClient.invalidateQueries({
             queryKey: projectKeys.port(affectedProject.id),
             refetchType: 'active',
-          });
-        }
-
-        // Debounce bulk status invalidations for state changes only
-        if (isStateChange) {
-          scheduleInvalidation('projects:status', () => {
-            queryClient.invalidateQueries({
-              queryKey: projectKeys.status(),
-              refetchType: 'active',
-            });
           });
         }
       }
@@ -90,28 +66,23 @@ export function useDockerEvents() {
 
       if (isServiceContainer) {
         // Extract service ID from container name (e.g., "damp-mysql" → "mysql")
-        const serviceId = event.containerName.replace('damp-', '');
+        const serviceId = event.containerName.replace('damp-', '') as ServiceId;
 
         // Always invalidate detail query (shows both state and health)
         queryClient.invalidateQueries({
-          queryKey: servicesKeys.detail(serviceId as ServiceId),
+          queryKey: servicesKeys.detail(serviceId),
           refetchType: 'active',
         });
 
-        // Debounce bulk status invalidations for state changes only
-        if (isStateChange) {
-          scheduleInvalidation('services:status', () => {
-            queryClient.invalidateQueries({
-              queryKey: servicesKeys.status(),
-              refetchType: 'active',
-            });
-          });
-        }
+        // ✅ Granular: Invalidate ONLY this service's container status
+        queryClient.invalidateQueries({
+          queryKey: servicesKeys.containerStatus(serviceId),
+          refetchType: 'active',
+        });
       }
 
-      // Note: Lists (projectKeys.lists(), servicesKeys.list()) are NOT invalidated
-      // Lists contain static definitions that only change on create/update/delete mutations
-      // Docker events only affect runtime state, not definitions
+      // ✅ No bulk status invalidations - per-container queries are precise
+      // ✅ No list invalidations - lists contain static definitions only
     });
 
     // Subscribe to Docker events connection status changes
@@ -131,8 +102,6 @@ export function useDockerEvents() {
     return () => {
       unsubscribe();
       unsubscribeStatus();
-      // Clear all pending debounce timers
-      Object.values(debounceTimers).forEach(clearTimeout);
     };
   }, [queryClient]);
 }

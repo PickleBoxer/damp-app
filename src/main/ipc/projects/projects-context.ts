@@ -38,6 +38,9 @@ export function exposeProjectsContext(): void {
 
     getProjectsState: () => ipcRenderer.invoke(CHANNELS.PROJECTS_GET_STATUS),
 
+    getProjectContainerStatus: (projectId: string) =>
+      ipcRenderer.invoke(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, projectId),
+
     discoverPort: (containerName: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_DISCOVER_PORT, containerName),
 

@@ -11,7 +11,8 @@ const servicesApi = (globalThis as unknown as Window).services;
 export const servicesKeys = {
   list: () => ['services'] as const,
   detail: (id: ServiceId) => ['services', id] as const,
-  status: () => ['services', 'status'] as const,
+  statuses: () => ['services', 'statuses'] as const,
+  containerStatus: (id: ServiceId) => ['services', 'statuses', id] as const,
 };
 
 /** Query options for all services - use in loaders */
@@ -23,20 +24,20 @@ export const servicesQueryOptions = () =>
     refetchInterval: false, // No polling - definitions only change on install/uninstall
   });
 
-/** Query options for service status - use in loaders */
-export const servicesStatusQueryOptions = () =>
-  queryOptions({
-    queryKey: servicesKeys.status(),
-    queryFn: () => servicesApi.getServicesState(),
-    staleTime: Infinity, // Pure event-driven - Docker events handle updates
-    refetchInterval: false, // No polling - Docker events provide real-time updates
-  });
-
 /** Query options for a specific service - use in loaders */
 export const serviceQueryOptions = (serviceId: ServiceId) =>
   queryOptions({
     queryKey: servicesKeys.detail(serviceId),
     queryFn: () => servicesApi.getService(serviceId),
+    staleTime: Infinity, // Pure event-driven - Docker events handle updates
+    refetchInterval: false, // No polling - Docker events provide real-time updates
+  });
+
+/** Query options for a specific service's container status */
+export const serviceContainerStatusQueryOptions = (serviceId: ServiceId) =>
+  queryOptions({
+    queryKey: servicesKeys.containerStatus(serviceId),
+    queryFn: () => servicesApi.getServiceContainerStatus(serviceId),
     staleTime: Infinity, // Pure event-driven - Docker events handle updates
     refetchInterval: false, // No polling - Docker events provide real-time updates
   });
@@ -51,17 +52,13 @@ export function useServices(options?: { refetchInterval?: number; staleTime?: nu
 }
 
 /**
- * Fetches bulk service container status (running state, health).
+ * Fetches a specific service's container status (running state, health).
  * Pure event-driven - Docker events provide real-time updates.
  */
-export function useServicesStatus(options?: {
-  refetchInterval?: number | false;
-  staleTime?: number;
-}) {
+export function useServiceContainerStatus(serviceId: ServiceId, options?: { enabled?: boolean }) {
   return useQuery({
-    ...servicesStatusQueryOptions(),
-    refetchInterval: options?.refetchInterval ?? false, // Pure event-driven by default
-    staleTime: options?.staleTime,
+    ...serviceContainerStatusQueryOptions(serviceId),
+    enabled: options?.enabled ?? true,
     refetchOnWindowFocus: true,
   });
 }
@@ -103,7 +100,9 @@ export function useInstallService() {
         queryKey: servicesKeys.detail(variables.serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
+      void queryClient.invalidateQueries({
+        queryKey: servicesKeys.containerStatus(variables.serviceId),
+      });
 
       // Clear progress for this service
       setProgress(prev => ({
@@ -145,7 +144,9 @@ export function useUninstallService() {
         queryKey: servicesKeys.detail(variables.serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
+      void queryClient.invalidateQueries({
+        queryKey: servicesKeys.containerStatus(variables.serviceId),
+      });
     },
   });
 }
@@ -161,7 +162,9 @@ export function useStartService() {
         queryKey: servicesKeys.detail(serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
+      void queryClient.invalidateQueries({
+        queryKey: servicesKeys.containerStatus(serviceId),
+      });
     },
   });
 }
@@ -177,7 +180,9 @@ export function useStopService() {
         queryKey: servicesKeys.detail(serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
+      void queryClient.invalidateQueries({
+        queryKey: servicesKeys.containerStatus(serviceId),
+      });
     },
   });
 }
@@ -193,7 +198,9 @@ export function useRestartService() {
         queryKey: servicesKeys.detail(serviceId),
       });
       void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.status() });
+      void queryClient.invalidateQueries({
+        queryKey: servicesKeys.containerStatus(serviceId),
+      });
     },
   });
 }

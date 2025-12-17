@@ -148,6 +148,33 @@ class ServiceStateManager {
   }
 
   /**
+   * Get container status for a specific service
+   */
+  async getServiceContainerStatus(serviceId: ServiceId): Promise<ContainerStateData | null> {
+    this.ensureInitialized();
+
+    const definition = getServiceDefinition(serviceId);
+    if (!definition) {
+      return null;
+    }
+
+    const state = serviceStorage.getServiceState(serviceId);
+    const containerName =
+      state?.custom_config?.container_name || definition.default_config.container_name;
+
+    const containerState = await dockerManager.getContainerState(containerName);
+
+    return {
+      id: serviceId,
+      running: containerState?.running ?? false,
+      exists: containerState?.exists ?? false,
+      state: containerState?.state ?? null,
+      ports: containerState?.ports ?? [],
+      health_status: containerState?.health_status ?? 'none',
+    };
+  }
+
+  /**
    * Get service by ID with full state including container status
    */
   async getService(serviceId: ServiceId): Promise<ServiceInfo | null> {

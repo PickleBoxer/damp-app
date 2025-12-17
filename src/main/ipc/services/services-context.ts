@@ -19,6 +19,9 @@ export function exposeServicesContext(): void {
 
     getServicesState: () => ipcRenderer.invoke(CHANNELS.SERVICES_GET_STATUS),
 
+    getServiceContainerStatus: (serviceId: ServiceId) =>
+      ipcRenderer.invoke(CHANNELS.SERVICES_GET_CONTAINER_STATUS, serviceId),
+
     installService: (serviceId: ServiceId, options?: InstallOptions) =>
       ipcRenderer.invoke(CHANNELS.SERVICES_INSTALL, serviceId, options),
 

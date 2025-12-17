@@ -97,6 +97,7 @@ export interface ServicesContext {
   getAllServices: () => Promise<ServiceDefinition[]>;
   getService: (serviceId: ServiceId) => Promise<ServiceInfo>;
   getServicesState: () => Promise<ContainerStateData[]>;
+  getServiceContainerStatus: (serviceId: ServiceId) => Promise<ContainerStateData | null>;
   installService: (
     serviceId: ServiceId,
     options?: InstallOptions
@@ -134,6 +135,7 @@ export interface ProjectsContext {
   reorderProjects: (projectIds: string[]) => Promise<void>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
   getProjectsState: () => Promise<ContainerStateData[]>;
+  getProjectContainerStatus: (projectId: string) => Promise<ContainerStateData | null>;
   discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (
     callback: (projectId: string, progress: VolumeCopyProgress) => void

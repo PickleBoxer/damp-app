@@ -6,6 +6,7 @@
 export const SERVICES_GET_ALL = 'services:get-all';
 export const SERVICES_GET_ONE = 'services:get-one';
 export const SERVICES_GET_STATUS = 'services:get-status';
+export const SERVICES_GET_CONTAINER_STATUS = 'services:get-container-status';
 
 // Service operations
 export const SERVICES_INSTALL = 'services:install';

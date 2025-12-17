@@ -28,15 +28,11 @@ import { useDashboardData, type DashboardService } from '@renderer/hooks/use-das
 import { useDockerStatus } from '@renderer/queries/docker-queries';
 import {
   servicesQueryOptions,
-  servicesStatusQueryOptions,
   useStartService,
   useStopService,
   useInstallService,
 } from '@renderer/queries/services-queries';
-import {
-  projectsQueryOptions,
-  projectsStatusQueryOptions,
-} from '@renderer/queries/projects-queries';
+import { projectsQueryOptions } from '@renderer/queries/projects-queries';
 import {
   Play,
   Square,
@@ -53,11 +49,10 @@ import { toast } from 'sonner';
 export const Route = createFileRoute('/')({
   loader: async ({ context: { queryClient } }) => {
     // Non-blocking parallel prefetch - starts loading but doesn't wait
+    // Status is now fetched per-component using individual queries
     void Promise.all([
       queryClient.prefetchQuery(servicesQueryOptions()),
-      queryClient.prefetchQuery(servicesStatusQueryOptions()),
       queryClient.prefetchQuery(projectsQueryOptions()),
-      queryClient.prefetchQuery(projectsStatusQueryOptions()),
     ]);
   },
   component: DashboardPage,

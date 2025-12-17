@@ -22,14 +22,13 @@ import {
 import {
   projectsQueryOptions,
   useReorderProjects,
-  useProjectsStatus,
+  useProjectContainerStatus,
 } from '@renderer/queries/projects-queries';
 import { useActiveSyncs } from '@renderer/queries/sync-queries';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';
 import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
 import type { Project } from '@shared/types/project';
-import type { ContainerStateData } from '@shared/types/container';
 import {
   DndContext,
   closestCenter,
@@ -61,16 +60,17 @@ export const Route = createFileRoute('/projects')({
 interface SortableProjectItemProps {
   project: Project;
   isSelected: boolean;
-  status?: ContainerStateData;
   isSyncing?: boolean;
 }
 
 function SortableProjectItem({
   project,
   isSelected,
-  status,
   isSyncing,
 }: Readonly<SortableProjectItemProps>) {
+  // Each project fetches its own container status
+  const { data: status } = useProjectContainerStatus(project.id);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
   });
@@ -140,14 +140,6 @@ function ProjectsPage() {
 
   // Get active syncs
   const { data: activeSyncs } = useActiveSyncs();
-
-  const { data: projectsStatus } = useProjectsStatus();
-
-  // Create status lookup map for efficient access
-  const statusMap = useMemo(
-    () => new Map((projectsStatus ?? []).map(status => [status.id, status])),
-    [projectsStatus]
-  );
 
   // Initialize or update project order when projects change
   const sortedProjects = useMemo(() => {
@@ -254,14 +246,12 @@ function ProjectsPage() {
                       strategy={verticalListSortingStrategy}
                     >
                       {sortedProjects.map(project => {
-                        const status = statusMap.get(project.id);
                         const isSyncing = activeSyncs?.has(project.id) || false;
                         return (
                           <SortableProjectItem
                             key={project.id}
                             project={project}
                             isSelected={selectedProjectId === project.id}
-                            status={status}
                             isSyncing={isSyncing}
                           />
                         );

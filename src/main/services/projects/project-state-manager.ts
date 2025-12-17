@@ -843,6 +843,30 @@ class ProjectStateManager {
 
     return results;
   }
+
+  /**
+   * Get container status for a specific project
+   */
+  async getProjectContainerStatus(projectId: string): Promise<ContainerStateData | null> {
+    this.ensureInitialized();
+
+    const project = projectStorage.getProject(projectId);
+    if (!project) {
+      return null;
+    }
+
+    const { dockerManager } = await import('@main/services/docker/docker-manager');
+    const containerState = await dockerManager.getContainerState(project.containerName);
+
+    return {
+      id: project.id,
+      running: containerState?.running ?? false,
+      exists: containerState?.exists ?? false,
+      state: containerState?.state ?? null,
+      ports: containerState?.ports ?? [],
+      health_status: containerState?.health_status ?? 'none',
+    };
+  }
 }
 
 // Export singleton instance

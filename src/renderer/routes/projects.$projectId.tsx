@@ -16,8 +16,8 @@ import { TbWorld } from 'react-icons/tb';
 import {
   projectQueryOptions,
   useDeleteProject,
-  useProjectsStatus,
   useProjectPort,
+  useProjectContainerStatus,
 } from '@renderer/queries/projects-queries';
 import { useDockerStatus } from '@renderer/queries/docker-queries';
 import {
@@ -109,10 +109,8 @@ function ProjectDetailPage() {
   // Get ngrok tunnel status
   const { data: ngrokStatusData } = useNgrokStatus(projectId);
 
-  // Use batch status (same as list view) - non-blocking, shares cache
-  // Docker events provide real-time updates, polling at 60s is fallback
-  const { data: projectsStatus } = useProjectsStatus();
-  const projectStatus = projectsStatus?.find(s => s.id === projectId);
+  // Use per-project container status - real-time updates via Docker events
+  const { data: projectStatus } = useProjectContainerStatus(projectId);
 
   // Lazy load port discovery - only when container is running (OPTIMIZED)
   // This is the ONLY potentially slow operation, but it's lazy and non-blocking

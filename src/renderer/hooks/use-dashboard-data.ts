@@ -4,8 +4,15 @@
  */
 
 import { useMemo } from 'react';
-import { useServices, useServicesStatus } from '@renderer/queries/services-queries';
-import { useProjects, useProjectsStatus } from '@renderer/queries/projects-queries';
+import { useQueries } from '@tanstack/react-query';
+import {
+  useServices,
+  serviceContainerStatusQueryOptions,
+} from '@renderer/queries/services-queries';
+import {
+  useProjects,
+  projectContainerStatusQueryOptions,
+} from '@renderer/queries/projects-queries';
 import type { ServiceDefinition } from '@shared/types/service';
 import type { Project } from '@shared/types/project';
 import type { ContainerStateData } from '@shared/types/container';
@@ -40,8 +47,15 @@ export function useDashboardData(): DashboardData {
   // Fetch service definitions (static, no Docker queries)
   const { data: services = [], isLoading: isLoadingServicesList } = useServices();
 
-  // Fetch service statuses separately (bulk Docker query)
-  const { data: servicesStatus = [], isLoading: isLoadingServicesStatus } = useServicesStatus();
+  // Fetch each service's container status in parallel
+  const serviceStatusQueries = useQueries({
+    queries: services.map(service => serviceContainerStatusQueryOptions(service.id)),
+  });
+
+  const isLoadingServicesStatus = serviceStatusQueries.some(q => q.isLoading);
+  const servicesStatus = serviceStatusQueries
+    .map(q => q.data)
+    .filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
 
   // Merge definitions with statuses
   const mergedServices = useMemo(() => {
@@ -61,8 +75,15 @@ export function useDashboardData(): DashboardData {
   // Fetch projects (non-blocking)
   const { data: projects = [], isLoading: isLoadingProjectsList } = useProjects();
 
-  // Batch fetch container status with event-driven updates (non-blocking)
-  const { data: batchStatus = [], isLoading: isLoadingBatchStatus } = useProjectsStatus();
+  // Fetch each project's container status in parallel
+  const projectStatusQueries = useQueries({
+    queries: projects.map(project => projectContainerStatusQueryOptions(project.id)),
+  });
+
+  const isLoadingBatchStatus = projectStatusQueries.some(q => q.isLoading);
+  const batchStatus = projectStatusQueries
+    .map(q => q.data)
+    .filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
 
   // Filter for running services only
   const runningServices = useMemo(

@@ -16,7 +16,8 @@ const projectsApi = (globalThis as unknown as Window).projects;
 export const projectKeys = {
   lists: () => ['projects'] as const,
   detail: (id: string) => ['projects', id] as const,
-  status: () => ['projects', 'status'] as const,
+  statuses: () => ['projects', 'statuses'] as const,
+  containerStatus: (id: string) => ['projects', 'statuses', id] as const,
   port: (id: string) => ['projects', 'port', id] as const,
 };
 
@@ -44,11 +45,11 @@ export const projectQueryOptions = (projectId: string) =>
     refetchInterval: false, // No polling - Docker events provide real-time updates
   });
 
-/** Query options for projects status - use in loaders */
-export const projectsStatusQueryOptions = () =>
+/** Query options for a specific project's container status */
+export const projectContainerStatusQueryOptions = (projectId: string) =>
   queryOptions({
-    queryKey: projectKeys.status(),
-    queryFn: () => projectsApi.getProjectsState(),
+    queryKey: projectKeys.containerStatus(projectId),
+    queryFn: () => projectsApi.getProjectContainerStatus(projectId),
     staleTime: Infinity, // Pure event-driven - Docker events handle updates
     refetchInterval: false, // No polling - Docker events provide real-time updates
   });
@@ -59,17 +60,13 @@ export function useProjects() {
 }
 
 /**
- * Fetches bulk project container status (running state, health).
+ * Fetches a specific project's container status (running state, health).
  * Pure event-driven - Docker events provide real-time updates.
  */
-export function useProjectsStatus(options?: {
-  refetchInterval?: number | false;
-  staleTime?: number;
-}) {
+export function useProjectContainerStatus(projectId: string, options?: { enabled?: boolean }) {
   return useQuery({
-    ...projectsStatusQueryOptions(),
-    refetchInterval: options?.refetchInterval ?? false, // Pure event-driven by default
-    staleTime: options?.staleTime,
+    ...projectContainerStatusQueryOptions(projectId),
+    enabled: options?.enabled ?? true,
     refetchOnWindowFocus: true,
   });
 }

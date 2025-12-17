@@ -176,6 +176,19 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
+   * Get container status for a specific project
+   */
+  ipcMain.handle(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, async (_event, projectId: string) => {
+    try {
+      await ensureInitialized();
+      return await projectStateManager.getProjectContainerStatus(projectId);
+    } catch (error) {
+      logger.error('Failed to get project container status', { projectId, error });
+      throw error;
+    }
+  });
+
+  /**
    * Discover forwarded localhost port for a container
    * Scans dynamic port range and checks X-Container-Name header
    * Tries HTTP first (faster), then HTTPS with self-signed cert support
