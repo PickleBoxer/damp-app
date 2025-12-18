@@ -39,9 +39,6 @@ export function exposeProjectsContext(): void {
     getProjectContainerState: (projectId: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_GET_CONTAINER_STATE, projectId),
 
-    discoverPort: (containerName: string) =>
-      ipcRenderer.invoke(CHANNELS.PROJECTS_DISCOVER_PORT, containerName),
-
     onCopyProgress: callback => {
       const listener = (_event: unknown, projectId: string, progress: VolumeCopyProgress) => {
         callback(projectId, progress);

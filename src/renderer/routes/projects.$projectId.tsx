@@ -13,14 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/ale
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
 import { IoInformationCircle, IoWarning } from 'react-icons/io5';
 import { TbWorld } from 'react-icons/tb';
-import {
-  projectQueryOptions,
-  projectContainerStateQueryOptions,
-  projectKeys,
-} from '@renderer/projects';
+import { projectQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
 import { useDeleteProject } from '@renderer/hooks/use-projects';
-// Direct access to IPC API exposed via preload script
-const projectsApi = (globalThis as unknown as Window).projects;
 import { dockerStatusQueryOptions } from '@renderer/docker';
 import { useSyncFromVolume, useSyncToVolume, useProjectSyncStatus } from '@renderer/hooks/use-sync';
 import { useNgrokStatus, useStartNgrokTunnel, useStopNgrokTunnel } from '@renderer/hooks/use-ngrok';
@@ -105,22 +99,6 @@ function ProjectDetailPage() {
 
   // Use per-project container state - real-time updates via Docker events
   const { data: projectState } = useQuery(projectContainerStateQueryOptions(projectId));
-
-  // Lazy load port discovery - only when container is running (OPTIMIZED)
-  // This is the ONLY potentially slow operation, but it's lazy and non-blocking
-  const { data: forwardedLocalhostPort } = useQuery({
-    queryKey: projectKeys.port(projectId || ''),
-    queryFn: async () => {
-      if (!projectId) return null;
-      const project = await projectsApi.getProject(projectId);
-      if (!project) return null;
-      return await projectsApi.discoverPort(project.containerName);
-    },
-    enabled: projectState?.running || false,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
 
   // Derived state
   const isDockerRunning = dockerStatus?.isRunning ?? false;
@@ -288,11 +266,7 @@ function ProjectDetailPage() {
       >
         <div className="flex h-full flex-1 flex-col space-y-4 p-2">
           {/* Safari Preview with Hover Expansion */}
-          <ProjectPreview
-            project={project}
-            forwardedLocalhostPort={forwardedLocalhostPort}
-            isRunning={isRunning}
-          />
+          <ProjectPreview project={project} isRunning={isRunning} />
           {/* Compact Project Header */}
           <div className="z-10 -mt-7 mb-0 flex items-baseline justify-between px-2">
             <div className="bg-background z-10 flex items-center p-2">
@@ -469,17 +443,6 @@ function ProjectDetailPage() {
                           <span className="text-muted-foreground">Container Port</span>
                           <span>{project.forwardedPort}</span>
                         </div>
-                        {forwardedLocalhostPort && (
-                          <div className="grid grid-cols-[140px_1fr] gap-2">
-                            <span className="text-muted-foreground">Localhost Port</span>
-                            <span className="font-mono">
-                              localhost:{forwardedLocalhostPort}
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                VS Code forwarded
-                              </Badge>
-                            </span>
-                          </div>
-                        )}
                         <div className="grid grid-cols-[140px_1fr] gap-2">
                           <span className="text-muted-foreground">Claude AI</span>
                           <span>{project.enableClaudeAi ? 'Enabled' : 'Disabled'}</span>

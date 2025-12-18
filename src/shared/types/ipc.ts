@@ -137,7 +137,6 @@ export interface ProjectsContext {
   reorderProjects: (projectIds: string[]) => Promise<Result<void>>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
   getProjectContainerState: (projectId: string) => Promise<ContainerStateData | null>;
-  discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (
     callback: (projectId: string, progress: VolumeCopyProgress) => void
   ) => () => void;

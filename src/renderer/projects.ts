@@ -11,7 +11,6 @@ export const projectKeys = {
   detail: (id: string) => ['projects', id] as const,
   states: () => ['projects', 'states'] as const,
   containerState: (id: string) => ['projects', 'states', id] as const,
-  port: (id: string) => ['projects', 'port', id] as const,
 };
 
 /** Query options for all projects - use in loaders */

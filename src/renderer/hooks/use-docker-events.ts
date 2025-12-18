@@ -51,14 +51,6 @@ export function useDockerEvents() {
           queryKey: projectKeys.containerState(affectedProject.id),
           refetchType: 'active',
         });
-
-        // Only invalidate port on container start (expensive ~2s operation)
-        if (event.action === 'start') {
-          queryClient.invalidateQueries({
-            queryKey: projectKeys.port(affectedProject.id),
-            refetchType: 'active',
-          });
-        }
       }
 
       // Check if this event is for a service container (damp-* prefix)

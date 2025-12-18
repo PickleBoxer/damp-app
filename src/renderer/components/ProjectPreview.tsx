@@ -5,26 +5,16 @@ import type { Project } from '@shared/types/project';
 
 interface ProjectPreviewProps {
   project: Project;
-  forwardedLocalhostPort?: number | null;
   isRunning?: boolean; // Passed from parent (detail view has batch status)
 }
 
-export function ProjectPreview({
-  project,
-  forwardedLocalhostPort,
-  isRunning = false,
-}: Readonly<ProjectPreviewProps>) {
+export function ProjectPreview({ project, isRunning = false }: Readonly<ProjectPreviewProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
-  // Determine preview URL: prefer localhost port if discovered, fallback to Caddy domain
-  const previewUrl = forwardedLocalhostPort
-    ? `http://localhost:${forwardedLocalhostPort}`
-    : `https://${project.domain}`;
-
-  const displayUrl = forwardedLocalhostPort
-    ? `localhost:${forwardedLocalhostPort}`
-    : project.domain;
+  // Use Caddy domain for preview
+  const previewUrl = `https://${project.domain}`;
+  const displayUrl = project.domain;
 
   useEffect(() => {
     const updateScale = () => {
