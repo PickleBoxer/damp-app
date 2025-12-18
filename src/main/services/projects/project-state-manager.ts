@@ -847,7 +847,7 @@ class ProjectStateManager {
   /**
    * Get container status for a specific project
    */
-  async getProjectContainerStatus(projectId: string): Promise<ContainerStateData | null> {
+  async getProjectContainerState(projectId: string): Promise<ContainerStateData | null> {
     this.ensureInitialized();
 
     const project = projectStorage.getProject(projectId);

@@ -9,8 +9,11 @@ import {
 } from '@renderer/components/ui/dialog';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Kbd } from '@renderer/components/ui/kbd';
-import { useProjects } from '@renderer/queries/projects-queries';
-import { useServices } from '@renderer/queries/services-queries';
+import { projectKeys } from '@renderer/projects';
+// useQuery already imported above
+import type { Project } from '@shared/types/project';
+import { servicesQueryOptions } from '@renderer/services';
+import { useQuery } from '@tanstack/react-query';
 import { isMacOS } from '@shared/utils/platform';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
@@ -34,13 +37,23 @@ export function QuickSearch() {
     isLoading: projectsLoading,
     isError: projectsError,
     error: projectsErr,
-  } = useProjects();
+  } = useQuery<Project[]>({
+    queryKey: projectKeys.lists(),
+    queryFn: () =>
+      (
+        globalThis as unknown as Window & { projects: { getAllProjects: () => Promise<Project[]> } }
+      ).projects.getAllProjects(),
+    staleTime: Infinity,
+    refetchInterval: false,
+  });
   const {
     data: services,
     isLoading: servicesLoading,
     isError: servicesError,
     error: servicesErr,
-  } = useServices();
+  } = useQuery({
+    ...servicesQueryOptions(),
+  });
 
   // Keyboard shortcut listener
   useEffect(() => {

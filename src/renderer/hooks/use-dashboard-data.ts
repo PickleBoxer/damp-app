@@ -4,17 +4,12 @@
  */
 
 import { useMemo } from 'react';
-import { useQueries } from '@tanstack/react-query';
-import {
-  useServices,
-  serviceContainerStatusQueryOptions,
-} from '@renderer/queries/services-queries';
-import {
-  useProjects,
-  projectContainerStatusQueryOptions,
-} from '@renderer/queries/projects-queries';
-import type { ServiceDefinition } from '@shared/types/service';
+import { useQueries, useQuery, type UseQueryOptions } from '@tanstack/react-query';
+import { servicesQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
+import { projectsQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
 import type { Project } from '@shared/types/project';
+import type { ServiceDefinition } from '@shared/types/service';
+// ...existing code...
 import type { ContainerStateData } from '@shared/types/container';
 
 export interface DashboardService extends ServiceDefinition {
@@ -29,7 +24,7 @@ export interface DashboardService extends ServiceDefinition {
 export interface DashboardData {
   runningServices: DashboardService[];
   runningProjects: Array<Project & { isRunning: boolean }>;
-  mandatoryServices: DashboardService[];
+  requiredServices: DashboardService[];
   allServices: DashboardService[];
   allProjects: Project[];
   isLoadingServices: boolean;
@@ -45,26 +40,32 @@ export interface DashboardData {
  */
 export function useDashboardData(): DashboardData {
   // Fetch service definitions (static, no Docker queries)
-  const { data: services = [], isLoading: isLoadingServicesList } = useServices();
+  const { data: services = [], isLoading: isLoadingServicesList } =
+    useQuery(servicesQueryOptions());
 
   // Fetch each service's container status in parallel
   const serviceStatusQueries = useQueries({
-    queries: services.map(service => serviceContainerStatusQueryOptions(service.id)),
+    queries: services.map((service: ServiceDefinition) =>
+      serviceContainerStateQueryOptions(service.id)
+    ),
   });
 
   const isLoadingServicesStatus = serviceStatusQueries.some(q => q.isLoading);
   const servicesStatus = serviceStatusQueries
-    .map(q => q.data)
-    .filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
+    .map(q => q.data ?? { id: '', exists: false, running: false, health_status: 'none' })
+    .filter((s: { id: string }) => s.id !== '');
 
   // Merge definitions with statuses
   const mergedServices = useMemo(() => {
-    const statusMap = new Map(servicesStatus.map(s => [s.id, s]));
-
-    return services.map(service => {
+    const statusMap = new Map(
+      servicesStatus.map(
+        (s: { id: string; exists: boolean; running: boolean; health_status: string }) => [s.id, s]
+      )
+    );
+    return services.map((service: ServiceDefinition) => {
       const status = statusMap.get(service.id);
       return {
-        ...service, // Spread all ServiceDefinition properties
+        ...service,
         exists: status?.exists ?? false,
         running: status?.running ?? false,
         health_status: status?.health_status ?? 'none',
@@ -73,41 +74,46 @@ export function useDashboardData(): DashboardData {
   }, [services, servicesStatus]);
 
   // Fetch projects (non-blocking)
-  const { data: projects = [], isLoading: isLoadingProjectsList } = useProjects();
+  const { data: projects = [], isLoading: isLoadingProjectsList } = useQuery<Project[], Error>({
+    ...(projectsQueryOptions() as UseQueryOptions<Project[], Error>),
+  });
 
   // Fetch each project's container status in parallel
   const projectStatusQueries = useQueries({
-    queries: projects.map(project => projectContainerStatusQueryOptions(project.id)),
+    queries: projects.map((project: Project) => projectContainerStateQueryOptions(project.id)),
   });
 
   const isLoadingBatchStatus = projectStatusQueries.some(q => q.isLoading);
   const batchStatus = projectStatusQueries
-    .map(q => q.data)
-    .filter((s): s is NonNullable<typeof s> => s !== null && s !== undefined);
+    .map(q => q.data ?? { id: '', running: false })
+    .filter((s: { id: string; running: boolean }) => s.id !== '');
 
   // Filter for running services only
   const runningServices = useMemo(
-    () => mergedServices.filter(service => service.running === true),
+    () => mergedServices.filter((service: DashboardService) => service.running === true),
     [mergedServices]
   );
 
-  // Filter for mandatory services that are not running or not installed
-  const mandatoryServices = useMemo(
+  // Filter for required services that are not running or not installed
+  const requiredServices = useMemo(
     () =>
-      mergedServices.filter(service => service.required && (!service.exists || !service.running)),
+      mergedServices.filter(
+        (service: DashboardService) => service.required && (!service.exists || !service.running)
+      ),
     [mergedServices]
   );
 
   // Combine projects with their running status and filter for running only
   const runningProjects = useMemo(() => {
-    const statusMap = new Map(batchStatus.map(s => [s.id, s.running]));
-
+    const statusMap = new Map(
+      batchStatus.map((s: { id: string; running: boolean }) => [s.id, s.running])
+    );
     return projects
-      .map(project => ({
+      .map((project: Project) => ({
         ...project,
         isRunning: statusMap.get(project.id) ?? false,
       }))
-      .filter(project => project.isRunning);
+      .filter((project: Project & { isRunning?: boolean }) => project.isRunning);
   }, [projects, batchStatus]);
 
   const isLoadingProjects = isLoadingProjectsList || isLoadingBatchStatus;
@@ -117,7 +123,7 @@ export function useDashboardData(): DashboardData {
   return {
     runningServices,
     runningProjects,
-    mandatoryServices,
+    requiredServices,
     allServices: mergedServices,
     allProjects: projects,
     isLoadingServices,

@@ -22,7 +22,7 @@ export const PROJECTS_COPY_PROGRESS = 'projects:copy-progress';
 
 // Container status
 export const PROJECTS_GET_STATUS = 'projects:get-status';
-export const PROJECTS_GET_CONTAINER_STATUS = 'projects:get-container-status';
+export const PROJECTS_GET_CONTAINER_STATE = 'projects:get-container-state';
 
 // Port discovery
 export const PROJECTS_DISCOVER_PORT = 'projects:discover-port';

@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 /**
  * Caddy web server status notification banner
  * Shows warning when Docker or Caddy service is not running
@@ -6,15 +7,19 @@
 import { Button } from '@renderer/components/ui/button';
 import { AlertTriangle, Loader2, Download, Play } from 'lucide-react';
 import { toast } from 'sonner';
-import { useDockerStatus } from '@renderer/queries/docker-queries';
-import { useService, useInstallService, useStartService } from '@renderer/queries/services-queries';
+import { dockerStatusQueryOptions } from '@renderer/docker';
+import { serviceQueryOptions } from '@renderer/services';
+import { useInstallService, useStartService } from '@renderer/hooks/use-services';
+// useQuery already imported above
 import { ServiceId } from '@shared/types/service';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function CaddyStatusBanner() {
   const queryClient = useQueryClient();
-  const { data: dockerStatus, isLoading: isDockerLoading } = useDockerStatus();
-  const { data: caddyService, isLoading: isCaddyLoading } = useService(ServiceId.Caddy);
+  const { data: dockerStatus, isLoading: isDockerLoading } = useQuery(dockerStatusQueryOptions());
+  const { data: caddyService, isLoading: isCaddyLoading } = useQuery(
+    serviceQueryOptions(ServiceId.Caddy)
+  );
   const installMutation = useInstallService();
   const startMutation = useStartService();
 

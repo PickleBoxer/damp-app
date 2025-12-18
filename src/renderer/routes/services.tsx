@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import {
   createFileRoute,
@@ -8,18 +9,16 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { PackageOpen, Loader2 } from 'lucide-react';
+import { PackageOpen, Loader2, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
-import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import {
-  servicesQueryOptions,
-  useServiceContainerStatus,
-} from '@renderer/queries/services-queries';
+import { useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { servicesQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
+// useQuery already imported above
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
 import type { ServiceType, ServiceId } from '@shared/types/service';
@@ -30,6 +29,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@renderer/components/ui/tooltip';
 import { Button } from '@renderer/components/ui/button';
 
 export const Route = createFileRoute('/services')({
@@ -58,6 +63,7 @@ interface ServiceListItemProps {
   displayName: string;
   description: string;
   isSelected: boolean;
+  isRequired?: boolean;
 }
 
 function ServiceListItem({
@@ -65,15 +71,16 @@ function ServiceListItem({
   displayName,
   description,
   isSelected,
+  isRequired,
 }: Readonly<ServiceListItemProps>) {
-  // Each service fetches its own container status
-  const { data: status } = useServiceContainerStatus(serviceId);
+  // Each service fetches its own container state
+  const { data: state } = useQuery(serviceContainerStateQueryOptions(serviceId));
 
   return (
     <div
       className={`group/service relative w-full ${
         isSelected ? 'bg-primary/5' : ''
-      } ${status?.running ? '' : 'opacity-50'}`}
+      } ${state?.exists ? '' : 'opacity-50'}`}
     >
       <Link
         to="/services/$serviceId"
@@ -84,8 +91,22 @@ function ServiceListItem({
           <ServiceIcon serviceId={serviceId} className="h-10 w-10" />
           <div className="w-full truncate">
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-sm font-semibold">{displayName}</span>
-              <ContainerStateIndicator status={status} />
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-sm font-semibold">{displayName}</span>
+                {isRequired && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Required service</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+              <ContainerStateIndicator status={state} />
             </div>
             <p className="text-muted-foreground truncate text-xs">{description}</p>
           </div>
@@ -173,6 +194,7 @@ function ServicesPage() {
                       displayName={service.display_name}
                       description={service.description}
                       isSelected={selectedServiceId === service.id}
+                      isRequired={service.required}
                     />
                   ))}
                 </>

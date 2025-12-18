@@ -19,12 +19,9 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
-import {
-  projectsQueryOptions,
-  useReorderProjects,
-  useProjectContainerStatus,
-} from '@renderer/queries/projects-queries';
-import { useActiveSyncs } from '@renderer/queries/sync-queries';
+import { projectsQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
+import { useReorderProjects } from '@renderer/hooks/use-projects';
+import { useActiveSyncs } from '@renderer/hooks/use-sync';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';
 import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
@@ -68,8 +65,8 @@ function SortableProjectItem({
   isSelected,
   isSyncing,
 }: Readonly<SortableProjectItemProps>) {
-  // Each project fetches its own container status
-  const { data: status } = useProjectContainerStatus(project.id);
+  // Each project fetches its own container state
+  const { data: state } = useQuery(projectContainerStateQueryOptions(project.id));
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
@@ -106,7 +103,7 @@ function SortableProjectItem({
             <div className="w-full truncate">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold capitalize">{project.name}</span>
-                <ContainerStateIndicator status={status} />
+                <ContainerStateIndicator status={state} />
               </div>
               <p className="text-muted-foreground flex items-center gap-1 text-xs">
                 <FaLink className="h-3 w-3 shrink-0" />

@@ -1,7 +1,7 @@
 import { Outlet, createRootRouteWithContext, Link } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useSyncProgress } from '@renderer/queries/sync-queries';
+import { useSyncProgress } from '@renderer/hooks/use-sync';
 import { useDockerEvents } from '@renderer/hooks/use-docker-events';
 import AppHeader from '@renderer/components/layout/AppHeader';
 import {

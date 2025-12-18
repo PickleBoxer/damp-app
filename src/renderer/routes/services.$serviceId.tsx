@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { Button } from '@renderer/components/ui/button';
 import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import { serviceQueryOptions } from '@renderer/queries/services-queries';
+import { serviceQueryOptions } from '@renderer/services';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 import { HealthBadge } from '@renderer/components/HealthBadge';
 import ServiceActions from '@renderer/components/ServiceActions';

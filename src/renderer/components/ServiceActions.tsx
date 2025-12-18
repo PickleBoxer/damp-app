@@ -3,14 +3,15 @@ import { Button } from '@renderer/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ServiceInfo } from '@shared/types/service';
+import { useQuery } from '@tanstack/react-query';
+import { dockerStatusQueryOptions } from '@renderer/docker';
 import {
   useInstallService,
   useStartService,
   useStopService,
   useRestartService,
   useUninstallService,
-} from '@renderer/queries/services-queries';
-import { useDockerStatus } from '@renderer/queries/docker-queries';
+} from '@renderer/hooks/use-services';
 
 interface ServiceActionsProps {
   readonly service: ServiceInfo;
@@ -23,7 +24,7 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
   const restartMutation = useRestartService();
   const uninstallMutation = useUninstallService();
 
-  const { data: dockerStatus, isLoading: isDockerLoading } = useDockerStatus();
+  const { data: dockerStatus, isLoading: isDockerLoading } = useQuery(dockerStatusQueryOptions());
   const isDockerRunning = dockerStatus?.isRunning === true;
 
   const toastIdRef = useRef<string | number | null>(null);

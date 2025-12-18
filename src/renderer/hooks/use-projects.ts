@@ -1,98 +1,12 @@
-/** TanStack Query hooks for project management */
+/** Mutation hooks for project management */
 
-import { useQuery, useMutation, useQueryClient, queryOptions } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type {
-  Project,
-  CreateProjectInput,
-  UpdateProjectInput,
-  FolderSelectionResult,
-} from '@shared/types/project';
+import type { Project, CreateProjectInput, UpdateProjectInput } from '@shared/types/project';
+import { projectKeys } from '@renderer/projects';
 
 // Direct access to IPC API exposed via preload script
 const projectsApi = (globalThis as unknown as Window).projects;
-
-/** Query keys for projects */
-export const projectKeys = {
-  lists: () => ['projects'] as const,
-  detail: (id: string) => ['projects', id] as const,
-  statuses: () => ['projects', 'statuses'] as const,
-  containerStatus: (id: string) => ['projects', 'statuses', id] as const,
-  port: (id: string) => ['projects', 'port', id] as const,
-};
-
-/** Query options for all projects - use in loaders */
-export const projectsQueryOptions = () =>
-  queryOptions({
-    queryKey: projectKeys.lists(),
-    queryFn: () => projectsApi.getAllProjects(),
-    staleTime: Infinity, // Pure event-driven - mutations handle updates
-    refetchInterval: false, // No polling - Docker events provide real-time updates
-  });
-
-/** Query options for a specific project - use in loaders */
-export const projectQueryOptions = (projectId: string) =>
-  queryOptions({
-    queryKey: projectKeys.detail(projectId),
-    queryFn: async () => {
-      const project = await projectsApi.getProject(projectId);
-      if (!project) {
-        throw new Error(`Project with ID "${projectId}" not found`);
-      }
-      return project;
-    },
-    staleTime: Infinity, // Pure event-driven - Docker events handle updates
-    refetchInterval: false, // No polling - Docker events provide real-time updates
-  });
-
-/** Query options for a specific project's container status */
-export const projectContainerStatusQueryOptions = (projectId: string) =>
-  queryOptions({
-    queryKey: projectKeys.containerStatus(projectId),
-    queryFn: () => projectsApi.getProjectContainerStatus(projectId),
-    staleTime: Infinity, // Pure event-driven - Docker events handle updates
-    refetchInterval: false, // No polling - Docker events provide real-time updates
-  });
-
-/** Fetches all projects */
-export function useProjects() {
-  return useQuery(projectsQueryOptions());
-}
-
-/**
- * Fetches a specific project's container status (running state, health).
- * Pure event-driven - Docker events provide real-time updates.
- */
-export function useProjectContainerStatus(projectId: string, options?: { enabled?: boolean }) {
-  return useQuery({
-    ...projectContainerStatusQueryOptions(projectId),
-    enabled: options?.enabled ?? true,
-    refetchOnWindowFocus: true,
-  });
-}
-
-/**
- * Discovers forwarded localhost port for a project container.
- * Lazy-loaded, only runs when enabled (expensive operation ~2s).
- */
-export function useProjectPort(projectId: string | undefined, options?: { enabled?: boolean }) {
-  return useQuery({
-    queryKey: projectKeys.port(projectId || ''),
-    queryFn: async () => {
-      if (!projectId) return null;
-
-      const project = await projectsApi.getProject(projectId);
-      if (!project) return null;
-
-      // Call IPC to discover port in main process (no CORS restrictions)
-      return await projectsApi.discoverPort(project.containerName);
-    },
-    enabled: options?.enabled === true && !!projectId,
-    staleTime: 5 * 60 * 1000, // Port rarely changes, cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchOnWindowFocus: false, // Don't refetch port on focus (it's stable)
-  });
-}
 
 /** Creates a new project */
 export function useCreateProject() {
@@ -209,9 +123,4 @@ export function useReorderProjects() {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
     },
   });
-}
-
-/** Opens folder selection dialog */
-export async function selectFolder(defaultPath?: string): Promise<FolderSelectionResult> {
-  return await projectsApi.selectFolder(defaultPath);
 }

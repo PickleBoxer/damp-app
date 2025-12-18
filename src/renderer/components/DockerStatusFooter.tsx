@@ -1,6 +1,10 @@
 import { SiDocker } from 'react-icons/si';
-import { useDockerStatus, useDockerInfo, useNetworkStatus } from '@renderer/queries/docker-queries';
-import { useProjects } from '@renderer/queries/projects-queries';
+import {
+  dockerStatusQueryOptions,
+  dockerInfoQueryOptions,
+  dockerNetworkStatusQueryOptions,
+} from '@renderer/docker';
+import { projectKeys } from '@renderer/projects';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   Cpu,
@@ -12,13 +16,15 @@ import {
   Network,
 } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useActiveSyncs } from '@renderer/queries/sync-queries';
-import { useActiveNgrokTunnels } from '@renderer/queries/ngrok-queries';
+import { useActiveSyncs } from '@renderer/hooks/use-sync';
+import { useActiveNgrokTunnels } from '@renderer/hooks/use-ngrok';
 import { useNavigate } from '@tanstack/react-router';
 
 /**
  * Format bytes to MB or GB depending on size
  */
+import { useQuery } from '@tanstack/react-query';
+import type { Project } from '@shared/types/project';
 function formatMemory(bytes: number): string {
   const gb = bytes / 1024 / 1024 / 1024;
   const mb = bytes / 1024 / 1024;
@@ -35,16 +41,26 @@ export default function DockerStatusFooter() {
     data: dockerStatus,
     isLoading: statusLoading,
     refetch: refetchStatus,
-  } = useDockerStatus();
-  const { data: dockerInfo, refetch: refetchInfo } = useDockerInfo(
-    dockerStatus?.isRunning ?? false
+  } = useQuery(dockerStatusQueryOptions());
+  const { data: dockerInfo, refetch: refetchInfo } = useQuery(
+    dockerInfoQueryOptions(dockerStatus?.isRunning ?? false)
   );
-  const { data: networkStatus } = useNetworkStatus(dockerStatus?.isRunning ?? false);
+  const { data: networkStatus } = useQuery(
+    dockerNetworkStatusQueryOptions(dockerStatus?.isRunning ?? false)
+  );
   const { data: activeSyncs } = useActiveSyncs();
-  const { data: projects } = useProjects();
+  const { data: projects } = useQuery<Project[]>({
+    queryKey: projectKeys.lists(),
+    queryFn: () =>
+      (
+        globalThis as unknown as Window & { projects: { getAllProjects: () => Promise<Project[]> } }
+      ).projects.getAllProjects(),
+    staleTime: Infinity,
+    refetchInterval: false,
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track mount state and cleanup on unmount
   useEffect(() => {

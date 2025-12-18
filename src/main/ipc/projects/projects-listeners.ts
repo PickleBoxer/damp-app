@@ -178,12 +178,12 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   /**
    * Get container status for a specific project
    */
-  ipcMain.handle(CHANNELS.PROJECTS_GET_CONTAINER_STATUS, async (_event, projectId: string) => {
+  ipcMain.handle(CHANNELS.PROJECTS_GET_CONTAINER_STATE, async (_event, projectId: string) => {
     try {
       await ensureInitialized();
-      return await projectStateManager.getProjectContainerStatus(projectId);
+      return await projectStateManager.getProjectContainerState(projectId);
     } catch (error) {
-      logger.error('Failed to get project container status', { projectId, error });
+      logger.error('Failed to get project container state', { projectId, error });
       throw error;
     }
   });

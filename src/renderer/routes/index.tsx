@@ -22,17 +22,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { useQuery } from '@tanstack/react-query';
 import { Marquee3D } from '@renderer/components/ui/marquee-3d';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
+import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
 import { useDashboardData, type DashboardService } from '@renderer/hooks/use-dashboard-data';
-import { useDockerStatus } from '@renderer/queries/docker-queries';
-import {
-  servicesQueryOptions,
-  useStartService,
-  useStopService,
-  useInstallService,
-} from '@renderer/queries/services-queries';
-import { projectsQueryOptions } from '@renderer/queries/projects-queries';
+import { dockerStatusQueryOptions } from '@renderer/docker';
+import { useStartService, useStopService, useInstallService } from '@renderer/hooks/use-services';
+import { servicesQueryOptions } from '@renderer/services';
+import { projectsQueryOptions } from '@renderer/projects';
 import {
   Play,
   Square,
@@ -68,7 +66,7 @@ function DashboardPage() {
     isLoadingProjects,
   } = useDashboardData();
 
-  const { data: dockerStatus } = useDockerStatus();
+  const { data: dockerStatus } = useQuery(dockerStatusQueryOptions());
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
@@ -80,10 +78,10 @@ function DashboardPage() {
   const runningCount = runningServices.length;
   const stoppedServicesCount = installedServices.filter(s => !s.running).length;
 
-  // Combine mandatory services with installed services for carousel display
-  const allMandatoryServices = allServices.filter(s => s.required);
+  // Combine required services with installed services for carousel display
+  const allRequiredServices = allServices.filter(s => s.required);
   const otherInstalledServices = installedServices.filter(s => !s.required);
-  const displayServices = [...allMandatoryServices, ...otherInstalledServices];
+  const displayServices = [...allRequiredServices, ...otherInstalledServices];
 
   // Initialize and update carousel scroll state
   useEffect(() => {
@@ -365,7 +363,7 @@ function DashboardPage() {
               <CarouselContent className="-ml-2">
                 {displayServices.map(service => (
                   <CarouselItem className="basis-1/2 pl-2" key={service.id}>
-                    <ServiceStatusCard service={service} isMandatory={service.required} />
+                    <ServiceStatusCard service={service} isRequired={service.required} />
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -379,10 +377,10 @@ function DashboardPage() {
 
 function ServiceStatusCard({
   service,
-  isMandatory,
+  isRequired,
 }: {
   readonly service: DashboardService;
-  readonly isMandatory?: boolean;
+  readonly isRequired?: boolean;
 }) {
   const startMutation = useStartService();
   const stopMutation = useStopService();
@@ -418,9 +416,23 @@ function ServiceStatusCard({
           <div className="flex flex-1 items-start gap-3">
             <ServiceIcon serviceId={service.id} className="mt-0.5 h-5 w-5" />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <CardTitle className="text-sm leading-none font-semibold">
-                {service.display_name}
-              </CardTitle>
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-sm leading-none font-semibold">
+                  {service.display_name}
+                </CardTitle>
+                {isRequired && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Required service</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
               <CardDescription className="text-xs leading-snug">
                 {service.description}
               </CardDescription>
@@ -428,33 +440,18 @@ function ServiceStatusCard({
           </div>
 
           {/* Status Indicator (top-right) */}
-          <div className="flex shrink-0 items-center gap-2">
-            {isMandatory && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">Required service</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            <div className="flex items-center gap-1.5">
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  !isInstalled
-                    ? 'bg-muted-foreground/40'
-                    : isRunning
-                      ? 'animate-pulse bg-emerald-500'
-                      : 'bg-orange-400'
-                }`}
-              />
-              <span className="text-xs font-medium">
-                {!isInstalled ? 'Not Installed' : isRunning ? 'Running' : 'Stopped'}
-              </span>
-            </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <ContainerStateIndicator
+              status={
+                isInstalled
+                  ? {
+                      running: isRunning,
+                      health_status: service.health_status,
+                      exists: true,
+                    }
+                  : null
+              }
+            />
           </div>
         </div>
       </CardHeader>

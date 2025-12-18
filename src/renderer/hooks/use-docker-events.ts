@@ -8,8 +8,8 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Project } from '@shared/types/project';
 import type { ServiceId } from '@shared/types/service';
-import { projectKeys } from '@renderer/queries/projects-queries';
-import { servicesKeys } from '@renderer/queries/services-queries';
+import { projectKeys } from '@renderer/projects';
+import { servicesKeys } from '@renderer/services';
 
 const dockerEventsApi = (globalThis as unknown as Window).dockerEvents;
 
@@ -46,9 +46,9 @@ export function useDockerEvents() {
           refetchType: 'active',
         });
 
-        // ✅ Granular: Invalidate ONLY this project's container status
+        // ✅ Granular: Invalidate ONLY this project's container state
         queryClient.invalidateQueries({
-          queryKey: projectKeys.containerStatus(affectedProject.id),
+          queryKey: projectKeys.containerState(affectedProject.id),
           refetchType: 'active',
         });
 
@@ -74,9 +74,9 @@ export function useDockerEvents() {
           refetchType: 'active',
         });
 
-        // ✅ Granular: Invalidate ONLY this service's container status
+        // ✅ Granular: Invalidate ONLY this service's container state
         queryClient.invalidateQueries({
-          queryKey: servicesKeys.containerStatus(serviceId),
+          queryKey: servicesKeys.containerState(serviceId),
           refetchType: 'active',
         });
       }

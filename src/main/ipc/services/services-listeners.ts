@@ -70,12 +70,12 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   /**
    * Get container status for a specific service
    */
-  ipcMain.handle(CHANNELS.SERVICES_GET_CONTAINER_STATUS, async (_event, serviceId: ServiceId) => {
+  ipcMain.handle(CHANNELS.SERVICES_GET_CONTAINER_STATE, async (_event, serviceId: ServiceId) => {
     try {
       await ensureInitialized();
-      return await serviceStateManager.getServiceContainerStatus(serviceId);
+      return await serviceStateManager.getServiceContainerState(serviceId);
     } catch (error) {
-      logger.error('Failed to get service container status', { serviceId, error });
+      logger.error('Failed to get service container state', { serviceId, error });
       throw error;
     }
   });

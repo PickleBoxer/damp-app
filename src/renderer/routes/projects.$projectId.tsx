@@ -5,7 +5,7 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Button } from '@renderer/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
@@ -15,21 +15,15 @@ import { IoInformationCircle, IoWarning } from 'react-icons/io5';
 import { TbWorld } from 'react-icons/tb';
 import {
   projectQueryOptions,
-  useDeleteProject,
-  useProjectPort,
-  useProjectContainerStatus,
-} from '@renderer/queries/projects-queries';
-import { useDockerStatus } from '@renderer/queries/docker-queries';
-import {
-  useSyncFromVolume,
-  useSyncToVolume,
-  useProjectSyncStatus,
-} from '@renderer/queries/sync-queries';
-import {
-  useNgrokStatus,
-  useStartNgrokTunnel,
-  useStopNgrokTunnel,
-} from '@renderer/queries/ngrok-queries';
+  projectContainerStateQueryOptions,
+  projectKeys,
+} from '@renderer/projects';
+import { useDeleteProject } from '@renderer/hooks/use-projects';
+// Direct access to IPC API exposed via preload script
+const projectsApi = (globalThis as unknown as Window).projects;
+import { dockerStatusQueryOptions } from '@renderer/docker';
+import { useSyncFromVolume, useSyncToVolume, useProjectSyncStatus } from '@renderer/hooks/use-sync';
+import { useNgrokStatus, useStartNgrokTunnel, useStopNgrokTunnel } from '@renderer/hooks/use-ngrok';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';
 import { ProjectLogs } from '@renderer/components/ProjectLogs';
@@ -101,7 +95,7 @@ function ProjectDetailPage() {
   const [includeVendor, setIncludeVendor] = useState(false);
 
   // Check Docker status
-  const { data: dockerStatus } = useDockerStatus();
+  const { data: dockerStatus } = useQuery(dockerStatusQueryOptions());
 
   // Get sync status for this project
   const syncStatus = useProjectSyncStatus(projectId);
@@ -109,20 +103,30 @@ function ProjectDetailPage() {
   // Get ngrok tunnel status
   const { data: ngrokStatusData } = useNgrokStatus(projectId);
 
-  // Use per-project container status - real-time updates via Docker events
-  const { data: projectStatus } = useProjectContainerStatus(projectId);
+  // Use per-project container state - real-time updates via Docker events
+  const { data: projectState } = useQuery(projectContainerStateQueryOptions(projectId));
 
   // Lazy load port discovery - only when container is running (OPTIMIZED)
   // This is the ONLY potentially slow operation, but it's lazy and non-blocking
-  const { data: forwardedLocalhostPort } = useProjectPort(projectId, {
-    enabled: projectStatus?.running || false, // Only discover port when container is actually running
+  const { data: forwardedLocalhostPort } = useQuery({
+    queryKey: projectKeys.port(projectId || ''),
+    queryFn: async () => {
+      if (!projectId) return null;
+      const project = await projectsApi.getProject(projectId);
+      if (!project) return null;
+      return await projectsApi.discoverPort(project.containerName);
+    },
+    enabled: projectState?.running || false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Derived state
   const isDockerRunning = dockerStatus?.isRunning ?? false;
   const ngrokStatus = ngrokStatusData?.status || 'stopped';
   const ngrokPublicUrl = ngrokStatusData?.publicUrl;
-  const containerState = projectStatus;
+  const containerState = projectState;
   const isRunning = containerState?.running || false;
 
   const handleOpenVSCode = async () => {

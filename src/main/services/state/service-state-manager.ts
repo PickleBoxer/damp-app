@@ -150,7 +150,7 @@ class ServiceStateManager {
   /**
    * Get container status for a specific service
    */
-  async getServiceContainerStatus(serviceId: ServiceId): Promise<ContainerStateData | null> {
+  async getServiceContainerState(serviceId: ServiceId): Promise<ContainerStateData | null> {
     this.ensureInitialized();
 
     const definition = getServiceDefinition(serviceId);

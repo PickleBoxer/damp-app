@@ -24,10 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import {
-  useCreateProject,
-  selectFolder as selectProjectFolder,
-} from '@renderer/queries/projects-queries';
+import { useCreateProject } from '@renderer/hooks/use-projects';
 import {
   ProjectCreationTerminal,
   type TerminalLog,
@@ -38,6 +35,7 @@ import type {
   PhpVersion,
   NodeVersion,
   PhpVariant,
+  FolderSelectionResult,
 } from '@shared/types/project';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { SiClaude, SiNodedotjs, SiPhp, SiReact, SiVuedotjs, SiLivewire } from 'react-icons/si';
@@ -223,7 +221,8 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   }, []);
 
   const handleSelectFolder = async () => {
-    const result = await selectProjectFolder();
+    const projectsApi = (globalThis as unknown as Window).projects;
+    const result: FolderSelectionResult = await projectsApi.selectFolder();
     if (result.success && result.path) {
       setFormData(prev => {
         const newData = { ...prev, path: result.path };

@@ -1,13 +1,11 @@
-/**
- * TanStack Query hooks for Docker operations
- */
+/** Query keys and query options for Docker operations */
 
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions } from '@tanstack/react-query';
 
 // Direct access to IPC API exposed via preload script
 const dockerApi = (globalThis as unknown as Window).docker;
 
-// Query keys
+/** Query keys for Docker */
 export const dockerKeys = {
   all: ['docker'] as const,
   status: () => [...dockerKeys.all, 'status'] as const,
@@ -16,37 +14,35 @@ export const dockerKeys = {
 };
 
 /**
- * Hook to check Docker daemon status
+ * Query options for Docker daemon status
  * Polls every 5 seconds to detect when Docker starts/stops
  */
-export function useDockerStatus() {
-  return useQuery({
+export const dockerStatusQueryOptions = () =>
+  queryOptions({
     queryKey: dockerKeys.status(),
     queryFn: () => dockerApi.getStatus(),
     refetchInterval: 5000, // Poll every 5 seconds
     initialData: { isRunning: false }, // Assume not running initially
   });
-}
 
 /**
- * Hook to get Docker system info (CPU, RAM, disk)
- * Polls every 15 seconds with 10s cache to reduce overhead
+ * Query options for Docker system info (CPU, RAM, disk)
+ * Polls every 15 seconds to reduce overhead
  */
-export function useDockerInfo(dockerIsRunning: boolean) {
-  return useQuery({
+export const dockerInfoQueryOptions = (dockerIsRunning: boolean) =>
+  queryOptions({
     queryKey: dockerKeys.info(),
     queryFn: () => dockerApi.getInfo(),
     refetchInterval: 15000, // Poll every 15 seconds
     enabled: dockerIsRunning, // Only run when Docker is running
   });
-}
 
 /**
- * Hook to get Docker network status
+ * Query options for Docker network status
  * Only polls when Docker is running and network doesn't exist (every 15 seconds)
  */
-export function useNetworkStatus(dockerIsRunning: boolean) {
-  return useQuery({
+export const dockerNetworkStatusQueryOptions = (dockerIsRunning: boolean) =>
+  queryOptions({
     queryKey: dockerKeys.networkStatus(),
     queryFn: () => dockerApi.getNetworkStatus(),
     refetchInterval: query => {
@@ -55,4 +51,3 @@ export function useNetworkStatus(dockerIsRunning: boolean) {
     },
     enabled: dockerIsRunning, // Only run when Docker is running
   });
-}
