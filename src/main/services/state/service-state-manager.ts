@@ -9,10 +9,10 @@ import type {
   ServiceDefinition,
   CustomConfig,
   InstallOptions,
-  ServiceOperationResult,
   PullProgress,
 } from '@shared/types/service';
-import type { ContainerStateData } from '@shared/types/container';
+import type { Result } from '@shared/types/result';
+import type { ContainerStateData, PortMapping } from '@shared/types/container';
 import { ServiceId } from '@shared/types/service';
 import { createLogger } from '@main/utils/logger';
 
@@ -175,7 +175,8 @@ class ServiceStateManager {
   }
 
   /**
-   * Get service by ID with full state including container status
+   * Get service by ID with definition and custom config (no container state)
+   * Use getServiceContainerState() separately for Docker container status
    */
   async getService(serviceId: ServiceId): Promise<ServiceInfo | null> {
     this.ensureInitialized();
@@ -190,21 +191,9 @@ class ServiceStateManager {
       return null;
     }
 
-    // Get container status from Docker (single source of truth)
-    const containerState = await dockerManager.getContainerState(
-      state.custom_config?.container_name || definition.default_config.container_name
-    );
-
-    // Compute installed/enabled from Docker state
-    const installed = containerState?.exists ?? false;
-    const enabled = installed && (definition.required || containerState?.running === true);
-
     return {
       ...definition, // Spread all ServiceDefinition properties
-      installed,
-      enabled,
       custom_config: state.custom_config,
-      container_status: containerState,
     };
   }
 
@@ -215,7 +204,7 @@ class ServiceStateManager {
     serviceId: ServiceId,
     options?: InstallOptions,
     onProgress?: (progress: PullProgress) => void
-  ): Promise<ServiceOperationResult> {
+  ): Promise<Result<{ message?: string; container_id: string; ports?: PortMapping[] }>> {
     this.ensureInitialized();
 
     try {
@@ -297,11 +286,11 @@ class ServiceStateManager {
           });
 
           // Store metadata if provided
-          if (hookResult.metadata) {
+          if (hookResult.data) {
             await serviceStorage.updateServiceState(serviceId, {
               custom_config: {
                 ...customConfig,
-                metadata: hookResult.metadata,
+                metadata: hookResult.data,
               },
             });
           }
@@ -325,7 +314,7 @@ class ServiceStateManager {
       return {
         success: true,
         data: {
-          message: definition.post_install_message,
+          message: definition.post_install_message ?? undefined,
           container_id: containerId,
           ports: containerState?.ports,
         },
@@ -345,7 +334,7 @@ class ServiceStateManager {
   async uninstallService(
     serviceId: ServiceId,
     removeVolumes = false
-  ): Promise<ServiceOperationResult> {
+  ): Promise<Result<{ message: string }>> {
     this.ensureInitialized();
 
     try {
@@ -419,7 +408,7 @@ class ServiceStateManager {
   /**
    * Start a service
    */
-  async startService(serviceId: ServiceId): Promise<ServiceOperationResult> {
+  async startService(serviceId: ServiceId): Promise<Result<{ message: string }>> {
     this.ensureInitialized();
 
     try {
@@ -478,7 +467,7 @@ class ServiceStateManager {
   /**
    * Stop a service
    */
-  async stopService(serviceId: ServiceId): Promise<ServiceOperationResult> {
+  async stopService(serviceId: ServiceId): Promise<Result<{ message: string }>> {
     this.ensureInitialized();
 
     try {
@@ -530,7 +519,7 @@ class ServiceStateManager {
   /**
    * Restart a service
    */
-  async restartService(serviceId: ServiceId): Promise<ServiceOperationResult> {
+  async restartService(serviceId: ServiceId): Promise<Result<{ message: string }>> {
     this.ensureInitialized();
 
     try {
@@ -578,7 +567,7 @@ class ServiceStateManager {
   async updateServiceConfig(
     serviceId: ServiceId,
     customConfig: CustomConfig
-  ): Promise<ServiceOperationResult> {
+  ): Promise<Result<{ message: string }>> {
     this.ensureInitialized();
 
     try {

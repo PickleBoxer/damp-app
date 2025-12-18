@@ -4,13 +4,7 @@
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { z } from 'zod';
-import {
-  LOGS_START_CHANNEL,
-  LOGS_STOP_CHANNEL,
-  LOGS_LINE_CHANNEL,
-  LOGS_READ_FILE_CHANNEL,
-  LOGS_TAIL_FILE_CHANNEL,
-} from './logs-channels';
+import { LOGS_START_CHANNEL, LOGS_STOP_CHANNEL, LOGS_LINE_CHANNEL } from './logs-channels';
 import { dockerManager } from '@main/services/docker/docker-manager';
 import { projectStateManager } from '@main/services/projects/project-state-manager';
 import { createLogger } from '@main/utils/logger';
@@ -114,61 +108,6 @@ async function handleStopLogs(_event: IpcMainInvokeEvent, projectId: string): Pr
 }
 
 /**
- * Read log file from container
- */
-async function handleReadFile(
-  _event: IpcMainInvokeEvent,
-  projectId: string,
-  filePath: string
-): Promise<{ success: boolean; content?: string; error?: string }> {
-  try {
-    const project = await projectStateManager.getProject(projectId);
-    if (!project) {
-      return { success: false, error: `Project ${projectId} not found` };
-    }
-
-    const buffer = await dockerManager.getFileFromContainer(project.containerName, filePath);
-    const content = buffer.toString('utf-8');
-
-    return { success: true, content };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[Logs] Failed to read file ${filePath}:`, errorMessage);
-    return { success: false, error: errorMessage };
-  }
-}
-
-/**
- * Tail log file from container
- */
-async function handleTailFile(
-  _event: IpcMainInvokeEvent,
-  projectId: string,
-  filePath: string,
-  lines = 100
-): Promise<{ success: boolean; content?: string; error?: string }> {
-  try {
-    const project = await projectStateManager.getProject(projectId);
-    if (!project) {
-      return { success: false, error: `Project ${projectId} not found` };
-    }
-
-    const buffer = await dockerManager.getFileFromContainer(project.containerName, filePath);
-    const fullContent = buffer.toString('utf-8');
-
-    // Get last N lines
-    const allLines = fullContent.split('\n');
-    const content = allLines.slice(-lines).join('\n');
-
-    return { success: true, content };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[Logs] Failed to tail file ${filePath}:`, errorMessage);
-    return { success: false, error: errorMessage };
-  }
-}
-
-/**
  * Register all log-related IPC listeners
  */
 // Prevent duplicate listener registration
@@ -180,8 +119,6 @@ export function addLogsEventListeners(): void {
 
   ipcMain.handle(LOGS_START_CHANNEL, handleStartLogs);
   ipcMain.handle(LOGS_STOP_CHANNEL, handleStopLogs);
-  ipcMain.handle(LOGS_READ_FILE_CHANNEL, handleReadFile);
-  ipcMain.handle(LOGS_TAIL_FILE_CHANNEL, handleTailFile);
 
   logger.info('Logs IPC listeners registered');
 }

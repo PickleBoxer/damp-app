@@ -12,10 +12,13 @@ const projectsApi = (globalThis as unknown as Window).projects;
 export function useCreateProject() {
   const queryClient = useQueryClient();
 
-  return useMutation<Project, Error, CreateProjectInput>({
+  return useMutation<unknown, Error, CreateProjectInput>({
     mutationFn: async (input: CreateProjectInput) => {
       const result = await projectsApi.createProject(input);
-      return result;
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create project');
+      }
+      return result.data;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
@@ -36,8 +39,14 @@ export function useCreateProject() {
 export function useUpdateProject() {
   const queryClient = useQueryClient();
 
-  return useMutation<Project, Error, UpdateProjectInput>({
-    mutationFn: (input: UpdateProjectInput) => projectsApi.updateProject(input),
+  return useMutation<unknown, Error, UpdateProjectInput>({
+    mutationFn: async (input: UpdateProjectInput) => {
+      const result = await projectsApi.updateProject(input);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update project');
+      }
+      return result.data;
+    },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
@@ -59,12 +68,17 @@ export function useDeleteProject() {
   const queryClient = useQueryClient();
 
   return useMutation<
-    void,
+    unknown,
     Error,
     { projectId: string; removeVolume?: boolean; removeFolder?: boolean }
   >({
-    mutationFn: ({ projectId, removeVolume, removeFolder }) =>
-      projectsApi.deleteProject(projectId, removeVolume, removeFolder),
+    mutationFn: async ({ projectId, removeVolume, removeFolder }) => {
+      const result = await projectsApi.deleteProject(projectId, removeVolume, removeFolder);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete project');
+      }
+      return result.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
       toast.success('Project deleted successfully', {
@@ -83,8 +97,14 @@ export function useDeleteProject() {
 export function useReorderProjects() {
   const queryClient = useQueryClient();
 
-  return useMutation<void, Error, string[], { previousProjects?: Project[] } | undefined>({
-    mutationFn: (projectIds: string[]) => projectsApi.reorderProjects(projectIds),
+  return useMutation<unknown, Error, string[], { previousProjects?: Project[] } | undefined>({
+    mutationFn: async (projectIds: string[]) => {
+      const result = await projectsApi.reorderProjects(projectIds);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to reorder projects');
+      }
+      return result.data;
+    },
     onMutate: async (newOrder: string[]) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: projectKeys.lists() });

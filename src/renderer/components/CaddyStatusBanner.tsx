@@ -1,31 +1,28 @@
-import { useQuery } from '@tanstack/react-query';
 /**
  * Caddy web server status notification banner
  * Shows warning when Docker or Caddy service is not running
  */
 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@renderer/components/ui/button';
 import { AlertTriangle, Loader2, Download, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { dockerStatusQueryOptions } from '@renderer/docker';
-import { serviceQueryOptions } from '@renderer/services';
+import { serviceQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
 import { useInstallService, useStartService } from '@renderer/hooks/use-services';
-// useQuery already imported above
 import { ServiceId } from '@shared/types/service';
-import { useQueryClient } from '@tanstack/react-query';
 
 export default function CaddyStatusBanner() {
   const queryClient = useQueryClient();
   const { data: dockerStatus, isLoading: isDockerLoading } = useQuery(dockerStatusQueryOptions());
-  const { data: caddyService, isLoading: isCaddyLoading } = useQuery(
-    serviceQueryOptions(ServiceId.Caddy)
-  );
+  const { isLoading: isCaddyLoading } = useQuery(serviceQueryOptions(ServiceId.Caddy));
+  const { data: caddyState } = useQuery(serviceContainerStateQueryOptions(ServiceId.Caddy));
   const installMutation = useInstallService();
   const startMutation = useStartService();
 
   const isDockerRunning = dockerStatus?.isRunning === true;
-  const isCaddyInstalled = caddyService?.installed ?? false;
-  const isCaddyRunning = caddyService?.container_status?.running ?? false;
+  const isCaddyInstalled = caddyState?.exists ?? false;
+  const isCaddyRunning = caddyState?.running ?? false;
 
   // Don't render during loading (non-blocking)
   if (isDockerLoading || isCaddyLoading) {
@@ -39,21 +36,15 @@ export default function CaddyStatusBanner() {
 
   const handleInstall = async () => {
     try {
-      const result = await installMutation.mutateAsync({
+      await installMutation.mutateAsync({
         serviceId: ServiceId.Caddy,
         options: { start_immediately: true },
       });
-      if (result?.success) {
-        toast.success('Web server installed successfully');
-        // Invalidate Caddy service query to refresh data
-        await queryClient.invalidateQueries({
-          queryKey: ['services', 'detail', ServiceId.Caddy],
-        });
-      } else {
-        toast.error('Failed to install web server', {
-          description: result?.error || 'Unknown error',
-        });
-      }
+      toast.success('Web server installed successfully');
+      // Invalidate Caddy service query to refresh data
+      await queryClient.invalidateQueries({
+        queryKey: ['services', 'detail', ServiceId.Caddy],
+      });
     } catch (error) {
       toast.error('Failed to install web server', {
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -63,18 +54,12 @@ export default function CaddyStatusBanner() {
 
   const handleStart = async () => {
     try {
-      const result = await startMutation.mutateAsync(ServiceId.Caddy);
-      if (result?.success) {
-        toast.success('Web server started successfully');
-        // Invalidate Caddy service query to refresh data
-        await queryClient.invalidateQueries({
-          queryKey: ['services', 'detail', ServiceId.Caddy],
-        });
-      } else {
-        toast.error('Failed to start web server', {
-          description: result?.error || 'Unknown error',
-        });
-      }
+      await startMutation.mutateAsync(ServiceId.Caddy);
+      toast.success('Web server started successfully');
+      // Invalidate Caddy service query to refresh data
+      await queryClient.invalidateQueries({
+        queryKey: ['services', 'detail', ServiceId.Caddy],
+      });
     } catch (error) {
       toast.error('Failed to start web server', {
         description: error instanceof Error ? error.message : 'Unknown error',

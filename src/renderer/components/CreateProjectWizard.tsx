@@ -105,17 +105,17 @@ type WizardStep = 'type' | 'laravel-starter' | 'laravel-config' | 'basic' | 'var
 const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: string }> = [
   {
     value: ProjectType.BasicPhp,
-    label: 'Basic PHP',
+    label: 'Custom',
     description: 'A flexible PHP scaffold you can build on',
   },
   {
     value: ProjectType.Laravel,
     label: 'Laravel',
-    description: 'Laravel framework project (requires PHP 8.2+)',
+    description: 'Laravel framework project',
   },
   {
     value: ProjectType.Existing,
-    label: 'Existing Project',
+    label: 'Existing',
     description: 'Import an existing PHP project',
   },
 ];
@@ -150,9 +150,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   const [step, setStep] = useState<WizardStep>('type');
   const [formData, setFormData] = useState<Partial<CreateProjectInput>>({
     type: ProjectType.BasicPhp,
-    phpVersion: '8.3',
+    phpVersion: '8.4',
     phpVariant: 'fpm-apache',
-    nodeVersion: 'none',
+    nodeVersion: 'latest',
     enableClaudeAi: false,
     phpExtensions: [],
   });
@@ -170,9 +170,9 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         setStep('type');
         setFormData({
           type: ProjectType.BasicPhp,
-          phpVersion: '8.3',
+          phpVersion: '8.4',
           phpVariant: 'fpm-apache',
-          nodeVersion: 'none',
+          nodeVersion: 'latest',
           enableClaudeAi: false,
           phpExtensions: [],
         });
@@ -433,7 +433,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                     if (type.value === ProjectType.Laravel && !prev.laravelOptions) {
                       newData.laravelOptions = {
                         starterKit: 'none',
-                        authentication: 'none',
+                        authentication: 'laravel',
                         useVolt: false,
                         testingFramework: 'pest',
                         installBoost: false,
@@ -474,10 +474,19 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                   />
                 </div>
                 <div className="flex-1">
-                  <div className="font-semibold">{type.label}</div>
-                  <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                    {type.description}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="font-semibold">{type.label}</div>
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="text-muted-foreground h-3.5 w-3.5 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">{type.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
                 {formData.type === type.value && (
                   <div className="absolute top-3 right-3">
@@ -589,7 +598,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         const starterKit = formData.laravelOptions?.starterKit || 'none';
         const hasStarterKit = starterKit !== 'none' && starterKit !== 'custom';
         const isLivewire = starterKit === 'livewire';
-        const authentication = formData.laravelOptions?.authentication || 'none';
+        const authentication = formData.laravelOptions?.authentication || 'laravel';
 
         return (
           <div className="space-y-4">

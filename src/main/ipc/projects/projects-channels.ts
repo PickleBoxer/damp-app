@@ -21,7 +21,6 @@ export const PROJECTS_SELECT_FOLDER = 'projects:select-folder';
 export const PROJECTS_COPY_PROGRESS = 'projects:copy-progress';
 
 // Container status
-export const PROJECTS_GET_STATUS = 'projects:get-status';
 export const PROJECTS_GET_CONTAINER_STATE = 'projects:get-container-state';
 
 // Port discovery

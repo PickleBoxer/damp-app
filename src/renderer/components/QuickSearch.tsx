@@ -9,13 +9,16 @@ import {
 } from '@renderer/components/ui/dialog';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Kbd } from '@renderer/components/ui/kbd';
-import { projectKeys } from '@renderer/projects';
-// useQuery already imported above
-import type { Project } from '@shared/types/project';
+import { projectsQueryOptions } from '@renderer/projects';
 import { servicesQueryOptions } from '@renderer/services';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isMacOS } from '@shared/utils/platform';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return 'An unknown error occurred';
+}
 
 interface SearchItem {
   id: string;
@@ -26,25 +29,120 @@ interface SearchItem {
   icon?: React.ReactNode;
 }
 
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 text-center">
+      <div className="text-muted-foreground mb-2 h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      <p className="text-muted-foreground text-sm">Loading projects and services...</p>
+    </div>
+  );
+}
+
+function ErrorState({
+  projectsError,
+  servicesError,
+  projectsErr,
+  servicesErr,
+}: Readonly<{
+  projectsError: boolean;
+  servicesError: boolean;
+  projectsErr: unknown;
+  servicesErr: unknown;
+}>) {
+  return (
+    <div className="space-y-4 p-4">
+      {projectsError && (
+        <div className="border-destructive/50 bg-destructive/10 border p-3">
+          <p className="text-destructive mb-1 text-sm font-medium">Failed to load projects</p>
+          <p className="text-muted-foreground text-xs">{getErrorMessage(projectsErr)}</p>
+        </div>
+      )}
+      {servicesError && (
+        <div className="border-destructive/50 bg-destructive/10 border p-3">
+          <p className="text-destructive mb-1 text-sm font-medium">Failed to load services</p>
+          <p className="text-muted-foreground text-xs">{getErrorMessage(servicesErr)}</p>
+        </div>
+      )}
+      {!projectsError && !servicesError && (
+        <div className="text-muted-foreground text-center text-sm">
+          Some data could not be loaded. Try again later.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return <div className="text-muted-foreground p-8 text-center text-sm">No results found</div>;
+}
+
+function ResultsList({
+  items,
+  selectedIndex,
+  selectedItemRef,
+  onSelect,
+}: Readonly<{
+  items: SearchItem[];
+  selectedIndex: number;
+  selectedItemRef: React.RefObject<HTMLButtonElement | null>;
+  onSelect: (item: SearchItem) => void;
+}>) {
+  return (
+    <div className="py-2">
+      {items.map((item, index) => {
+        const isSelected = index === selectedIndex;
+        return (
+          <button
+            key={item.id}
+            ref={isSelected ? selectedItemRef : null}
+            onClick={() => onSelect(item)}
+            className={`flex w-full min-w-0 items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+              isSelected ? 'bg-muted' : 'hover:bg-muted'
+            }`}
+          >
+            <div className="bg-primary/5 flex h-8 w-8 shrink-0 items-center justify-center">
+              {item.type === 'project' && <Command className="text-primary h-4 w-4" />}
+              {item.type === 'service' && <div className="bg-primary h-2 w-2 rounded-full" />}
+              {item.type === 'page' && <Search className="text-muted-foreground h-4 w-4" />}
+            </div>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="truncate text-sm font-medium">{item.title}</div>
+              <div className="text-muted-foreground truncate text-xs">{item.subtitle}</div>
+            </div>
+            {isSelected && <Kbd className="bg-background shrink-0">↵</Kbd>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PartialSuccessNotice({ hasProjectsError }: Readonly<{ hasProjectsError: boolean }>) {
+  return (
+    <div className="border-t bg-amber-500/10 px-4 py-2">
+      <p className="text-xs wrap-break-word text-amber-700 dark:text-amber-400">
+        ⚠️ {hasProjectsError ? 'Projects' : 'Services'} could not be loaded. Showing available
+        results only.
+      </p>
+    </div>
+  );
+}
+
 export function QuickSearch() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const selectedItemRef = useRef<HTMLButtonElement>(null);
   const {
     data: projects,
     isLoading: projectsLoading,
     isError: projectsError,
     error: projectsErr,
-  } = useQuery<Project[]>({
-    queryKey: projectKeys.lists(),
-    queryFn: () =>
-      (
-        globalThis as unknown as Window & { projects: { getAllProjects: () => Promise<Project[]> } }
-      ).projects.getAllProjects(),
-    staleTime: Infinity,
-    refetchInterval: false,
+  } = useQuery({
+    ...projectsQueryOptions(),
+    enabled: open, // Only fetch when dialog is opened
   });
   const {
     data: services,
@@ -53,6 +151,7 @@ export function QuickSearch() {
     error: servicesErr,
   } = useQuery({
     ...servicesQueryOptions(),
+    enabled: open, // Only fetch when dialog is opened
   });
 
   // Keyboard shortcut listener
@@ -67,8 +166,8 @@ export function QuickSearch() {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Check loading states (only initial loading, not background refetch)
@@ -133,17 +232,6 @@ export function QuickSearch() {
       })
     : searchItems.slice(0, 8); // Show recent/top items
 
-  // Track previous filtered items length to reset selection
-  const prevFilteredLengthRef = useRef(filteredItems.length);
-
-  useEffect(() => {
-    // Only reset when items actually change (not on mount)
-    if (prevFilteredLengthRef.current !== filteredItems.length) {
-      prevFilteredLengthRef.current = filteredItems.length;
-      setSelectedIndex(0);
-    }
-  }, [filteredItems.length]);
-
   // Scroll to selected item when index changes
   useEffect(() => {
     if (selectedItemRef.current) {
@@ -163,6 +251,12 @@ export function QuickSearch() {
     [navigate]
   );
 
+  const handlePrefetch = useCallback(() => {
+    // Prefetch projects and services when user hovers over search button
+    queryClient.prefetchQuery(projectsQueryOptions());
+    queryClient.prefetchQuery(servicesQueryOptions());
+  }, [queryClient]);
+
   const modKey = isMacOS() ? '⌘' : 'Ctrl';
 
   return (
@@ -170,11 +264,15 @@ export function QuickSearch() {
       {/* Search trigger button in title bar */}
       <button
         onClick={() => setOpen(true)}
-        className="bg-primary/5 border-border hover:bg-muted hover:border-ring/20 relative flex h-[26px] w-[320px] items-center justify-center gap-2 border px-3 font-mono text-sm transition-all duration-100"
+        onMouseEnter={handlePrefetch}
+        className="bg-primary/5 border-border hover:bg-muted hover:border-ring/20 relative flex h-6.5 w-[320px] items-center justify-center gap-2 border px-3 font-mono text-sm transition-all duration-100"
       >
         <Search className="text-muted-foreground h-4 w-4" />
         <span className="text-muted-foreground text-xs">DAMP</span>
-        <Kbd className="bg-background absolute right-3">{modKey}P</Kbd>
+        <div className="absolute right-3 flex items-center gap-0.5">
+          <Kbd className="bg-background">{modKey}</Kbd>
+          <Kbd className="bg-background">P</Kbd>
+        </div>
       </button>
 
       {/* Command palette dialog */}
@@ -193,7 +291,10 @@ export function QuickSearch() {
               placeholder="Search projects, services, pages..."
               aria-label="Search projects, services, and pages"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => {
+                setSearch(e.target.value);
+                setSelectedIndex(0); // Reset selection when search changes
+              }}
               className="min-w-0 flex-1 bg-transparent font-mono text-sm outline-none"
               onKeyDown={e => {
                 if (e.key === 'ArrowDown') {
@@ -219,88 +320,36 @@ export function QuickSearch() {
           </div>
 
           {/* Results */}
-          <ScrollArea className="flex-1">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center p-8 text-center">
-                <div className="text-muted-foreground mb-2 h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                <p className="text-muted-foreground text-sm">Loading projects and services...</p>
-              </div>
-            ) : hasErrors ? (
-              <div className="space-y-4 p-4">
-                {projectsError && (
-                  <div className="border-destructive/50 bg-destructive/10 border p-3">
-                    <p className="text-destructive mb-1 text-sm font-medium">
-                      Failed to load projects
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {projectsErr instanceof Error
-                        ? projectsErr.message
-                        : 'An unknown error occurred'}
-                    </p>
-                  </div>
-                )}
-                {servicesError && (
-                  <div className="border-destructive/50 bg-destructive/10 border p-3">
-                    <p className="text-destructive mb-1 text-sm font-medium">
-                      Failed to load services
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {servicesErr instanceof Error
-                        ? servicesErr.message
-                        : 'An unknown error occurred'}
-                    </p>
-                  </div>
-                )}
-                {!projectsError && !servicesError && (
-                  <div className="text-muted-foreground text-center text-sm">
-                    Some data could not be loaded. Try again later.
-                  </div>
-                )}
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="text-muted-foreground p-8 text-center text-sm">No results found</div>
-            ) : (
-              <div className="py-2">
-                {filteredItems.map((item, index) => (
-                  <button
-                    key={item.id}
-                    ref={index === selectedIndex ? selectedItemRef : null}
-                    onClick={() => handleSelect(item)}
-                    className={`flex w-full min-w-0 items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                      index === selectedIndex ? 'bg-muted' : 'hover:bg-muted'
-                    }`}
-                  >
-                    <div className="bg-primary/5 flex h-8 w-8 shrink-0 items-center justify-center">
-                      {item.type === 'project' && <Command className="text-primary h-4 w-4" />}
-                      {item.type === 'service' && (
-                        <div className="bg-primary h-2 w-2 rounded-full" />
-                      )}
-                      {item.type === 'page' && <Search className="text-muted-foreground h-4 w-4" />}
-                    </div>
-                    <div className="min-w-0 flex-1 overflow-hidden">
-                      <div className="truncate text-sm font-medium">{item.title}</div>
-                      <div className="text-muted-foreground truncate text-xs">{item.subtitle}</div>
-                    </div>
-                    {index === selectedIndex && <Kbd className="bg-background shrink-0">↵</Kbd>}
-                  </button>
-                ))}
-              </div>
+          <ScrollArea className="h-101.5">
+            {isLoading && <LoadingState />}
+            {!isLoading && hasErrors && (
+              <ErrorState
+                projectsError={projectsError}
+                servicesError={servicesError}
+                projectsErr={projectsErr}
+                servicesErr={servicesErr}
+              />
+            )}
+            {!isLoading && !hasErrors && filteredItems.length === 0 && <EmptyState />}
+            {!isLoading && !hasErrors && filteredItems.length > 0 && (
+              <ResultsList
+                items={filteredItems}
+                selectedIndex={selectedIndex}
+                selectedItemRef={selectedItemRef}
+                onSelect={handleSelect}
+              />
             )}
             {/* Partial success notice */}
             {!isLoading && (projectsError || servicesError) && filteredItems.length > 0 && (
-              <div className="border-t bg-amber-500/10 px-4 py-2">
-                <p className="text-xs wrap-break-word text-amber-700 dark:text-amber-400">
-                  ⚠️ {projectsError ? 'Projects' : 'Services'} could not be loaded. Showing
-                  available results only.
-                </p>
-              </div>
+              <PartialSuccessNotice hasProjectsError={!!projectsError} />
             )}
           </ScrollArea>
 
           {/* Footer hint */}
           <div className="text-muted-foreground bg-muted/30 flex flex-wrap items-center gap-2 border-t px-3 py-2 text-xs sm:gap-4">
             <span className="flex shrink-0 items-center gap-1">
-              <Kbd className="bg-background">↑↓</Kbd> to navigate
+              <Kbd className="bg-background">↑</Kbd>
+              <Kbd className="bg-background">↓</Kbd> to navigate
             </span>
             <span className="flex shrink-0 items-center gap-1">
               <Kbd className="bg-background">↵</Kbd> to select

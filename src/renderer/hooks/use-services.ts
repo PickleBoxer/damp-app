@@ -1,7 +1,7 @@
 /** Mutation hooks for service management */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ServiceId, CustomConfig, InstallOptions, PullProgress } from '@shared/types/service';
+import type { ServiceId, PullProgress, InstallOptions, CustomConfig } from '@shared/types/service';
 import { useEffect, useState } from 'react';
 import { servicesKeys } from '@renderer/services';
 
@@ -27,9 +27,14 @@ export function useInstallService() {
     return cleanup;
   }, []);
 
-  const mutation = useMutation({
-    mutationFn: ({ serviceId, options }: { serviceId: ServiceId; options?: InstallOptions }) =>
-      servicesApi.installService(serviceId, options),
+  const mutation = useMutation<unknown, Error, { serviceId: ServiceId; options?: InstallOptions }>({
+    mutationFn: async ({ serviceId, options }) => {
+      const result = await servicesApi.installService(serviceId, options);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to install service');
+      }
+      return result.data;
+    },
     onSuccess: (data, variables) => {
       // Invalidate and refetch
       void queryClient.invalidateQueries({
@@ -67,14 +72,14 @@ export function useInstallService() {
 export function useUninstallService() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({
-      serviceId,
-      removeVolumes = false,
-    }: {
-      serviceId: ServiceId;
-      removeVolumes?: boolean;
-    }) => servicesApi.uninstallService(serviceId, removeVolumes),
+  return useMutation<unknown, Error, { serviceId: ServiceId; removeVolumes?: boolean }>({
+    mutationFn: async ({ serviceId, removeVolumes = false }) => {
+      const result = await servicesApi.uninstallService(serviceId, removeVolumes);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to uninstall service');
+      }
+      return result.data;
+    },
     onSuccess: (data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(variables.serviceId),
@@ -91,8 +96,14 @@ export function useUninstallService() {
 export function useStartService() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (serviceId: ServiceId) => servicesApi.startService(serviceId),
+  return useMutation<unknown, Error, ServiceId>({
+    mutationFn: async serviceId => {
+      const result = await servicesApi.startService(serviceId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to start service');
+      }
+      return result.data;
+    },
     onSuccess: (data, serviceId) => {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(serviceId),
@@ -109,8 +120,14 @@ export function useStartService() {
 export function useStopService() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (serviceId: ServiceId) => servicesApi.stopService(serviceId),
+  return useMutation<unknown, Error, ServiceId>({
+    mutationFn: async serviceId => {
+      const result = await servicesApi.stopService(serviceId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to stop service');
+      }
+      return result.data;
+    },
     onSuccess: (data, serviceId) => {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(serviceId),
@@ -127,8 +144,14 @@ export function useStopService() {
 export function useRestartService() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (serviceId: ServiceId) => servicesApi.restartService(serviceId),
+  return useMutation<unknown, Error, ServiceId>({
+    mutationFn: async serviceId => {
+      const result = await servicesApi.restartService(serviceId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to restart service');
+      }
+      return result.data;
+    },
     onSuccess: (data, serviceId) => {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(serviceId),
@@ -145,14 +168,14 @@ export function useRestartService() {
 export function useUpdateServiceConfig() {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: ({
-      serviceId,
-      customConfig,
-    }: {
-      serviceId: ServiceId;
-      customConfig: CustomConfig;
-    }) => servicesApi.updateConfig(serviceId, customConfig),
+  return useMutation<unknown, Error, { serviceId: ServiceId; customConfig: CustomConfig }>({
+    mutationFn: async ({ serviceId, customConfig }) => {
+      const result = await servicesApi.updateConfig(serviceId, customConfig);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update service configuration');
+      }
+      return result.data;
+    },
     onSuccess: (data, variables) => {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.detail(variables.serviceId),

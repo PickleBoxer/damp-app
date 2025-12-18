@@ -61,7 +61,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-background flex h-5 w-full shrink-0 items-center justify-between border-t text-[11px]">
+    <footer className="bg-background flex h-8 w-full shrink-0 items-center justify-between border-t text-xs">
       <DockerStatusFooter />
       <div className="flex h-full">
         <Tooltip>
@@ -71,7 +71,7 @@ export default function Footer() {
               className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors"
               aria-label="Settings"
             >
-              <Settings className="size-3" />
+              <Settings className="size-4" />
             </Link>
           </TooltipTrigger>
           <TooltipContent side="top">Settings</TooltipContent>
@@ -83,7 +83,7 @@ export default function Footer() {
               className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors"
               aria-label="About"
             >
-              <Info className="size-3" />
+              <Info className="size-4" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">About</TooltipContent>
@@ -95,7 +95,7 @@ export default function Footer() {
               className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors"
               aria-label="Open Terminal"
             >
-              <Terminal className="size-3" />
+              <Terminal className="size-4" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">Open Terminal</TooltipContent>
@@ -120,10 +120,10 @@ export default function Footer() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {!appInfo && !error && (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  <div className="bg-muted size-12 animate-pulse rounded-full" />
-                  <p className="text-muted-foreground text-sm">Loading...</p>
-                </div>
+                <span className="flex flex-col items-center gap-3 py-4">
+                  <span className="bg-muted size-12 animate-pulse rounded-full" />
+                  <span className="text-muted-foreground text-sm">Loading...</span>
+                </span>
               )}
 
               {error && <span>{error}</span>}

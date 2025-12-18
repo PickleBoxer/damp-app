@@ -32,7 +32,8 @@ function buildLaravelCommand(projectName: string, options: LaravelInstallerOptio
   if (options.authentication === 'workos') {
     flags.push('--workos');
   } else if (options.authentication === 'none') {
-    flags.push('--no-authentication');
+    // TODO: when try to install with --no-authentication, it fails with error php version"
+    // flags.push('--no-authentication');
   }
 
   // Volt flag (for Livewire without Volt)
@@ -161,6 +162,7 @@ export async function installLaravelToVolume(
     }
 
     const command = buildLaravelCommand(projectName, options);
+    console.log('Laravel installer command:', command.join(' '));
     const container = await docker.createContainer({
       Image: INSTALLER_IMAGE,
       Cmd: command,

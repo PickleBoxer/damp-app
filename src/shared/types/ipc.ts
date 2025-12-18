@@ -19,8 +19,8 @@ import type {
   CustomConfig,
   InstallOptions,
   PullProgress,
-  ServiceOperationResult,
 } from './service';
+import type { Result } from './result';
 import type { ContainerStateData } from './container';
 
 /**
@@ -101,18 +101,20 @@ export interface ServicesContext {
   installService: (
     serviceId: ServiceId,
     options?: InstallOptions
-  ) => Promise<ServiceOperationResult>;
+  ) => Promise<
+    Result<{ message?: string; container_id: string; ports?: import('./container').PortMapping[] }>
+  >;
   uninstallService: (
     serviceId: ServiceId,
     removeVolumes?: boolean
-  ) => Promise<ServiceOperationResult>;
-  startService: (serviceId: ServiceId) => Promise<ServiceOperationResult>;
-  stopService: (serviceId: ServiceId) => Promise<ServiceOperationResult>;
-  restartService: (serviceId: ServiceId) => Promise<ServiceOperationResult>;
+  ) => Promise<Result<{ message: string }>>;
+  startService: (serviceId: ServiceId) => Promise<Result<{ message: string }>>;
+  stopService: (serviceId: ServiceId) => Promise<Result<{ message: string }>>;
+  restartService: (serviceId: ServiceId) => Promise<Result<{ message: string }>>;
   updateConfig: (
     serviceId: ServiceId,
     customConfig: CustomConfig
-  ) => Promise<ServiceOperationResult>;
+  ) => Promise<Result<{ message: string }>>;
   downloadCaddyCertificate: () => Promise<{ success: boolean; path?: string; error?: string }>;
   onInstallProgress: (
     callback: (serviceId: ServiceId, progress: PullProgress) => void
@@ -125,16 +127,15 @@ export interface ServicesContext {
 export interface ProjectsContext {
   getAllProjects: () => Promise<Project[]>;
   getProject: (projectId: string) => Promise<Project | null>;
-  createProject: (input: CreateProjectInput) => Promise<Project>;
-  updateProject: (input: UpdateProjectInput) => Promise<Project>;
+  createProject: (input: CreateProjectInput) => Promise<Result<Project>>;
+  updateProject: (input: UpdateProjectInput) => Promise<Result<Project>>;
   deleteProject: (
     projectId: string,
     removeVolume?: boolean,
     removeFolder?: boolean
-  ) => Promise<void>;
-  reorderProjects: (projectIds: string[]) => Promise<void>;
+  ) => Promise<Result<void>>;
+  reorderProjects: (projectIds: string[]) => Promise<Result<void>>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
-  getProjectsState: () => Promise<ContainerStateData[]>;
   getProjectContainerState: (projectId: string) => Promise<ContainerStateData | null>;
   discoverPort: (containerName: string) => Promise<number | null>;
   onCopyProgress: (
@@ -182,15 +183,6 @@ export interface ProjectLogsContext {
   start: (projectId: string) => Promise<{ success: boolean; error?: string }>;
   stop: (projectId: string) => Promise<void>;
   onLine: (callback: (log: LogLine) => void) => () => void;
-  readFile: (
-    projectId: string,
-    filePath: string
-  ) => Promise<{ success: boolean; content?: string; error?: string }>;
-  tailFile: (
-    projectId: string,
-    filePath: string,
-    lines?: number
-  ) => Promise<{ success: boolean; content?: string; error?: string }>;
 }
 
 /**

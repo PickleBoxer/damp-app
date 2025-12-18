@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { ServiceInfo } from '@shared/types/service';
 import { useQuery } from '@tanstack/react-query';
 import { dockerStatusQueryOptions } from '@renderer/docker';
+import { serviceContainerStateQueryOptions } from '@renderer/services';
 import {
   useInstallService,
   useStartService,
@@ -25,6 +26,7 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
   const uninstallMutation = useUninstallService();
 
   const { data: dockerStatus, isLoading: isDockerLoading } = useQuery(dockerStatusQueryOptions());
+  const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
   const isDockerRunning = dockerStatus?.isRunning === true;
 
   const toastIdRef = useRef<string | number | null>(null);
@@ -60,19 +62,13 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
 
   const handleInstall = async () => {
     try {
-      const result = await installMutation.mutateAsync({
+      await installMutation.mutateAsync({
         serviceId: service.id,
         options: { start_immediately: true },
       });
-      if (result?.success) {
-        toast.success(
-          service.post_install_message || `${service.display_name} installed successfully`
-        );
-      } else {
-        toast.error(`Failed to install ${service.display_name}`, {
-          description: result?.error || 'Unknown error occurred',
-        });
-      }
+      toast.success(
+        service.post_install_message || `${service.display_name} installed successfully`
+      );
     } catch (error) {
       toast.error(`Failed to install ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -82,14 +78,8 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
 
   const handleStart = async () => {
     try {
-      const result = await startMutation.mutateAsync(service.id);
-      if (result?.success) {
-        toast.success(`${service.display_name} started successfully`);
-      } else {
-        toast.error(`Failed to start ${service.display_name}`, {
-          description: result?.error || 'Unknown error occurred',
-        });
-      }
+      await startMutation.mutateAsync(service.id);
+      toast.success(`${service.display_name} started successfully`);
     } catch (error) {
       toast.error(`Failed to start ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -99,14 +89,8 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
 
   const handleStop = async () => {
     try {
-      const result = await stopMutation.mutateAsync(service.id);
-      if (result?.success) {
-        toast.success(`${service.display_name} stopped successfully`);
-      } else {
-        toast.error(`Failed to stop ${service.display_name}`, {
-          description: result?.error || 'Unknown error occurred',
-        });
-      }
+      await stopMutation.mutateAsync(service.id);
+      toast.success(`${service.display_name} stopped successfully`);
     } catch (error) {
       toast.error(`Failed to stop ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -116,14 +100,8 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
 
   const handleRestart = async () => {
     try {
-      const result = await restartMutation.mutateAsync(service.id);
-      if (result?.success) {
-        toast.success(`${service.display_name} restarted successfully`);
-      } else {
-        toast.error(`Failed to restart ${service.display_name}`, {
-          description: result?.error || 'Unknown error occurred',
-        });
-      }
+      await restartMutation.mutateAsync(service.id);
+      toast.success(`${service.display_name} restarted successfully`);
     } catch (error) {
       toast.error(`Failed to restart ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -133,17 +111,11 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
 
   const handleUninstall = async () => {
     try {
-      const result = await uninstallMutation.mutateAsync({
+      await uninstallMutation.mutateAsync({
         serviceId: service.id,
         removeVolumes: false,
       });
-      if (result?.success) {
-        toast.success(`${service.display_name} uninstalled successfully`);
-      } else {
-        toast.error(`Failed to uninstall ${service.display_name}`, {
-          description: result?.error || 'Unknown error occurred',
-        });
-      }
+      toast.success(`${service.display_name} uninstalled successfully`);
     } catch (error) {
       toast.error(`Failed to uninstall ${service.display_name}`, {
         description: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -151,8 +123,8 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
     }
   };
 
-  const isInstalled = status?.exists ?? service.installed;
-  const isRunning = service.container_status?.running ?? false;
+  const isInstalled = state?.exists ?? false;
+  const isRunning = state?.running ?? false;
 
   return (
     <div className="flex flex-wrap gap-2">

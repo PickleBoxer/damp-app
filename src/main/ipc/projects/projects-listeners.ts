@@ -18,9 +18,12 @@ import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('projects-ipc');
 
+// UUID regex pattern for validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Validation schemas
-const projectIdSchema = z.string().uuid();
-const projectIdsSchema = z.array(z.string().uuid());
+const projectIdSchema = z.string().regex(UUID_REGEX, 'Invalid UUID format');
+const projectIdsSchema = z.array(z.string().regex(UUID_REGEX, 'Invalid UUID format'));
 
 // Prevent duplicate listener registration
 let listenersAdded = false;
@@ -36,14 +39,6 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
   const ensureInitialized = async () => {
     initPromise ??= projectStateManager.initialize();
     await initPromise;
-  };
-
-  // Lazy-load docker manager only when needed (not on app startup)
-  let dockerManagerPromise: Promise<typeof import('@main/services/docker/docker-manager')> | null =
-    null;
-  const getDockerManager = async () => {
-    dockerManagerPromise ??= import('@main/services/docker/docker-manager');
-    return dockerManagerPromise;
   };
 
   /**
@@ -158,19 +153,6 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       return await projectStateManager.selectFolder(defaultPath);
     } catch (error) {
       logger.error('Failed to select folder', { error });
-      throw error;
-    }
-  });
-
-  /**
-   * Get container status for all projects
-   */
-  ipcMain.handle(CHANNELS.PROJECTS_GET_STATUS, async () => {
-    try {
-      await ensureInitialized();
-      return await projectStateManager.getProjectsState();
-    } catch (error) {
-      logger.error('Failed to get projects status', { error });
       throw error;
     }
   });

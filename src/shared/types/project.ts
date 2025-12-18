@@ -2,7 +2,7 @@
  * Project type definitions for devcontainer site management
  */
 
-import type { Result, StorageData } from './result';
+import type { StorageData } from './result';
 
 /**
  * Project type enum
@@ -175,11 +175,6 @@ export interface ProjectTemplate {
   dockerignore: string;
   dockerCompose: string;
 }
-
-/**
- * Project operation result (generic version)
- */
-export type ProjectOperationResult<T = unknown> = Result<T>;
 
 /**
  * Folder selection result (from Electron dialog)

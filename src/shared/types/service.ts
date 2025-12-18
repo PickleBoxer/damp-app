@@ -72,10 +72,6 @@ export interface ServiceConfig {
  * Custom configuration overrides
  */
 export interface CustomConfig {
-  /** Override enabled status */
-  enabled?: boolean;
-  /** Override installed status (usually managed by system) */
-  installed?: boolean;
   /** Custom port mappings */
   ports?: PortMapping[];
   /** Custom environment variables (merged with defaults) */
@@ -156,36 +152,12 @@ export interface PullProgress {
 }
 
 /**
- * Result of a service operation
- * @deprecated Use Result<T> from './result' instead
- */
-export interface ServiceOperationResult {
-  /** Whether operation succeeded */
-  success: boolean;
-  /** Error message if failed */
-  error?: string;
-  /** Additional data returned by operation */
-  data?: unknown;
-}
-
-/**
- * Service operation result using generic Result type
- */
-export type ServiceResult<T = unknown> = Result<T>;
-
-/**
  * Combined service information (definition + state)
  * All ServiceDefinition properties are flattened to root level with state properties
  */
 export interface ServiceInfo extends ServiceDefinition {
-  /** Whether service is installed */
-  installed: boolean;
-  /** Whether service is enabled */
-  enabled: boolean;
   /** Custom configuration overrides */
   custom_config: CustomConfig | null;
-  /** Current container status */
-  container_status: ContainerState | null;
 }
 
 /**

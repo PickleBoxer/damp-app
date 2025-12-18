@@ -294,7 +294,7 @@ export default function DockerStatusFooter() {
       {syncInfo.total > 0 && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 bg-blue-500/10 px-2 transition-colors">
+            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 px-2 transition-colors">
               <div className="flex items-center gap-1">
                 {syncInfo.counts.from > 0 && (
                   <div className="flex items-center gap-0.5">
@@ -319,13 +319,13 @@ export default function DockerStatusFooter() {
                   onClick={() =>
                     navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
                   }
-                  className="hover:bg-accent/50 flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
-                    <ArrowDownToLine className="text-muted-foreground size-3.5 shrink-0" />
-                    <span className="text-muted-foreground text-xs">{project.name}</span>
+                    <ArrowDownToLine className="size-3.5 shrink-0" />
+                    <span className="text-xs">{project.name}</span>
                   </div>
-                  <span className="text-xs text-blue-400 hover:underline">Open</span>
+                  <span className="text-xs hover:underline">Open</span>
                 </button>
               ))}
               {syncInfo.toProjects.map((project, idx) => (
@@ -334,13 +334,13 @@ export default function DockerStatusFooter() {
                   onClick={() =>
                     navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
                   }
-                  className="hover:bg-accent/50 flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
-                    <ArrowUpFromLine className="text-muted-foreground size-3.5 shrink-0" />
-                    <span className="text-muted-foreground text-xs">{project.name}</span>
+                    <ArrowUpFromLine className="size-3.5 shrink-0" />
+                    <span className="text-xs">{project.name}</span>
                   </div>
-                  <span className="text-xs text-blue-400 hover:underline">Open</span>
+                  <span className="text-xs hover:underline">Open</span>
                 </button>
               ))}
             </div>
@@ -352,7 +352,7 @@ export default function DockerStatusFooter() {
       {ngrokInfo.total > 0 && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 bg-purple-500/10 px-2 transition-colors">
+            <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 px-2 transition-colors">
               <div className="flex items-center gap-1">
                 <Globe className="size-3 animate-pulse text-purple-400" />
                 <span className="font-mono text-xs text-purple-400">{ngrokInfo.total}</span>
@@ -367,13 +367,13 @@ export default function DockerStatusFooter() {
                   onClick={() =>
                     navigate({ to: '/projects/$projectId', params: { projectId: tunnel.id } })
                   }
-                  className="hover:bg-accent/50 flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
-                    <Globe className="text-muted-foreground size-3.5 shrink-0" />
-                    <span className="text-muted-foreground text-xs">{tunnel.name}</span>
+                    <Globe className="size-3.5 shrink-0" />
+                    <span className="text-xs">{tunnel.name}</span>
                   </div>
-                  <span className="text-xs text-purple-400 hover:underline">Open</span>
+                  <span className="text-xs text-purple-500 hover:underline">Open</span>
                 </button>
               ))}
             </div>

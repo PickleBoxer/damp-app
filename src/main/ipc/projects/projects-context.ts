@@ -36,8 +36,6 @@ export function exposeProjectsContext(): void {
     selectFolder: (defaultPath?: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_SELECT_FOLDER, defaultPath),
 
-    getProjectsState: () => ipcRenderer.invoke(CHANNELS.PROJECTS_GET_STATUS),
-
     getProjectContainerState: (projectId: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_GET_CONTAINER_STATE, projectId),
 

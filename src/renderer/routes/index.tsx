@@ -89,15 +89,14 @@ function DashboardPage() {
       return;
     }
 
-    // Initialize state immediately
-    setCanScrollPrev(carouselApi.canScrollPrev());
-    setCanScrollNext(carouselApi.canScrollNext());
-
     // Update state on carousel events
     const updateScrollState = () => {
       setCanScrollPrev(carouselApi.canScrollPrev());
       setCanScrollNext(carouselApi.canScrollNext());
     };
+
+    // Initialize state
+    updateScrollState();
 
     carouselApi.on('select', updateScrollState);
     carouselApi.on('reInit', updateScrollState);
@@ -134,7 +133,7 @@ function DashboardPage() {
     <ScrollArea className="h-full w-full">
       <div className="space-y-4 p-6">
         {/* Feature Highlight Banner */}
-        <div className="relative flex h-[120px] w-full flex-col items-center justify-center overflow-hidden bg-linear-65 from-orange-400 via-purple-600 to-blue-500">
+        <div className="relative flex h-30 w-full flex-col items-center justify-center overflow-hidden bg-linear-65 from-orange-400 via-purple-600 to-blue-500">
           <Marquee3D className="pl-95" pauseOnHover>
             {allServices.map(service => (
               <Card
@@ -407,6 +406,51 @@ function ServiceStatusCard({
     }
   };
 
+  const renderActionButton = () => {
+    if (!isInstalled) {
+      return (
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => handleAction('install')}
+          disabled={actionLoading}
+          className="flex-1"
+        >
+          <Download className="mr-1.5 h-3.5 w-3.5" />
+          Install
+        </Button>
+      );
+    }
+
+    if (isRunning) {
+      return (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => handleAction('stop')}
+          disabled={actionLoading}
+          className="flex-1"
+        >
+          <Square className="text-destructive mr-1.5 h-3.5 w-3.5" />
+          Stop
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => handleAction('start')}
+        disabled={actionLoading}
+        className="flex-1"
+      >
+        <Play className="mr-1.5 h-3.5 w-3.5" />
+        Start
+      </Button>
+    );
+  };
+
   return (
     <Card data-size="sm" className="group/card flex h-full w-full flex-col">
       {/* Card Header with border-bottom */}
@@ -445,9 +489,12 @@ function ServiceStatusCard({
               status={
                 isInstalled
                   ? {
+                      id: service.id,
                       running: isRunning,
                       health_status: service.health_status,
                       exists: true,
+                      state: isRunning ? 'running' : 'exited',
+                      ports: [],
                     }
                   : null
               }
@@ -460,40 +507,7 @@ function ServiceStatusCard({
       <CardContent className="flex flex-col gap-3">
         {/* Action Buttons */}
         <div className="flex gap-2">
-          {!isInstalled ? (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => handleAction('install')}
-              disabled={actionLoading}
-              className="flex-1"
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5" />
-              Install
-            </Button>
-          ) : isRunning ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleAction('stop')}
-              disabled={actionLoading}
-              className="flex-1"
-            >
-              <Square className="text-destructive mr-1.5 h-3.5 w-3.5" />
-              Stop
-            </Button>
-          ) : (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => handleAction('start')}
-              disabled={actionLoading}
-              className="flex-1"
-            >
-              <Play className="mr-1.5 h-3.5 w-3.5" />
-              Start
-            </Button>
-          )}
+          {renderActionButton()}
           <Button variant="outline" size="sm" asChild className="px-2">
             <Link to="/services/$serviceId" params={{ serviceId: service.id }}>
               <Settings className="h-3.5 w-3.5" />

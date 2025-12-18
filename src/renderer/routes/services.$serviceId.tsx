@@ -6,8 +6,8 @@ import {
   type ErrorComponentProps,
 } from '@tanstack/react-router';
 import { Button } from '@renderer/components/ui/button';
-import { useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import { serviceQueryOptions } from '@renderer/services';
+import { useSuspenseQuery, useQueryErrorResetBoundary, useQuery } from '@tanstack/react-query';
+import { serviceQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 import { HealthBadge } from '@renderer/components/HealthBadge';
 import ServiceActions from '@renderer/components/ServiceActions';
@@ -38,12 +38,12 @@ export const Route = createFileRoute('/services/$serviceId')({
 });
 
 // Helper function to get status text
-function getStatusText(service: ServiceInfo): string {
-  if (service.container_status?.running) {
+function getStatusText(isRunning?: boolean, exists?: boolean): string {
+  if (isRunning) {
     return 'Running';
   }
 
-  if (service.installed) {
+  if (exists) {
     return 'Stopped';
   }
 
@@ -348,9 +348,10 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 
 // Service Info Card Component
 function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
+  const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
   const port = getServicePort(service, 0);
-  const isRunning = service.container_status?.running;
-  const healthStatus = service.container_status?.health_status;
+  const isRunning = state?.running;
+  const healthStatus = state?.health_status;
 
   return (
     <div className="bg-muted/30 dark:bg-muted/10 border-border border-b px-4 py-3">
@@ -365,11 +366,13 @@ function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
                   : 'bg-muted-foreground/40 dark:bg-muted-foreground/30'
               }`}
             />
-            <span className="text-foreground text-sm font-medium">{getStatusText(service)}</span>
+            <span className="text-foreground text-sm font-medium">
+              {getStatusText(isRunning, state?.exists)}
+            </span>
           </div>
 
           {/* Port Info */}
-          {service.installed && service.default_config.ports.length > 0 && (
+          {state?.exists && service.default_config.ports.length > 0 && (
             <>
               <div className="bg-border h-4 w-px" />
               <div className="flex items-center gap-1.5">
@@ -393,6 +396,7 @@ function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
 
 // Service details component
 function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
+  const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadCertificate = async () => {
@@ -450,7 +454,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
   const isCaddy = service.id === ServiceId.Caddy;
   const certInstalled =
     (service.custom_config?.metadata?.certInstalled as boolean | undefined) ?? false;
-  const showUIButton = hasServiceUI(service.id) && service.container_status?.running;
+  const showUIButton = hasServiceUI(service.id) && state?.running;
 
   return (
     <div className="flex h-full flex-col">
@@ -470,7 +474,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 
       <ScrollArea className="h-0 flex-1">
         <div className="flex-1 space-y-4">
-          {isCaddy && service.installed && (
+          {isCaddy && state?.exists && (
             <div className="p-4">
               <Card size="sm" className="mx-auto w-full">
                 <CardContent>
@@ -508,7 +512,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
           )}
 
           {/* Connection Information */}
-          {!isCaddy && service.installed && service.default_config.ports.length > 0 && (
+          {!isCaddy && state?.exists && service.default_config.ports.length > 0 && (
             <div className="p-4">
               <ConnectionInfo service={service} />
             </div>
@@ -524,7 +528,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
             Open Web UI
           </Button>
         )}
-        {isCaddy && service.installed && (
+        {isCaddy && state?.exists && (
           <Button
             variant="ghost"
             onClick={handleDownloadCertificate}
