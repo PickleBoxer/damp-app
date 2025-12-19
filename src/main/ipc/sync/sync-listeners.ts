@@ -7,15 +7,32 @@ import { ipcMain, BrowserWindow } from 'electron';
 import { z } from 'zod';
 import Docker from 'dockerode';
 import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_PROGRESS } from './sync-channels';
-import type { SyncOptions, SyncResult } from './sync-context';
 import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('sync-ipc');
 
 const docker = new Docker();
 
+// Define types locally
+interface SyncOptions {
+  includeNodeModules?: boolean;
+  includeVendor?: boolean;
+}
+
+interface SyncResult {
+  success: boolean;
+  error?: string;
+}
+
 // Validation schemas
-const projectIdSchema = z.string().uuid();
+const projectIdSchema = z.string().refine(
+  val => {
+    // UUID v4 regex pattern
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(val);
+  },
+  { message: 'Invalid project ID format' }
+);
 const syncOptionsSchema = z
   .object({
     includeNodeModules: z.boolean().optional(),
@@ -148,7 +165,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
         // Return immediately - sync runs in background
         return { success: true };
       } catch (error) {
-        console.error('Failed to get project details:', error);
+        logger.error('Failed to get project details for sync from volume', { error });
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),
@@ -241,7 +258,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
         // Return immediately - sync runs in background
         return { success: true };
       } catch (error) {
-        console.error('Failed to get project details:', error);
+        logger.error('Failed to get project details for sync to volume', { error });
         return {
           success: false,
           error: error instanceof Error ? error.message : String(error),

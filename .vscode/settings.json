@@ -45,10 +45,6 @@
     "editor.formatOnSave": true
   },
 
-  // Prettier specific settings
-  "prettier.requireConfig": true,
-  "prettier.useEditorConfig": false,
-
   // Ignore generated route tree files
   "files.readonlyInclude": {
     "**/routeTree.gen.ts": true

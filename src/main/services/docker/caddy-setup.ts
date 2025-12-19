@@ -9,6 +9,9 @@ import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFileSync, unlinkSync } from 'node:fs';
+import { createLogger } from '@main/utils/logger';
+
+const logger = createLogger('CaddySSL');
 
 /**
  * Default Caddyfile content for SSL bootstrapping
@@ -68,23 +71,23 @@ export interface CaddySSLSetupResult {
  * @returns Result object with success status and messages
  */
 export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySSLSetupResult> {
-  console.log('[Caddy SSL] Starting certificate setup...');
+  logger.info('Starting certificate setup...');
 
   try {
     // Step 1: Create Caddyfile
-    console.log('[Caddy SSL] Creating default Caddyfile...');
+    logger.info('Creating default Caddyfile...');
     await createCaddyfile(containerName);
 
     // Step 2: Format Caddyfile
-    console.log('[Caddy SSL] Formatting Caddyfile...');
+    logger.info('Formatting Caddyfile...');
     await formatCaddyfile(containerName);
 
     // Step 3: Reload Caddy
-    console.log('[Caddy SSL] Reloading Caddy with new configuration...');
+    logger.info('Reloading Caddy with new configuration...');
     await reloadCaddy(containerName);
 
     // Step 4: Wait for certificate generation
-    console.log('[Caddy SSL] Waiting for SSL certificate generation...');
+    logger.info('Waiting for SSL certificate generation...');
     const certGenerated = await waitForCertificate(containerName);
 
     if (!certGenerated) {
@@ -95,25 +98,25 @@ export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySS
       };
     }
 
-    console.log('[Caddy SSL] Certificate generated successfully');
+    logger.info('Certificate generated successfully');
 
     // Step 5: Extract certificate
-    console.log('[Caddy SSL] Extracting certificate from container...');
+    logger.info('Extracting certificate from container...');
     const certPath = await extractCertificate(containerName);
 
     // Step 6: Install to system
-    console.log('[Caddy SSL] Installing certificate to system trust store...');
+    logger.info('Installing certificate to system trust store...');
     const installResult = await installCertificateToSystem(certPath);
 
     // Clean up temporary certificate file
     try {
       unlinkSync(certPath);
     } catch (error) {
-      console.warn('Failed to delete temporary certificate file:', error);
+      logger.warn('Failed to delete temporary certificate file', { error });
     }
 
     if (installResult.success) {
-      console.log('[Caddy SSL] Setup completed successfully');
+      logger.info('Setup completed successfully');
       return {
         success: true,
         certInstalled: true,
@@ -121,7 +124,7 @@ export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySS
           'Caddy SSL certificate installed successfully. Your browser will now trust HTTPS connections.',
       };
     } else {
-      console.warn('[Caddy SSL] Certificate installation failed, but Caddy is configured');
+      logger.warn('Certificate installation failed, but Caddy is configured');
       return {
         success: true,
         certInstalled: false,
@@ -130,7 +133,7 @@ export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySS
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[Caddy SSL] Setup failed:', errorMessage);
+    logger.error('Setup failed', { error: errorMessage });
     return {
       success: false,
       certInstalled: false,
@@ -200,7 +203,7 @@ async function waitForCertificate(containerName: string): Promise<boolean> {
       }
     } catch {
       // Continue polling on error - certificate not ready yet
-      console.debug('Certificate not yet available, retrying...');
+      logger.debug('Certificate not yet available, retrying...');
     }
 
     // Wait before next poll
@@ -224,7 +227,7 @@ async function extractCertificate(containerName: string): Promise<string> {
   const certPath = join(tempDir, 'damp-caddy-root.crt');
 
   writeFileSync(certPath, certBuffer);
-  console.log(`Certificate extracted to: ${certPath}`);
+  logger.info(`Certificate extracted to: ${certPath}`);
 
   return certPath;
 }
@@ -322,7 +325,7 @@ async function installCertificateWindows(
   try {
     const nonElev = await tryNonElevated();
     if (nonElev.success) {
-      console.log('Certificate installed to Windows ROOT store (non-elevated)');
+      logger.info('Certificate installed to Windows ROOT store (non-elevated)');
       return { success: true };
     }
 
@@ -334,10 +337,10 @@ async function installCertificateWindows(
     }
 
     // Prompt elevation
-    console.log('Attempting elevated certificate installation (UAC prompt may appear)...');
+    logger.info('Attempting elevated certificate installation (UAC prompt may appear)...');
     const elevatedResult = await tryElevated();
     if (elevatedResult.success) {
-      console.log('Certificate installed to Windows ROOT store (elevated)');
+      logger.info('Certificate installed to Windows ROOT store (elevated)');
       return { success: true };
     }
 
@@ -375,11 +378,11 @@ async function installCertificateMacOS(
 
     process.on('close', (code: number) => {
       if (code === 0) {
-        console.log('Certificate installed to macOS System keychain');
+        logger.info('Certificate installed to macOS System keychain');
         resolve({ success: true });
       } else {
         const errorMsg = `security command exited with code ${code}`;
-        console.error('Failed to install certificate on macOS:', errorMsg);
+        logger.error('Failed to install certificate on macOS', { error: errorMsg });
         resolve({
           success: false,
           error: `macOS certificate installation failed: ${errorMsg}`,
@@ -388,7 +391,7 @@ async function installCertificateMacOS(
     });
 
     process.on('error', (err: Error) => {
-      console.error('Failed to spawn security command:', err);
+      logger.error('Failed to spawn security command', { error: err });
       resolve({
         success: false,
         error: `Failed to run security command: ${err.message}`,

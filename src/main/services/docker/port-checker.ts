@@ -3,6 +3,9 @@
  */
 
 import net from 'node:net';
+import { createLogger } from '@main/utils/logger';
+
+const logger = createLogger('PortChecker');
 
 /**
  * Check if a port is available
@@ -83,7 +86,7 @@ export async function getAvailablePorts(desiredPorts: number[]): Promise<Map<num
       const nextStartPort = desiredPort < 65535 ? desiredPort + 1 : 1;
       const nextPort = await findNextAvailablePort(nextStartPort);
       portMap.set(desiredPort, nextPort);
-      console.log(`Port ${desiredPort} is not available. Using ${nextPort} instead.`);
+      logger.info(`Port ${desiredPort} is not available. Using ${nextPort} instead.`);
     }
   }
 

@@ -162,7 +162,7 @@ export async function installLaravelToVolume(
     }
 
     const command = buildLaravelCommand(projectName, options);
-    console.log('Laravel installer command:', command.join(' '));
+    logger.debug('Laravel installer command', { command: command.join(' ') });
     const container = await docker.createContainer({
       Image: INSTALLER_IMAGE,
       Cmd: command,

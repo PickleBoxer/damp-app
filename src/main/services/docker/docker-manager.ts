@@ -15,6 +15,9 @@ import type { PortMapping } from '@shared/types/container';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { getAvailablePorts } from './port-checker';
 import * as tar from 'tar-stream';
+import { createLogger } from '@main/utils/logger';
+
+const logger = createLogger('DockerManager');
 
 /**
  * Docker manager singleton
@@ -62,7 +65,7 @@ class DockerManager {
             'com.damp.description': 'Shared network for DAMP services and projects',
           },
         });
-        console.log(`Created Docker network: ${DAMP_NETWORK_NAME}`);
+        logger.info(`Created Docker network: ${DAMP_NETWORK_NAME}`);
       }
     } catch (error) {
       throw new Error(
@@ -108,7 +111,7 @@ class DockerManager {
       });
 
       if (images.length > 0) {
-        console.log(`Image ${imageName} already exists locally`);
+        logger.info(`Image ${imageName} already exists locally`);
         return;
       }
 
@@ -131,7 +134,7 @@ class DockerManager {
               if (err) {
                 reject(new Error(`Failed to pull image: ${err.message}`));
               } else {
-                console.log(`Successfully pulled image: ${imageName}`);
+                logger.info(`Successfully pulled image: ${imageName}`);
                 resolve();
               }
             },
@@ -204,7 +207,7 @@ class DockerManager {
 
       // Create container
       const container = await this.docker.createContainer(containerConfig);
-      console.log(`Container ${container.id} created and connected to ${DAMP_NETWORK_NAME}`);
+      logger.info(`Container ${container.id} created and connected to ${DAMP_NETWORK_NAME}`);
       return container.id;
     } catch (error) {
       throw new Error(`Failed to create container: ${error}`);
@@ -218,7 +221,7 @@ class DockerManager {
     try {
       const container = this.docker.getContainer(containerId);
       await container.start();
-      console.log(`Container ${containerId} started successfully`);
+      logger.info(`Container ${containerId} started successfully`);
     } catch (error) {
       throw new Error(`Failed to start container: ${error}`);
     }
@@ -231,7 +234,7 @@ class DockerManager {
     try {
       const container = this.docker.getContainer(containerId);
       await container.stop({ t: 10 }); // 10 second timeout
-      console.log(`Container ${containerId} stopped successfully`);
+      logger.info(`Container ${containerId} stopped successfully`);
     } catch (error) {
       throw new Error(`Failed to stop container: ${error}`);
     }
@@ -244,7 +247,7 @@ class DockerManager {
     try {
       const container = this.docker.getContainer(containerId);
       await container.restart({ t: 10 }); // 10 second timeout
-      console.log(`Container ${containerId} restarted successfully`);
+      logger.info(`Container ${containerId} restarted successfully`);
     } catch (error) {
       throw new Error(`Failed to restart container: ${error}`);
     }
@@ -269,7 +272,7 @@ class DockerManager {
 
       // Remove container
       await container.remove({ v: removeVolumes, force: true });
-      console.log(`Container ${containerId} removed successfully`);
+      logger.info(`Container ${containerId} removed successfully`);
     } catch (error) {
       throw new Error(`Failed to remove container: ${error}`);
     }
@@ -322,7 +325,7 @@ class DockerManager {
 
       return statusMap;
     } catch (error) {
-      console.error(`Failed to get bulk container statuses: ${error}`);
+      logger.error('Failed to get bulk container statuses', { error });
       // Return default status for all containers on error
       for (const containerName of containerNames) {
         statusMap.set(containerName, {
@@ -398,7 +401,7 @@ class DockerManager {
         };
       }
 
-      console.error(`Failed to get container status for ${containerName}: ${error}`);
+      logger.error('Failed to get container status', { containerName, error });
       return null;
     }
   }
@@ -414,7 +417,7 @@ class DockerManager {
 
       if (!volumes.Volumes?.some(v => v.Name === volumeName)) {
         await this.docker.createVolume({ Name: volumeName });
-        console.log(`Created volume: ${volumeName}`);
+        logger.info(`Created volume: ${volumeName}`);
       }
     } catch (error) {
       throw new Error(`Failed to create volume ${volumeName}: ${error}`);
@@ -450,7 +453,7 @@ class DockerManager {
     try {
       const volume = this.docker.getVolume(volumeName);
       await volume.remove();
-      console.log(`Removed volume: ${volumeName}`);
+      logger.info(`Removed volume: ${volumeName}`);
     } catch (error) {
       // Ignore if volume doesn't exist (status code 404)
       if (
@@ -458,7 +461,7 @@ class DockerManager {
         (error.message.includes('no such volume') ||
           (error as { statusCode?: number }).statusCode === 404)
       ) {
-        console.log(`Volume ${volumeName} does not exist, skipping removal`);
+        logger.info(`Volume ${volumeName} does not exist, skipping removal`);
       } else if (
         error instanceof Error &&
         (error.message.includes('volume is in use') ||
@@ -479,7 +482,7 @@ class DockerManager {
       try {
         await this.removeVolume(volumeName);
       } catch (error) {
-        console.error(`Failed to remove volume ${volumeName}: ${error}`);
+        logger.error('Failed to remove volume', { volumeName, error });
       }
     }
   }
@@ -783,7 +786,7 @@ class DockerManager {
             (stream as unknown as NodeJS.WritableStream).end();
           }
         } catch (error) {
-          console.warn('Failed to close log stream:', error);
+          logger.warn('Failed to close log stream', { error });
         }
       };
     } catch (error) {

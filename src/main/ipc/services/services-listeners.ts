@@ -114,7 +114,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
         await ensureInitialized();
         return await serviceStateManager.uninstallService(serviceId, removeVolumes);
       } catch (error) {
-        console.error(`Failed to uninstall service ${serviceId}:`, error);
+        logger.error('Failed to uninstall service', { serviceId, error });
         throw error;
       }
     }
@@ -169,7 +169,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
         await ensureInitialized();
         return await serviceStateManager.updateServiceConfig(serviceId, customConfig);
       } catch (error) {
-        console.error(`Failed to update service ${serviceId} configuration:`, error);
+        logger.error('Failed to update service configuration', { serviceId, error });
         throw error;
       }
     }
@@ -205,7 +205,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
 
       return { success: false, error: 'Download canceled' };
     } catch (error) {
-      console.error('Failed to download Caddy certificate:', error);
+      logger.error('Failed to download Caddy certificate', { error });
       throw error;
     }
   });

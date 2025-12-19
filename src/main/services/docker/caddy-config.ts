@@ -6,6 +6,9 @@
 import { dockerManager } from './docker-manager';
 import { projectStorage } from '../projects/project-storage';
 import type { Project } from '@shared/types/project';
+import { createLogger } from '@main/utils/logger';
+
+const logger = createLogger('CaddyConfig');
 
 /**
  * Path to Caddyfile inside the Caddy container
@@ -65,15 +68,15 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
     const containerState = await dockerManager.getContainerState(CADDY_CONTAINER_NAME);
 
     if (!containerState?.running) {
-      console.log('[Caddy Sync] Skipping - Caddy container not running');
+      logger.info('Skipping - Caddy container not running');
       return { success: true }; // Not an error - just skip
     }
 
-    console.log('[Caddy Sync] Syncing projects to Caddy configuration...');
+    logger.info('Syncing projects to Caddy configuration...');
 
     // Get all projects
     const projects = projectStorage.getAllProjects();
-    console.log(`[Caddy Sync] Found ${projects.length} project(s) to configure`);
+    logger.info(`Found ${projects.length} project(s) to configure`);
 
     // Generate Caddyfile content
     const caddyfileContent = generateCaddyfile(projects);
@@ -101,11 +104,11 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
       throw new Error(`Failed to reload Caddy: ${reloadResult.stderr}`);
     }
 
-    console.log('[Caddy Sync] Successfully synchronized projects to Caddy');
+    logger.info('Successfully synchronized projects to Caddy');
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.warn('[Caddy Sync] Failed to sync projects to Caddy:', errorMessage);
+    logger.warn('Failed to sync projects to Caddy', { error: errorMessage });
 
     // Don't throw - just return error for logging
     return {

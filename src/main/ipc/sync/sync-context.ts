@@ -7,6 +7,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { SyncContext } from '@shared/types/ipc';
 import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_PROGRESS } from './sync-channels';
 
+// Define types locally to match SyncContext interface
+interface SyncOptions {
+  includeNodeModules?: boolean;
+  includeVendor?: boolean;
+}
+
 export function exposeSyncContext() {
   const syncContext: SyncContext = {
     fromVolume: (projectId: string, options?: SyncOptions) =>
