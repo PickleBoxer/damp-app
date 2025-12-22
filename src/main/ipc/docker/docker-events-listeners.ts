@@ -33,17 +33,10 @@ let healthCheckInterval: NodeJS.Timeout | null = null;
 let mainWindowRef: BrowserWindow | null = null;
 
 /**
- * Calculate exponential backoff delay with jitter
- * Base: 1s, Max: 64s, Factor: 2x
+ * Fixed 5 second retry delay for reconnection attempts
  */
-function calculateBackoffDelay(attempts: number): number {
-  const baseDelay = 1000; // 1 second
-  const maxDelay = 64000; // 64 seconds
-  const delay = Math.min(baseDelay * Math.pow(2, attempts), maxDelay);
-
-  // Add jitter (±20%) to prevent thundering herd
-  const jitter = delay * 0.2 * (Math.random() - 0.5);
-  return Math.floor(delay + jitter);
+function getReconnectDelay(): number {
+  return 5000; // 5 seconds
 }
 
 /**
@@ -77,10 +70,10 @@ function scheduleReconnect() {
   isReconnecting = true;
   reconnectAttempts++;
 
-  const delay = calculateBackoffDelay(reconnectAttempts);
-  logger.info(`Scheduling reconnect attempt ${reconnectAttempts} in ${delay}ms`);
+  const delay = getReconnectDelay();
+  logger.info(`Scheduling reconnect attempt ${reconnectAttempts} in ${delay / 1000}s`);
 
-  sendConnectionStatus(false, `Reconnecting in ${Math.floor(delay / 1000)}s...`);
+  sendConnectionStatus(false, `Reconnecting in ${delay / 1000}s...`);
 
   reconnectTimer = setTimeout(async () => {
     reconnectTimer = null;
@@ -283,6 +276,9 @@ async function stopEventMonitoring(): Promise<{ success: boolean }> {
  * Register Docker events IPC handlers
  */
 export function addDockerEventsListeners(mainWindow: BrowserWindow) {
+  // Store window reference for reconnection logic
+  mainWindowRef = mainWindow;
+
   ipcMain.handle(DOCKER_EVENTS_START_CHANNEL, async () => {
     return await startEventMonitoring(mainWindow);
   });
@@ -293,10 +289,19 @@ export function addDockerEventsListeners(mainWindow: BrowserWindow) {
 
   // Start monitoring automatically when the app starts
   // This ensures we capture events from the beginning
-  startEventMonitoring(mainWindow).catch(error => {
-    logger.error('Failed to auto-start Docker event monitoring', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+  // If Docker is not available, scheduleReconnect() will retry indefinitely
+  startEventMonitoring(mainWindow).then(result => {
+    if (!result.success) {
+      logger.error('Failed to auto-start Docker event monitoring', { error: result.error });
+
+      // Send initial connection status to renderer
+      sendConnectionStatus(false, result.error);
+
+      // Start reconnection attempts with exponential backoff
+      scheduleReconnect();
+    } else {
+      logger.info('Docker event monitoring started successfully');
+    }
   });
 
   logger.info('Docker events IPC listeners registered');

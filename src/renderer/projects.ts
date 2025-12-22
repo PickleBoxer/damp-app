@@ -7,7 +7,7 @@ const projectsApi = (globalThis as unknown as Window).projects;
 
 /** Query keys for projects */
 export const projectKeys = {
-  lists: () => ['projects'] as const,
+  list: () => ['projects'] as const,
   detail: (id: string) => ['projects', id] as const,
   states: () => ['projects', 'states'] as const,
   containerState: (id: string) => ['projects', 'states', id] as const,
@@ -16,7 +16,7 @@ export const projectKeys = {
 /** Query options for all projects - use in loaders */
 export const projectsQueryOptions = () =>
   queryOptions({
-    queryKey: projectKeys.lists(),
+    queryKey: projectKeys.list(),
     queryFn: () => projectsApi.getAllProjects(),
     staleTime: Infinity, // Pure event-driven - mutations handle updates
     refetchInterval: false, // No polling - Docker events provide real-time updates

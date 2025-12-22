@@ -21,7 +21,7 @@ export function useCreateProject() {
       return result.data;
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
 
       toast.success('Project created successfully', {
         description: `${variables.name} is ready to use`,
@@ -49,7 +49,7 @@ export function useUpdateProject() {
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
 
       toast.success('Project updated successfully', {
         description: 'Your changes have been saved',
@@ -80,7 +80,7 @@ export function useDeleteProject() {
       return result.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
       toast.success('Project deleted successfully', {
         description: 'The project has been removed',
       });
@@ -107,10 +107,10 @@ export function useReorderProjects() {
     },
     onMutate: async (newOrder: string[]) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: projectKeys.lists() });
+      await queryClient.cancelQueries({ queryKey: projectKeys.list() });
 
       // Snapshot the previous value
-      const previousProjects = queryClient.getQueryData<Project[]>(projectKeys.lists());
+      const previousProjects = queryClient.getQueryData<Project[]>(projectKeys.list());
 
       // Optimistically update to the new order
       if (previousProjects) {
@@ -119,7 +119,7 @@ export function useReorderProjects() {
           .filter((p): p is Project => p !== undefined)
           .map((p, index) => ({ ...p, order: index }));
 
-        queryClient.setQueryData(projectKeys.lists(), reorderedProjects);
+        queryClient.setQueryData(projectKeys.list(), reorderedProjects);
       }
 
       // Return a context object with the snapshotted value
@@ -128,7 +128,7 @@ export function useReorderProjects() {
     onError: (error, _newOrder, context) => {
       // Rollback to the previous value on error
       if (context?.previousProjects) {
-        queryClient.setQueryData(projectKeys.lists(), context.previousProjects);
+        queryClient.setQueryData(projectKeys.list(), context.previousProjects);
       }
 
       toast.error('Failed to reorder projects', {
@@ -140,7 +140,7 @@ export function useReorderProjects() {
     },
     onSettled: () => {
       // Always refetch after error or success
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: projectKeys.list() });
     },
   });
 }

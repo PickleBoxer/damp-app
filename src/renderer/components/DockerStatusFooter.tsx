@@ -50,7 +50,7 @@ export default function DockerStatusFooter() {
   );
   const { data: activeSyncs } = useActiveSyncs();
   const { data: projects } = useQuery<Project[]>({
-    queryKey: projectKeys.lists(),
+    queryKey: projectKeys.list(),
     queryFn: () =>
       (
         globalThis as unknown as Window & { projects: { getAllProjects: () => Promise<Project[]> } }

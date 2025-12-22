@@ -32,7 +32,7 @@ export function useDockerEvents() {
       console.debug('[Docker Event]', event.action, event.containerName);
 
       // Get cached projects to map containerName → projectId
-      const cachedProjects = queryClient.getQueryData<Project[]>(projectKeys.lists());
+      const cachedProjects = queryClient.getQueryData<Project[]>(projectKeys.list());
 
       // Check if this event is for a project container
       const affectedProject = cachedProjects?.find(
@@ -82,11 +82,31 @@ export function useDockerEvents() {
       // Log connection status changes for debugging
       if (status.connected) {
         console.info('[Docker Events] ✓ Connected to Docker events stream');
+
+        // On reconnect, invalidate all project and service queries to refresh UI
+        queryClient.invalidateQueries({
+          queryKey: ['projects'],
+          refetchType: 'active',
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['services'],
+          refetchType: 'active',
+        });
       } else {
         const errorMsg = status.lastError ? `: ${status.lastError}` : '';
         const attemptMsg =
           status.reconnectAttempts > 0 ? ` (attempt ${status.reconnectAttempts})` : '';
         console.warn(`[Docker Events] ✗ Disconnected${errorMsg}${attemptMsg}`);
+
+        // On disconnect, invalidate all project and service queries to show stale data
+        queryClient.invalidateQueries({
+          queryKey: ['projects'],
+          refetchType: 'active',
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['services'],
+          refetchType: 'active',
+        });
       }
     });
 
