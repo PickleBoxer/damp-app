@@ -203,3 +203,43 @@ npm install
 ```bash
 npm run start
 ```
+
+## Releasing
+
+This project uses semantic versioning and automated GitHub releases.
+
+### Release Process
+
+1. **Update CHANGELOG.md**
+   - Document all changes in the appropriate section (Added, Changed, Fixed, etc.)
+   - Use the format from [Keep a Changelog](https://keepachangelog.com/)
+
+2. **Bump version**
+   ```bash
+   pnpm version patch   # 0.1.0 → 0.1.1 (bug fixes)
+   pnpm version minor   # 0.1.0 → 0.2.0 (new features)
+   pnpm version major   # 0.1.0 → 1.0.0 (breaking changes)
+   ```
+   This creates a git commit and tag automatically.
+
+3. **Push to GitHub**
+   ```bash
+   git push && git push --tags
+   ```
+   This triggers the GitHub Actions workflow that builds and publishes the release.
+
+4. **Review and publish**
+   - GitHub Actions creates a **draft release** with the Windows installer
+   - Review the draft release on GitHub
+   - Click "Publish release" to make it public
+
+### Version Strategy
+
+- **0.x.x** - Pre-release versions (breaking changes expected)
+- **1.0.0** - First stable release
+- **Prerelease tags** - Use `-beta.1`, `-alpha.1`, `-rc.1` for testing versions
+
+### Auto-Updates
+
+The app automatically checks for updates every hour when running in production mode. Users will be notified when a new version is available and can update with one click.
+

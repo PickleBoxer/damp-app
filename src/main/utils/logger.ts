@@ -65,6 +65,10 @@ function formatMessage(
  */
 export function createLogger(module: string) {
   return {
+    log: (message: string, context?: LogContext) => {
+      console.log(formatMessage('info', module, message, context));
+    },
+
     debug: (message: string, context?: LogContext) => {
       if (process.env.NODE_ENV === 'development') {
         console.debug(formatMessage('debug', module, message, context));

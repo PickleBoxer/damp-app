@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from 'electron';
 import registerListeners from './ipc/listeners-register';
-// "electron-squirrel-startup" seems broken when packaging with vite
 import started from 'electron-squirrel-startup';
 import path from 'node:path';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
@@ -8,6 +7,7 @@ import { TrayMenu } from './electron/TrayMenu';
 import { ngrokManager } from './services/ngrok/ngrok-manager';
 import { dockerManager } from './services/docker/docker-manager';
 import { createLogger } from '@main/utils/logger';
+import { updateElectronApp } from 'update-electron-app';
 
 const logger = createLogger('main');
 
@@ -17,6 +17,12 @@ if (started) {
 }
 
 const inDevelopment = process.env.NODE_ENV === 'development';
+
+// Auto-update setup (checks GitHub Releases via update.electronjs.org)
+updateElectronApp({
+  updateInterval: '1 hour',
+  logger: logger,
+});
 
 function createWindow() {
   const preload = path.join(__dirname, 'preload.js');

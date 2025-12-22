@@ -1,11 +1,9 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
-import { MakerZIP } from '@electron-forge/maker-zip';
-import { MakerDeb } from '@electron-forge/maker-deb';
-import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { PublisherGithub } from '@electron-forge/publisher-github';
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -13,7 +11,7 @@ const config: ForgeConfig = {
     icon: './src/main/icon/icon',
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  makers: [new MakerSquirrel({})],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
@@ -54,6 +52,16 @@ const config: ForgeConfig = {
       name: '@electron-forge/plugin-auto-unpack-natives',
       config: {},
     },
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: 'PickleBoxer',
+        name: 'damp-app',
+      },
+      prerelease: false,
+      draft: true,
+    }),
   ],
 };
 
