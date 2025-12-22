@@ -1,62 +1,62 @@
 /**
- * Settings helpers - localStorage persistence for app settings
+ * Settings helpers - localStorage + secure storage for app settings
+ * Sensitive fields (ngrokAuthToken) are stored encrypted via Electron safeStorage
  */
 
 import type { AppSettings } from '@shared/types/settings';
 import { DEFAULT_SETTINGS } from '@shared/types/settings';
 
 const SETTINGS_KEY = 'damp-settings';
+const NGROK_TOKEN_KEY = 'ngrok-auth-token';
 
 /**
- * Get all settings from localStorage
+ * Get all settings from localStorage (non-sensitive) and secure storage (sensitive)
  */
-export function getSettings(): AppSettings {
+export async function getSettings(): Promise<AppSettings> {
   try {
     const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as Partial<AppSettings>;
-      // Merge with defaults to ensure all fields exist
-      return { ...DEFAULT_SETTINGS, ...parsed };
+    const parsed = stored ? (JSON.parse(stored) as Partial<AppSettings>) : {};
+
+    // Merge with defaults
+    const settings = { ...DEFAULT_SETTINGS, ...parsed };
+
+    // Fetch ngrok token from secure storage
+    const tokenResult = await window.secureStorage.getSecret(NGROK_TOKEN_KEY);
+    if (tokenResult.success && tokenResult.value) {
+      settings.ngrokAuthToken = tokenResult.value;
     }
+
+    return settings;
   } catch (error) {
     console.error('Failed to load settings:', error);
+    return DEFAULT_SETTINGS;
   }
-  return DEFAULT_SETTINGS;
 }
 
 /**
- * Save all settings to localStorage
+ * Save all settings - sensitive fields go to secure storage, others to localStorage
  */
-export function saveSettings(settings: AppSettings): void {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  } catch (error) {
-    console.error('Failed to save settings:', error);
+export async function saveSettings(settings: AppSettings): Promise<void> {
+  // Extract ngrok token for secure storage
+  const { ngrokAuthToken, ...nonSensitiveSettings } = settings;
+
+  // Save non-sensitive settings to localStorage
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(nonSensitiveSettings));
+
+  // Save or delete ngrok token in secure storage
+  if (ngrokAuthToken) {
+    await window.secureStorage.saveSecret(NGROK_TOKEN_KEY, ngrokAuthToken);
+  } else {
+    await window.secureStorage.deleteSecret(NGROK_TOKEN_KEY);
   }
 }
 
 /**
  * Update specific settings fields
  */
-export function updateSettings(updates: Partial<AppSettings>): AppSettings {
-  const current = getSettings();
+export async function updateSettings(updates: Partial<AppSettings>): Promise<AppSettings> {
+  const current = await getSettings();
   const updated = { ...current, ...updates };
-  saveSettings(updated);
+  await saveSettings(updated);
   return updated;
-}
-
-/**
- * Get default editor command
- */
-export function getDefaultEditor(): string {
-  const settings = getSettings();
-  return settings.defaultEditor;
-}
-
-/**
- * Get default terminal choice
- */
-export function getDefaultTerminal(): string {
-  const settings = getSettings();
-  return settings.defaultTerminal;
 }

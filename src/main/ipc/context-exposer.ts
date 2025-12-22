@@ -9,6 +9,7 @@ import { exposeLogsContext } from './logs/logs-context';
 import { exposeAppContext } from './app/app-context';
 import { exposeSyncContext } from './sync/sync-context';
 import { exposeNgrokContext } from './ngrok/ngrok-context';
+import { exposeStorageContext } from './storage/storage-context';
 
 export default function exposeContexts() {
   exposeWindowContext();
@@ -22,4 +23,5 @@ export default function exposeContexts() {
   exposeAppContext();
   exposeSyncContext();
   exposeNgrokContext();
+  exposeStorageContext();
 }

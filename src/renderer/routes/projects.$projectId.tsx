@@ -60,6 +60,7 @@ import { Input } from '@renderer/components/ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@renderer/components/ui/tooltip';
 import { useState } from 'react';
 import { getSettings } from '@renderer/utils/settings';
+import { useSettings } from '@renderer/hooks/use-settings';
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
 import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
 
@@ -88,6 +89,9 @@ function ProjectDetailPage() {
   const [includeNodeModules, setIncludeNodeModules] = useState(false);
   const [includeVendor, setIncludeVendor] = useState(false);
 
+  // Load settings for ngrok token check
+  const { hasNgrokToken } = useSettings();
+
   // Check Docker status
   const { data: dockerStatus } = useQuery(dockerStatusQueryOptions());
 
@@ -108,7 +112,7 @@ function ProjectDetailPage() {
   const isRunning = containerState?.running || false;
 
   const handleOpenVSCode = async () => {
-    const settings = getSettings();
+    const settings = await getSettings();
     const result = await window.shell.openEditor(project.id, {
       defaultEditor: settings.defaultEditor,
       defaultTerminal: settings.defaultTerminal,
@@ -148,7 +152,7 @@ function ProjectDetailPage() {
   };
 
   const handleOpenTerminal = async () => {
-    const settings = getSettings();
+    const settings = await getSettings();
     const result = await window.shell.openTerminal(project.id, {
       defaultEditor: settings.defaultEditor,
       defaultTerminal: settings.defaultTerminal,
@@ -161,7 +165,7 @@ function ProjectDetailPage() {
   };
 
   const handleOpenTinker = async () => {
-    const settings = getSettings();
+    const settings = await getSettings();
     const result = await window.shell.openTinker(project.id, {
       defaultEditor: settings.defaultEditor,
       defaultTerminal: settings.defaultTerminal,
@@ -211,8 +215,8 @@ function ProjectDetailPage() {
     });
   };
 
-  const handleStartNgrok = () => {
-    const settings = getSettings();
+  const handleStartNgrok = async () => {
+    const settings = await getSettings();
     if (!settings.ngrokAuthToken) {
       toast.error('Please configure ngrok auth token in Settings first');
       return;
@@ -759,7 +763,7 @@ function ProjectDetailPage() {
                         ngrokStatus === 'starting' ||
                         ngrokStatus === 'active' ||
                         startNgrokMutation.isPending ||
-                        !getSettings().ngrokAuthToken
+                        !hasNgrokToken
                       }
                     >
                       {startNgrokMutation.isPending || ngrokStatus === 'starting' ? (
@@ -791,7 +795,7 @@ function ProjectDetailPage() {
 
                 {/* Info/Warning Messages */}
                 <div className="space-y-2">
-                  {!getSettings().ngrokAuthToken && (
+                  {!hasNgrokToken && (
                     <Alert>
                       <IoInformationCircle className="h-4 w-4" />
                       <AlertTitle>Configuration Required</AlertTitle>
@@ -811,19 +815,16 @@ function ProjectDetailPage() {
                     </Alert>
                   )}
 
-                  {ngrokStatus === 'stopped' &&
-                    getSettings().ngrokAuthToken &&
-                    isRunning &&
-                    isDockerRunning && (
-                      <div className="text-muted-foreground rounded-lg border p-3 text-xs">
-                        <p className="mb-2 font-medium">About ngrok tunnels:</p>
-                        <ul className="ml-4 list-disc space-y-1">
-                          <li>Creates a secure public URL to your local project</li>
-                          <li>Useful for testing webhooks or sharing with clients</li>
-                          <li>URL changes each time you restart the tunnel</li>
-                        </ul>
-                      </div>
-                    )}
+                  {ngrokStatus === 'stopped' && hasNgrokToken && isRunning && isDockerRunning && (
+                    <div className="text-muted-foreground rounded-lg border p-3 text-xs">
+                      <p className="mb-2 font-medium">About ngrok tunnels:</p>
+                      <ul className="ml-4 list-disc space-y-1">
+                        <li>Creates a secure public URL to your local project</li>
+                        <li>Useful for testing webhooks or sharing with clients</li>
+                        <li>URL changes each time you restart the tunnel</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>

@@ -20,4 +20,5 @@ declare interface Window {
   app: import('./types/ipc').AppContext;
   sync: import('./types/ipc').SyncContext;
   ngrok: import('./types/ipc').NgrokContext;
+  secureStorage: import('./types/ipc').SecureStorageContext;
 }

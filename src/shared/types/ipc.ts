@@ -243,3 +243,13 @@ export interface NgrokContext {
     error?: string;
   }>;
 }
+
+/**
+ * Secure storage context (uses Electron safeStorage API)
+ */
+export interface SecureStorageContext {
+  saveSecret: (key: string, value: string) => Promise<{ success: boolean; error?: string }>;
+  getSecret: (key: string) => Promise<{ success: boolean; value: string | null; error?: string }>;
+  deleteSecret: (key: string) => Promise<{ success: boolean; error?: string }>;
+  isAvailable: () => Promise<boolean>;
+}
