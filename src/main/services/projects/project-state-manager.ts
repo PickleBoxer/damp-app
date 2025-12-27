@@ -11,7 +11,6 @@ import semver from 'semver';
 import { addHostEntry, removeHostEntry } from '@main/utils/hosts';
 import { createLogger } from '@main/utils/logger';
 import type { ContainerStateData } from '@shared/types/container';
-const logger = createLogger('ProjectStateManager');
 import type {
   Project,
   ProjectType,
@@ -35,6 +34,8 @@ import {
 import { syncProjectsToCaddy } from '../docker/caddy-config';
 import { installLaravelToVolume } from './laravel-installer';
 import { FORWARDED_PORT } from '@shared/constants/ports';
+
+const logger = createLogger('ProjectStateManager');
 
 const DOCKER_NETWORK = 'damp-network';
 const LARAVEL_MIN_PHP_VERSION = '8.2';

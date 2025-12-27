@@ -15,8 +15,6 @@ import type { Result } from '@shared/types/result';
 import type { ContainerStateData, PortMapping } from '@shared/types/container';
 import { ServiceId } from '@shared/types/service';
 import { createLogger } from '@main/utils/logger';
-
-const logger = createLogger('ServiceStateManager');
 import {
   getServiceDefinition,
   getAllServiceDefinitions,
@@ -25,6 +23,8 @@ import {
 import { dockerManager } from '../docker/docker-manager';
 import { serviceStorage } from './service-storage';
 import { syncProjectsToCaddy } from '../docker/caddy-config';
+
+const logger = createLogger('ServiceStateManager');
 
 /**
  * Service state manager class

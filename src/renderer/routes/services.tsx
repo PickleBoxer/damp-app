@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery , useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import {
   createFileRoute,
@@ -16,7 +16,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@renderer/components/ui/resizable';
-import { useQueryErrorResetBoundary } from '@tanstack/react-query';
+
 import { servicesQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
 // useQuery already imported above
 import { ServiceIcon } from '@renderer/components/ServiceIcon';

@@ -1,5 +1,4 @@
-import { nativeTheme, BrowserWindow } from 'electron';
-import { ipcMain } from 'electron';
+import { nativeTheme, BrowserWindow , ipcMain } from 'electron';
 import {
   THEME_MODE_CURRENT_CHANNEL,
   THEME_MODE_DARK_CHANNEL,
@@ -8,6 +7,7 @@ import {
   THEME_MODE_TOGGLE_CHANNEL,
   THEME_MODE_UPDATED_CHANNEL,
 } from './theme-channels';
+
 let themeListenersAdded = false;
 
 export function addThemeEventListeners() {

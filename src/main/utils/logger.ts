@@ -83,7 +83,7 @@ export function createLogger(module: string) {
       console.warn(formatMessage('warn', module, message, context));
     },
 
-    error: (message: string, context?: any) => {
+    error: (message: string, context?: LogContext) => {
       console.error(formatMessage('error', module, message, context));
     },
   };

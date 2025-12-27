@@ -25,6 +25,7 @@ import { useNavigate } from '@tanstack/react-router';
  */
 import { useQuery } from '@tanstack/react-query';
 import type { Project } from '@shared/types/project';
+
 function formatMemory(bytes: number): string {
   const gb = bytes / 1024 / 1024 / 1024;
   const mb = bytes / 1024 / 1024;
