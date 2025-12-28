@@ -140,6 +140,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
           await volumeManager.syncFromVolume(
             project.volumeName,
             project.path,
+            project.id,
             {
               includeNodeModules: options.includeNodeModules ?? false,
               includeVendor: options.includeVendor ?? false,
@@ -247,6 +248,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
           await volumeManager.syncToVolume(
             project.path,
             project.volumeName,
+            project.id,
             {
               includeNodeModules: options.includeNodeModules ?? false,
               includeVendor: options.includeVendor ?? false,

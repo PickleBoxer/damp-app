@@ -148,6 +148,7 @@ export interface UpdateProjectInput {
  * Template placeholder values
  */
 export interface TemplateContext {
+  projectId: string;
   projectName: string;
   volumeName: string;
   phpVersion: PhpVersion;

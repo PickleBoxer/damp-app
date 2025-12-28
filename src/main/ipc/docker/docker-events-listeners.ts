@@ -161,12 +161,17 @@ async function startEventMonitoring(
       try {
         const event = JSON.parse(chunk.toString());
 
-        // Extract relevant information
+        // Extract relevant information including labels
+        const labels = event.Actor?.Attributes || {};
         const containerEvent = {
           containerId: event.Actor?.ID || event.id,
-          containerName: event.Actor?.Attributes?.name || '',
+          containerName: labels.name || '',
           action: event.Action || event.status,
           timestamp: event.time ? event.time * 1000 : Date.now(), // Convert to milliseconds
+          // Include metadata from our label system
+          serviceId: labels['com.damp.service-id'],
+          projectId: labels['com.damp.project-id'],
+          resourceType: labels['com.damp.type'],
         };
 
         logger.debug('Docker event received', containerEvent);

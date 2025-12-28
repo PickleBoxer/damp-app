@@ -13,6 +13,7 @@ import type {
 } from '@shared/types/service';
 import type { PortMapping } from '@shared/types/container';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
+import { buildNetworkLabels, LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { getAvailablePorts } from './port-checker';
 import * as tar from 'tar-stream';
 import { createLogger } from '@main/utils/logger';
@@ -23,7 +24,7 @@ const logger = createLogger('DockerManager');
  * Docker manager singleton
  */
 class DockerManager {
-  private readonly docker: Docker;
+  readonly docker: Docker;
 
   constructor() {
     // Initialize Docker client - will use default socket/pipe
@@ -60,10 +61,7 @@ class DockerManager {
           Name: DAMP_NETWORK_NAME,
           Driver: 'bridge',
           CheckDuplicate: true,
-          Labels: {
-            'com.damp.managed': 'true',
-            'com.damp.description': 'Shared network for DAMP services and projects',
-          },
+          Labels: buildNetworkLabels(),
         });
         logger.info(`Created Docker network: ${DAMP_NETWORK_NAME}`);
       }
@@ -159,7 +157,16 @@ class DockerManager {
   /**
    * Create and configure a container
    */
-  async createContainer(config: ServiceConfig, customConfig?: CustomConfig): Promise<string> {
+  async createContainer(
+    config: ServiceConfig,
+    metadata?: {
+      serviceId: string;
+      serviceType: string;
+      labels?: Record<string, string>;
+      volumeLabelsMap?: Map<string, Record<string, string>>;
+    },
+    customConfig?: CustomConfig
+  ): Promise<string> {
     try {
       // Ensure the shared network exists
       await this.ensureNetworkExists();
@@ -176,6 +183,7 @@ class DockerManager {
         Image: finalConfig.image,
         Env: finalConfig.environment_vars,
         ExposedPorts: this.buildExposedPorts(portMappings),
+        Labels: metadata?.labels,
         Healthcheck: finalConfig.healthcheck
           ? {
               Test: finalConfig.healthcheck.test,
@@ -202,7 +210,13 @@ class DockerManager {
       // Create all volumes from volume bindings
       const volumeNames = this.getVolumeNamesFromBindings(finalConfig.volume_bindings || []);
       if (volumeNames.length > 0) {
-        await this.ensureVolumesExist(volumeNames);
+        // Use volumeLabelsMap from metadata if provided, otherwise build from container labels
+        const volumeLabelsMap =
+          metadata?.volumeLabelsMap ||
+          (metadata?.labels
+            ? new Map(volumeNames.map(name => [name, metadata.labels!]))
+            : undefined);
+        await this.ensureVolumesExist(volumeNames, volumeLabelsMap);
       }
 
       // Create container
@@ -279,106 +293,28 @@ class DockerManager {
   }
 
   /**
-   * Get container status for multiple containers in a single Docker API call
-   * More efficient than calling getContainerState multiple times
+   * Get container status by inspecting the container
+   * Accepts both container name and container ID
    */
-  async getAllContainerState(containerNames: string[]): Promise<Map<string, ContainerState>> {
-    const statusMap = new Map<string, ContainerState>();
-
+  async getContainerState(containerNameOrId: string): Promise<ContainerState> {
     try {
-      // Single Docker API call to get all containers
-      const containers = await this.docker.listContainers({ all: true });
-
-      // Create lookup set for efficient checking
-      const existingContainerNames = new Set(containers.map(c => c.Names[0]?.replace('/', '')));
-
-      // Process each requested container
-      for (const containerName of containerNames) {
-        if (!existingContainerNames.has(containerName)) {
-          // Container doesn't exist
-          statusMap.set(containerName, {
-            exists: false,
-            running: false,
-            container_id: null,
-            state: null,
-            ports: [],
-            health_status: 'none',
-          });
-        } else {
-          // Container exists, get detailed status using getContainerState
-          const status = await this.getContainerState(containerName);
-          if (status) {
-            statusMap.set(containerName, status);
-          } else {
-            // Fallback if getContainerState returns null
-            statusMap.set(containerName, {
-              exists: false,
-              running: false,
-              container_id: null,
-              state: null,
-              ports: [],
-              health_status: 'none',
-            });
-          }
-        }
-      }
-
-      return statusMap;
-    } catch (error) {
-      logger.error('Failed to get bulk container statuses', { error });
-      // Return default status for all containers on error
-      for (const containerName of containerNames) {
-        statusMap.set(containerName, {
-          exists: false,
-          running: false,
-          container_id: null,
-          state: null,
-          ports: [],
-          health_status: 'none',
-        });
-      }
-      return statusMap;
-    }
-  }
-
-  /**
-   * Get container status by directly inspecting the container
-   * More efficient than listing all containers first
-   */
-  async getContainerState(containerName: string): Promise<ContainerState | null> {
-    try {
-      // Get container directly by name (more efficient than listing all)
-      const container = this.docker.getContainer(containerName);
-
-      // Inspect the container to get detailed status
+      const container = this.docker.getContainer(containerNameOrId);
       const inspection = await container.inspect();
 
-      // Parse port mappings from inspection
-      const ports: PortMapping[] = [];
-      if (inspection.NetworkSettings?.Ports) {
-        for (const [internalPort, bindings] of Object.entries(inspection.NetworkSettings.Ports)) {
-          if (bindings && bindings.length > 0) {
-            const hostPort = bindings[0].HostPort;
-            const containerPort = internalPort.split('/')[0]; // Remove '/tcp' suffix
-            if (hostPort && containerPort) {
-              ports.push([hostPort, containerPort]);
-            }
-          }
-        }
-      }
+      // Parse port mappings from NetworkSettings.Ports
+      const ports: PortMapping[] = Object.entries(inspection.NetworkSettings.Ports || {})
+        .filter(([, bindings]) => bindings?.[0])
+        .map(([internalPort, bindings]) => [bindings![0].HostPort, internalPort.split('/')[0]]);
 
-      // Parse health status
-      let healthStatus: 'starting' | 'healthy' | 'unhealthy' | 'none' = 'none';
-      if (inspection.State?.Health) {
-        const healthState = inspection.State.Health.Status;
-        if (healthState === 'healthy') {
-          healthStatus = 'healthy';
-        } else if (healthState === 'unhealthy') {
-          healthStatus = 'unhealthy';
-        } else if (healthState === 'starting') {
-          healthStatus = 'starting';
-        }
-      }
+      // Map health status to our enum
+      const healthStatusMap: Record<string, 'starting' | 'healthy' | 'unhealthy'> = {
+        starting: 'starting',
+        healthy: 'healthy',
+        unhealthy: 'unhealthy',
+      };
+      const healthStatus = inspection.State.Health?.Status
+        ? healthStatusMap[inspection.State.Health.Status] || 'none'
+        : 'none';
 
       return {
         exists: true,
@@ -389,34 +325,32 @@ class DockerManager {
         health_status: healthStatus,
       };
     } catch (error) {
-      // Container doesn't exist or other error
-      if (error instanceof Error && error.message.includes('no such container')) {
-        return {
-          exists: false,
-          running: false,
-          container_id: null,
-          state: null,
-          ports: [],
-          health_status: 'none',
-        };
-      }
-
-      logger.error('Failed to get container status', { containerName, error });
-      return null;
+      logger.error('Failed to get container status', { containerNameOrId, error });
+      return {
+        exists: false,
+        running: false,
+        container_id: null,
+        state: null,
+        ports: [],
+        health_status: 'none',
+      };
     }
   }
 
   /**
    * Ensure a Docker volume exists
    */
-  private async ensureVolumeExists(volumeName: string): Promise<void> {
+  private async ensureVolumeExists(
+    volumeName: string,
+    labels?: Record<string, string>
+  ): Promise<void> {
     try {
       const volumes = await this.docker.listVolumes({
         filters: { name: [volumeName] },
       });
 
       if (!volumes.Volumes?.some(v => v.Name === volumeName)) {
-        await this.docker.createVolume({ Name: volumeName });
+        await this.docker.createVolume({ Name: volumeName, Labels: labels });
         logger.info(`Created volume: ${volumeName}`);
       }
     } catch (error) {
@@ -440,9 +374,13 @@ class DockerManager {
   /**
    * Ensure multiple Docker volumes exist
    */
-  private async ensureVolumesExist(volumeNames: string[]): Promise<void> {
+  private async ensureVolumesExist(
+    volumeNames: string[],
+    labelsMap?: Map<string, Record<string, string>>
+  ): Promise<void> {
     for (const volumeName of volumeNames) {
-      await this.ensureVolumeExists(volumeName);
+      const labels = labelsMap?.get(volumeName);
+      await this.ensureVolumeExists(volumeName, labels);
     }
   }
 
@@ -793,6 +731,82 @@ class DockerManager {
       throw new Error(
         `Failed to stream logs from container ${containerIdOrName}: ${error instanceof Error ? error.message : String(error)}`
       );
+    }
+  }
+  /**
+   * Find container by project ID using labels
+   */
+  async findContainerByProjectId(projectId: string): Promise<Docker.ContainerInfo | null> {
+    try {
+      const containers = await this.docker.listContainers({
+        all: true,
+        filters: {
+          label: [
+            `${LABEL_KEYS.PROJECT_ID}=${projectId}`,
+            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.PROJECT_CONTAINER}`,
+          ],
+        },
+      });
+      return containers[0] || null;
+    } catch (error) {
+      logger.error('Failed to find container by project ID', { projectId, error });
+      return null;
+    }
+  }
+
+  /**
+   * Find container by service ID using labels
+   */
+  async findContainerByServiceId(serviceId: string): Promise<Docker.ContainerInfo | null> {
+    try {
+      const containers = await this.docker.listContainers({
+        all: true,
+        filters: {
+          label: [
+            `${LABEL_KEYS.SERVICE_ID}=${serviceId}`,
+            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`,
+          ],
+        },
+      });
+      return containers[0] || null;
+    } catch (error) {
+      logger.error('Failed to find container by service ID', { serviceId, error });
+      return null;
+    }
+  }
+
+  /**
+   * Get all DAMP-managed containers grouped by type
+   */
+  async getAllManagedContainers(): Promise<{
+    projects: Docker.ContainerInfo[];
+    services: Docker.ContainerInfo[];
+    helpers: Docker.ContainerInfo[];
+    ngrok: Docker.ContainerInfo[];
+  }> {
+    try {
+      const containers = await this.docker.listContainers({
+        all: true,
+        filters: {
+          label: [`${LABEL_KEYS.MANAGED}=true`],
+        },
+      });
+
+      return {
+        projects: containers.filter(
+          c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.PROJECT_CONTAINER
+        ),
+        services: containers.filter(
+          c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.SERVICE_CONTAINER
+        ),
+        helpers: containers.filter(
+          c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.HELPER_CONTAINER
+        ),
+        ngrok: containers.filter(c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.NGROK_TUNNEL),
+      };
+    } catch (error) {
+      logger.error('Failed to get all managed containers', { error });
+      return { projects: [], services: [], helpers: [], ngrok: [] };
     }
   }
 }

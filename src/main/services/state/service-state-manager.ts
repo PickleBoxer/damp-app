@@ -3,6 +3,8 @@
  * Coordinates between service registry, Docker manager, and storage
  */
 
+import type Docker from 'dockerode';
+
 import type {
   ServiceState,
   ServiceInfo,
@@ -14,6 +16,12 @@ import type {
 import type { Result } from '@shared/types/result';
 import type { ContainerStateData, PortMapping } from '@shared/types/container';
 import { ServiceId } from '@shared/types/service';
+import {
+  buildServiceContainerLabels,
+  buildServiceVolumeLabels,
+  LABEL_KEYS,
+  RESOURCE_TYPES,
+} from '@shared/constants/labels';
 import { createLogger } from '@main/utils/logger';
 import {
   getServiceDefinition,
@@ -106,49 +114,81 @@ class ServiceStateManager {
 
   /**
    * Get bulk status for all services using a single Docker API call
+   * Uses label-based filtering for reliability
    * More efficient than calling getService() for each service individually
    */
   async getServicesState(): Promise<ContainerStateData[]> {
     this.ensureInitialized();
 
     const definitions = getAllServiceDefinitions();
-    const containerNames: string[] = [];
-    const serviceIdToContainerName = new Map<ServiceId, string>();
 
-    // Collect all container names
-    for (const definition of definitions) {
-      const state = serviceStorage.getServiceState(definition.id);
-      const containerName =
-        state?.custom_config?.container_name || definition.default_config.container_name;
-      containerNames.push(containerName);
-      serviceIdToContainerName.set(definition.id, containerName);
-    }
-
-    // Single Docker API call to get all container statuses
-    const containersState = await dockerManager.getAllContainerState(containerNames);
-
-    // Build status array for all services
-    const statuses: ContainerStateData[] = [];
-    for (const definition of definitions) {
-      const containerName = serviceIdToContainerName.get(definition.id);
-      const containerState = containerName ? containersState.get(containerName) : null;
-
-      statuses.push({
-        // Standard container data from Docker
-        id: definition.id,
-        running: containerState?.running ?? false,
-        exists: containerState?.exists ?? false,
-        state: containerState?.state ?? null,
-        ports: containerState?.ports ?? [],
-        health_status: containerState?.health_status ?? 'none',
+    try {
+      // Single Docker API call filtered by DAMP-managed service containers
+      const containers = await dockerManager.docker.listContainers({
+        all: true,
+        filters: {
+          label: [
+            `${LABEL_KEYS.MANAGED}=true`,
+            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`,
+          ],
+        },
       });
-    }
 
-    return statuses;
+      // Build map by serviceId from labels
+      const containersByServiceId = new Map<ServiceId, Docker.ContainerInfo>();
+      for (const container of containers) {
+        const serviceId = container.Labels?.[LABEL_KEYS.SERVICE_ID];
+        if (serviceId) {
+          containersByServiceId.set(serviceId as ServiceId, container);
+        }
+      }
+
+      // Build status array for all services
+      const statuses: ContainerStateData[] = [];
+      for (const definition of definitions) {
+        const containerInfo = containersByServiceId.get(definition.id);
+
+        if (!containerInfo) {
+          // Container doesn't exist for this service
+          statuses.push({
+            id: definition.id,
+            running: false,
+            exists: false,
+            state: null,
+            ports: [],
+            health_status: 'none',
+          });
+        } else {
+          // Build state from container info
+          const state = await dockerManager.getContainerState(containerInfo.Id);
+          statuses.push({
+            id: definition.id,
+            running: state.running,
+            exists: state.exists,
+            state: state.state,
+            ports: state.ports,
+            health_status: state.health_status ?? 'none',
+          });
+        }
+      }
+
+      return statuses;
+    } catch (error) {
+      logger.error('Failed to get services state', { error });
+      // Return default states on error
+      return definitions.map(def => ({
+        id: def.id,
+        running: false,
+        exists: false,
+        state: null,
+        ports: [],
+        health_status: 'none',
+      }));
+    }
   }
 
   /**
-   * Get container status for a specific service
+   * Get container status for a specific service using label-based lookup
    */
   async getServiceContainerState(serviceId: ServiceId): Promise<ContainerStateData | null> {
     this.ensureInitialized();
@@ -158,20 +198,42 @@ class ServiceStateManager {
       return null;
     }
 
-    const state = serviceStorage.getServiceState(serviceId);
-    const containerName =
-      state?.custom_config?.container_name || definition.default_config.container_name;
+    try {
+      // Find container by service ID label
+      const containerInfo = await dockerManager.findContainerByServiceId(serviceId);
 
-    const containerState = await dockerManager.getContainerState(containerName);
+      if (!containerInfo) {
+        return {
+          id: serviceId,
+          running: false,
+          exists: false,
+          state: null,
+          ports: [],
+          health_status: 'none',
+        };
+      }
 
-    return {
-      id: serviceId,
-      running: containerState?.running ?? false,
-      exists: containerState?.exists ?? false,
-      state: containerState?.state ?? null,
-      ports: containerState?.ports ?? [],
-      health_status: containerState?.health_status ?? 'none',
-    };
+      const containerState = await dockerManager.getContainerState(containerInfo.Id);
+
+      return {
+        id: serviceId,
+        running: containerState.running,
+        exists: containerState.exists,
+        state: containerState.state,
+        ports: containerState.ports,
+        health_status: containerState.health_status ?? 'none',
+      };
+    } catch (error) {
+      logger.error('Failed to get service container state', { serviceId, error });
+      return {
+        id: serviceId,
+        running: false,
+        exists: false,
+        state: null,
+        ports: [],
+        health_status: 'none',
+      };
+    }
   }
 
   /**
@@ -231,8 +293,25 @@ class ServiceStateManager {
 
       // Create container with port resolution
       logger.info(`Creating container for ${serviceId}...`);
+
+      // Build service labels
+      const containerLabels = buildServiceContainerLabels(serviceId, definition.service_type);
+      const volumeBindings = definition.default_config.volume_bindings || [];
+      const volumeLabelsMap = new Map(
+        volumeBindings.map(binding => {
+          const volumeName = binding.split(':')[0];
+          return [volumeName, buildServiceVolumeLabels(serviceId, volumeName)];
+        })
+      );
+
       const containerId = await dockerManager.createContainer(
         definition.default_config,
+        {
+          serviceId,
+          serviceType: definition.service_type,
+          labels: containerLabels,
+          volumeLabelsMap,
+        },
         options?.custom_config
       );
 

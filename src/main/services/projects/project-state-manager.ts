@@ -273,6 +273,7 @@ class ProjectStateManager {
       // Build template context
       const documentRoot = this.getDocumentRoot(project);
       const context: TemplateContext = {
+        projectId: project.id,
         projectName: project.name,
         volumeName: project.volumeName,
         phpVersion: project.phpVersion,
@@ -530,7 +531,13 @@ class ProjectStateManager {
   ): Promise<void> {
     if (laravelOptions) {
       logger.info('Installing fresh Laravel project to volume...');
-      await installLaravelToVolume(project.volumeName, project.name, laravelOptions, onProgress);
+      await installLaravelToVolume(
+        project.volumeName,
+        project.name,
+        project.id,
+        laravelOptions,
+        onProgress
+      );
     }
   }
 
@@ -635,7 +642,7 @@ class ProjectStateManager {
           stage: 'creating-volume',
         });
       }
-      await volumeManager.createVolume(project.volumeName);
+      await volumeManager.createVolume(project.volumeName, project.id);
       volumeCreated = true;
 
       // Step 6: Install Laravel if needed
@@ -667,7 +674,7 @@ class ProjectStateManager {
           stage: 'copying-files',
         });
       }
-      await volumeManager.copyToVolume(projectPath, project.volumeName, onProgress);
+      await volumeManager.copyToVolume(projectPath, project.volumeName, project.id, onProgress);
       project.volumeCopied = true;
 
       // Step 9: Update hosts file
@@ -915,7 +922,7 @@ class ProjectStateManager {
   }
 
   /**
-   * Get container status for a specific project
+   * Get container status for a specific project using label-based lookup
    */
   async getProjectContainerState(projectId: string): Promise<ContainerStateData | null> {
     this.ensureInitialized();
@@ -925,17 +932,45 @@ class ProjectStateManager {
       return null;
     }
 
-    const { dockerManager } = await import('@main/services/docker/docker-manager');
-    const containerState = await dockerManager.getContainerState(project.containerName);
+    try {
+      const { dockerManager } = await import('@main/services/docker/docker-manager');
 
-    return {
-      id: project.id,
-      running: containerState?.running ?? false,
-      exists: containerState?.exists ?? false,
-      state: containerState?.state ?? null,
-      ports: containerState?.ports ?? [],
-      health_status: containerState?.health_status ?? 'none',
-    };
+      // Find container by project ID label
+      const containerInfo = await dockerManager.findContainerByProjectId(projectId);
+
+      if (!containerInfo) {
+        return {
+          id: project.id,
+          running: false,
+          exists: false,
+          state: null,
+          ports: [],
+          health_status: 'none',
+        };
+      }
+
+      const containerState = await dockerManager.getContainerState(containerInfo.Id);
+
+      return {
+        id: project.id,
+        running: containerState.running,
+        exists: containerState.exists,
+        state: containerState.state,
+        ports: containerState.ports,
+        health_status: containerState.health_status ?? 'none',
+      };
+    } catch (error) {
+      const logger = (await import('@main/utils/logger')).createLogger('ProjectStateManager');
+      logger.error('Failed to get project container state', { projectId, error });
+      return {
+        id: project.id,
+        running: false,
+        exists: false,
+        state: null,
+        ports: [],
+        health_status: 'none',
+      };
+    }
   }
 }
 

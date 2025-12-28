@@ -5,6 +5,7 @@
 
 import Docker from 'dockerode';
 import type { LaravelInstallerOptions, VolumeCopyProgress } from '@shared/types/project';
+import { buildHelperContainerLabels, HELPER_OPERATIONS } from '@shared/constants/labels';
 import { createLogger } from '@main/utils/logger';
 
 const docker = new Docker();
@@ -65,6 +66,7 @@ function buildLaravelCommand(projectName: string, options: LaravelInstallerOptio
 async function flattenVolumeStructure(
   volumeName: string,
   projectName: string,
+  projectId: string,
   onProgress?: (progress: VolumeCopyProgress) => void
 ): Promise<void> {
   try {
@@ -80,8 +82,14 @@ async function flattenVolumeStructure(
     }
 
     // Create Alpine container to move files from /app/projectName to /app/
+    const labels = buildHelperContainerLabels(
+      HELPER_OPERATIONS.LARAVEL_FLATTEN,
+      volumeName,
+      projectId
+    );
     const container = await docker.createContainer({
       Image: 'alpine:latest',
+      Labels: labels,
       Cmd: [
         'sh',
         '-c',
@@ -123,6 +131,7 @@ async function flattenVolumeStructure(
 export async function installLaravelToVolume(
   volumeName: string,
   projectName: string,
+  projectId: string,
   options: LaravelInstallerOptions,
   onProgress?: (progress: VolumeCopyProgress) => void
 ): Promise<void> {
@@ -163,8 +172,14 @@ export async function installLaravelToVolume(
 
     const command = buildLaravelCommand(projectName, options);
     logger.debug('Laravel installer command', { command: command.join(' ') });
+    const labels = buildHelperContainerLabels(
+      HELPER_OPERATIONS.LARAVEL_INSTALL,
+      volumeName,
+      projectId
+    );
     const container = await docker.createContainer({
       Image: INSTALLER_IMAGE,
+      Labels: labels,
       Cmd: command,
       HostConfig: {
         Binds: [`${volumeName}:/app`],
@@ -245,7 +260,7 @@ export async function installLaravelToVolume(
     }
 
     // Step 3: Flatten volume structure (move files from /app/projectName to /app/)
-    await flattenVolumeStructure(volumeName, projectName, onProgress);
+    await flattenVolumeStructure(volumeName, projectName, projectId, onProgress);
 
     // Step 4: Installation complete (files installed to volume root)
     if (onProgress) {

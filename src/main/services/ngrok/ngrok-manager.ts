@@ -7,6 +7,7 @@ import Docker from 'dockerode';
 import { z } from 'zod';
 import type { Project } from '@shared/types/project';
 import { dockerManager } from '../docker/docker-manager';
+import { buildNgrokLabels, LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { ngrokStateManager, type NgrokStatus } from './ngrok-state-manager';
 import { createLogger } from '@main/utils/logger';
 
@@ -96,16 +97,38 @@ class NgrokManager {
         };
       }
 
-      // Generate container name
-      const containerName = `${project.containerName}_ngrok`;
+      // Find and remove existing ngrok container by label
+      const existingContainers = await this.docker.listContainers({
+        all: true,
+        filters: {
+          label: [
+            `${LABEL_KEYS.PROJECT_ID}=${project.id}`,
+            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.NGROK_TUNNEL}`,
+          ],
+        },
+      });
 
-      // Remove existing container if it exists
-      try {
-        const existingContainer = this.docker.getContainer(containerName);
-        await existingContainer.remove({ v: false, force: true });
-      } catch {
-        // Ignore if container doesn't exist
+      for (const containerInfo of existingContainers) {
+        try {
+          const container = this.docker.getContainer(containerInfo.Id);
+          await container.remove({ v: false, force: true });
+        } catch {
+          // Ignore if container removal fails
+        }
       }
+
+      // Find project container by label to get network address
+      const projectContainer = await dockerManager.findContainerByProjectId(project.id);
+
+      if (!projectContainer) {
+        return {
+          success: false,
+          error: 'Project container not found. Start the project first.',
+        };
+      }
+
+      // Use container ID for stable reference (name could change)
+      const projectContainerId = projectContainer.Id.substring(0, 12);
 
       // Build environment variables
       const env = [`NGROK_AUTHTOKEN=${authToken}`];
@@ -113,12 +136,12 @@ class NgrokManager {
         env.push(`NGROK_REGION=${region}`);
       }
 
-      // Create ngrok container with custom command
+      // Create ngrok container pointing to project container by ID
       const container = await this.docker.createContainer({
-        name: containerName,
+        name: `ngrok_${project.id}`, // Use project ID for stability
         Image: NGROK_IMAGE,
         Env: env,
-        Cmd: ['http', `https://${project.containerName}:${project.forwardedPort}`],
+        Cmd: ['http', `https://${projectContainerId}:${project.forwardedPort}`],
         ExposedPorts: {
           '4040/tcp': {},
         },
@@ -135,11 +158,7 @@ class NgrokManager {
             [NETWORK_NAME]: {},
           },
         },
-        Labels: {
-          'com.damp.managed': 'true',
-          'com.damp.type': 'ngrok-tunnel',
-          'com.damp.project-id': project.id,
-        },
+        Labels: buildNgrokLabels(project.id),
       });
 
       const containerId = container.id;

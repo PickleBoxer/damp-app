@@ -47,18 +47,18 @@ async function handleStartLogs(
       };
     }
 
-    // Check if container exists
-    const containerState = await dockerManager.getContainerState(project.containerName);
-    if (!containerState?.exists) {
+    // Find container by project ID label
+    const containerInfo = await dockerManager.findContainerByProjectId(projectId);
+    if (!containerInfo) {
       return {
         success: false,
-        error: `Container ${project.containerName} does not exist. Start the project first.`,
+        error: 'Project container not found. Start the project first.',
       };
     }
 
-    // Start streaming
+    // Start streaming using container ID
     const stopFn = await dockerManager.streamContainerLogs(
-      project.containerName,
+      containerInfo.Id,
       (line: string, stream: 'stdout' | 'stderr') => {
         // Send log line to renderer
         event.sender.send(LOGS_LINE_CHANNEL, {

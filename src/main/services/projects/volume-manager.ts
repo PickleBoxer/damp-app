@@ -5,6 +5,11 @@
 
 import Docker from 'dockerode';
 import type { VolumeCopyProgress } from '@shared/types/project';
+import {
+  buildProjectVolumeLabels,
+  buildHelperContainerLabels,
+  HELPER_OPERATIONS,
+} from '@shared/constants/labels';
 import { createLogger } from '@main/utils/logger';
 import { ensureRsyncImage, RSYNC_IMAGE_NAME } from './rsync-image-builder';
 
@@ -42,7 +47,7 @@ class VolumeManager {
   /**
    * Create a Docker volume
    */
-  async createVolume(volumeName: string): Promise<void> {
+  async createVolume(volumeName: string, projectId: string): Promise<void> {
     try {
       // Check if volume already exists
       const volumes = await docker.listVolumes({
@@ -54,7 +59,8 @@ class VolumeManager {
         return;
       }
 
-      await docker.createVolume({ Name: volumeName });
+      const labels = buildProjectVolumeLabels(projectId, volumeName);
+      await docker.createVolume({ Name: volumeName, Labels: labels });
       logger.info(`Created volume: ${volumeName}`);
     } catch (error) {
       throw new Error(`Failed to create volume ${volumeName}: ${error}`);
@@ -112,13 +118,14 @@ class VolumeManager {
   async copyToVolume(
     sourcePath: string,
     volumeName: string,
+    projectId: string,
     onProgress?: (progress: VolumeCopyProgress) => void
   ): Promise<void> {
     // Always copy to volume root (flat structure)
 
     try {
       // Ensure volume exists
-      await this.createVolume(volumeName);
+      await this.createVolume(volumeName, projectId);
 
       // Normalize paths for Docker bind mounts (Windows paths need conversion)
       const normalizedSourcePath = this.normalizePathForDocker(sourcePath);
@@ -139,8 +146,14 @@ class VolumeManager {
       }
 
       // Create Alpine container with both source folder and volume mounted
+      const labels = buildHelperContainerLabels(
+        HELPER_OPERATIONS.VOLUME_COPY,
+        volumeName,
+        projectId
+      );
       const container = await docker.createContainer({
         Image: 'alpine:latest',
+        Labels: labels,
         Cmd: [
           'sh',
           '-c',
@@ -231,6 +244,7 @@ class VolumeManager {
   async syncFromVolume(
     volumeName: string,
     targetPath: string,
+    projectId: string,
     options: {
       includeNodeModules?: boolean;
       includeVendor?: boolean;
@@ -263,8 +277,14 @@ class VolumeManager {
       }
 
       // Create Alpine container with rsync (using cached image)
+      const labels = buildHelperContainerLabels(
+        HELPER_OPERATIONS.VOLUME_SYNC_FROM,
+        volumeName,
+        projectId
+      );
       const container = await docker.createContainer({
         Image: RSYNC_IMAGE_NAME,
+        Labels: labels,
         Cmd: [
           'sh',
           '-c',
@@ -358,6 +378,7 @@ class VolumeManager {
   async syncToVolume(
     sourcePath: string,
     volumeName: string,
+    projectId: string,
     options: {
       includeNodeModules?: boolean;
       includeVendor?: boolean;
@@ -370,7 +391,7 @@ class VolumeManager {
       await ensureRsyncImage();
 
       // Ensure volume exists
-      await this.createVolume(volumeName);
+      await this.createVolume(volumeName, projectId);
 
       // Normalize paths for Docker bind mounts
       const normalizedSourcePath = this.normalizePathForDocker(sourcePath);
@@ -387,8 +408,14 @@ class VolumeManager {
       const uidGid = await this.getUidGid();
 
       // Create Alpine container with rsync (using cached image)
+      const labels = buildHelperContainerLabels(
+        HELPER_OPERATIONS.VOLUME_SYNC_TO,
+        volumeName,
+        projectId
+      );
       const container = await docker.createContainer({
         Image: RSYNC_IMAGE_NAME,
+        Labels: labels,
         Cmd: [
           'sh',
           '-c',

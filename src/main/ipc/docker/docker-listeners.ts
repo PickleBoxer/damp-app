@@ -7,6 +7,7 @@ import {
   DOCKER_NETWORK_STATUS_CHANNEL,
 } from './docker-channels';
 import { dockerManager } from '@main/services/docker/docker-manager';
+import { LABEL_KEYS } from '@shared/constants/labels';
 import { DOCKER_TIMEOUTS } from './docker-constants';
 import { createLogger } from '@main/utils/logger';
 
@@ -79,8 +80,14 @@ export function addDockerListeners() {
               DOCKER_TIMEOUTS.LIST_CONTAINERS
             )
           );
+          // Filter containers to only app-managed containers
           const containers = await Promise.race([
-            docker.listContainers({ all: false }),
+            docker.listContainers({
+              all: false,
+              filters: {
+                label: [`${LABEL_KEYS.MANAGED}=true`],
+              },
+            }),
             listTimeoutPromise,
           ]);
 

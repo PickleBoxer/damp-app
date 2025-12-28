@@ -6,7 +6,6 @@
 
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Project } from '@shared/types/project';
 import type { ServiceId } from '@shared/types/service';
 import { projectKeys } from '@renderer/projects';
 import { servicesKeys } from '@renderer/services';
@@ -29,36 +28,30 @@ export function useDockerEvents() {
     // Subscribe to Docker container events
     const unsubscribe = dockerEventsApi.onEvent(event => {
       // Log event for debugging
-      console.debug('[Docker Event]', event.action, event.containerName);
+      console.debug('[Docker Event]', event.action, event.containerName, {
+        serviceId: event.serviceId,
+        projectId: event.projectId,
+        resourceType: event.resourceType,
+      });
 
-      // Get cached projects to map containerName → projectId
-      const cachedProjects = queryClient.getQueryData<Project[]>(projectKeys.list());
-
-      // Check if this event is for a project container
-      const affectedProject = cachedProjects?.find(
-        project => project.containerName === event.containerName
-      );
-
-      if (affectedProject) {
+      // Handle project container events (projectId label present)
+      if (event.projectId) {
         // Always invalidate detail query (shows both state and health)
         queryClient.invalidateQueries({
-          queryKey: projectKeys.detail(affectedProject.id),
+          queryKey: projectKeys.detail(event.projectId),
           refetchType: 'active',
         });
 
         // ✅ Granular: Invalidate ONLY this project's container state
         queryClient.invalidateQueries({
-          queryKey: projectKeys.containerState(affectedProject.id),
+          queryKey: projectKeys.containerState(event.projectId),
           refetchType: 'active',
         });
       }
 
-      // Check if this event is for a service container (damp-* prefix)
-      const isServiceContainer = event.containerName.startsWith('damp-');
-
-      if (isServiceContainer) {
-        // Extract service ID from container name (e.g., "damp-mysql" → "mysql")
-        const serviceId = event.containerName.replace('damp-', '') as ServiceId;
+      // Handle service container events (serviceId label present)
+      if (event.serviceId) {
+        const serviceId = event.serviceId as ServiceId;
 
         // Always invalidate detail query (shows both state and health)
         queryClient.invalidateQueries({

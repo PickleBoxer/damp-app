@@ -4,6 +4,7 @@
  */
 
 import type { TemplateContext, ProjectTemplate } from '@shared/types/project';
+import { buildProjectContainerLabels, LABEL_KEYS } from '@shared/constants/labels';
 
 /**
  * Map Node.js versions to specific releases for better Docker layer caching
@@ -35,6 +36,9 @@ function renderTemplate(template: string, context: TemplateContext): string {
       : context.phpVariant.includes('frankenphp')
         ? 'frankenphp'
         : 'fpm';
+
+  // Build container labels
+  const labels = buildProjectContainerLabels(context.projectId, context.projectName);
 
   // Prepare Node.js installation blocks
   const nodeSetup = hasNodeVersion
@@ -73,6 +77,13 @@ function renderTemplate(template: string, context: TemplateContext): string {
     .replaceAll('{{NETWORK_NAME}}', context.networkName)
     .replaceAll('{{CONTAINER_NAME}}', context.containerName)
     .replaceAll('{{FORWARDED_PORT}}', context.forwardedPort.toString())
+    .replaceAll('{{LABEL_MANAGED}}', `${LABEL_KEYS.MANAGED}=${labels[LABEL_KEYS.MANAGED]}`)
+    .replaceAll('{{LABEL_TYPE}}', `${LABEL_KEYS.TYPE}=${labels[LABEL_KEYS.TYPE]}`)
+    .replaceAll('{{LABEL_PROJECT_ID}}', `${LABEL_KEYS.PROJECT_ID}=${labels[LABEL_KEYS.PROJECT_ID]}`)
+    .replaceAll(
+      '{{LABEL_PROJECT_NAME}}',
+      `${LABEL_KEYS.PROJECT_NAME}=${labels[LABEL_KEYS.PROJECT_NAME]}`
+    )
     .replaceAll('{{POST_START_COMMAND}}', context.postStartCommand)
     .replaceAll('{{POST_CREATE_COMMAND}}', context.postCreateCommand || '')
     .replaceAll('{{LAUNCH_INDEX_PATH}}', context.launchIndexPath || '')
@@ -148,7 +159,11 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
 
     "runArgs": [
         "--network={{NETWORK_NAME}}",
-        "--name={{CONTAINER_NAME}}"
+        "--name={{CONTAINER_NAME}}",
+        "--label={{LABEL_MANAGED}}",
+        "--label={{LABEL_TYPE}}",
+        "--label={{LABEL_PROJECT_ID}}",
+        "--label={{LABEL_PROJECT_NAME}}"
     ],
 
     "forwardPorts": [{{FORWARDED_PORT}}],
