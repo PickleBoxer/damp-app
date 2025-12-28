@@ -165,6 +165,11 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   // Reset wizard state when dialog closes
   const handleOpenChange = useCallback(
     (newOpen: boolean) => {
+      // Prevent closing during project creation
+      if (!newOpen && isCreating) {
+        return;
+      }
+
       if (!newOpen) {
         // Reset all state when closing
         setStep('type');
@@ -184,7 +189,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
       }
       onOpenChange(newOpen);
     },
-    [onOpenChange]
+    [onOpenChange, isCreating]
   );
 
   // Add keyboard listener to close dialog when creation is finished
@@ -1217,6 +1222,16 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className={`max-w-2xl select-none sm:max-w-lg ${showTerminal ? 'gap-0 p-0 [&>button]:top-1' : ''}`}
+        onEscapeKeyDown={e => {
+          if (isCreating) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={e => {
+          if (isCreating) {
+            e.preventDefault();
+          }
+        }}
       >
         {!showTerminal && (
           <DialogHeader>
