@@ -24,27 +24,29 @@ export interface SyncResult {
  * Query keys for sync operations
  */
 export const syncKeys = {
-  all: ['syncs'] as const,
-  activeSyncs: () => [...syncKeys.all, 'active'] as const,
+  status: (projectId: string) => ['syncs', projectId] as const,
 };
 
 /**
- * Type for active sync state (just direction, no progress)
+ * Type for active sync state (direction + optional progress)
  */
 export interface ActiveSync {
   direction: 'to' | 'from';
+  percentage?: number;
+  bytesTransferred?: number;
 }
 
 /**
- * Hook to get all active syncs
- * Returns a Map of projectId -> ActiveSync
+ * Hook to get sync status for a specific project
+ * Returns null when no sync is active, ActiveSync object when syncing
+ * Query is created lazily on first call and auto-garbage-collected 5 minutes after sync completes
  */
-export function useActiveSyncs() {
-  return useQuery<Map<string, ActiveSync>>({
-    queryKey: syncKeys.activeSyncs(),
-    queryFn: () => new Map(), // Initialize with empty map
+export function useProjectSyncStatus(projectId: string) {
+  return useQuery<ActiveSync | null>({
+    queryKey: syncKeys.status(projectId),
+    queryFn: () => null, // Initialize with no active sync
     staleTime: Infinity, // Never auto-refetch, only update via setQueryData
-    gcTime: Infinity, // Keep in cache forever
+    // gcTime defaults to 5 minutes - query auto-cleans after sync completes
   });
 }
 
@@ -59,17 +61,15 @@ export function useSyncFromVolume() {
       syncApi.fromVolume(projectId, options),
     onMutate: ({ projectId }) => {
       // Check if project already has an active sync
-      const activeSyncs = queryClient.getQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs());
-      if (activeSyncs?.has(projectId)) {
+      const currentSync = queryClient.getQueryData<ActiveSync | null>(syncKeys.status(projectId));
+      if (currentSync !== null) {
         // Project already syncing, cancel this mutation
         throw new Error('Sync already in progress for this project');
       }
 
-      // Immediately add to active syncs to prevent duplicate clicks
-      queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
-        const newMap = new Map(oldMap || []);
-        newMap.set(projectId, { direction: 'from' });
-        return newMap;
+      // Immediately set sync status to prevent duplicate clicks
+      queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), {
+        direction: 'from',
       });
     },
     onSuccess: (result, { projectId }) => {
@@ -77,23 +77,15 @@ export function useSyncFromVolume() {
         // Only handle setup errors (Docker not running, project not found)
         // These fail immediately before sync starts, so we need to clean up
         toast.error(result.error || 'Failed to start sync from volume');
-        queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
-          const newMap = new Map(oldMap || []);
-          newMap.delete(projectId);
-          return newMap;
-        });
+        queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), null);
       }
       // On success, sync is running - IPC progress events will handle state updates
     },
     onError: (error: Error, { projectId }) => {
       // Only handle mutation errors (onMutate threw error)
       toast.error(`${error.message}`);
-      // Clean up if we added to active syncs but mutation failed
-      queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
-        const newMap = new Map(oldMap || []);
-        newMap.delete(projectId);
-        return newMap;
-      });
+      // Clean up if we set sync status but mutation failed
+      queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), null);
     },
   });
 }
@@ -109,17 +101,15 @@ export function useSyncToVolume() {
       syncApi.toVolume(projectId, options),
     onMutate: ({ projectId }) => {
       // Check if project already has an active sync
-      const activeSyncs = queryClient.getQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs());
-      if (activeSyncs?.has(projectId)) {
+      const currentSync = queryClient.getQueryData<ActiveSync | null>(syncKeys.status(projectId));
+      if (currentSync !== null) {
         // Project already syncing, cancel this mutation
         throw new Error('Sync already in progress for this project');
       }
 
-      // Immediately add to active syncs to prevent duplicate clicks
-      queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
-        const newMap = new Map(oldMap || []);
-        newMap.set(projectId, { direction: 'to' });
-        return newMap;
+      // Immediately set sync status to prevent duplicate clicks
+      queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), {
+        direction: 'to',
       });
     },
     onSuccess: (result, { projectId }) => {
@@ -127,23 +117,15 @@ export function useSyncToVolume() {
         // Only handle setup errors (Docker not running, project not found)
         // These fail immediately before sync starts, so we need to clean up
         toast.error(result.error || 'Failed to start sync to volume');
-        queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
-          const newMap = new Map(oldMap || []);
-          newMap.delete(projectId);
-          return newMap;
-        });
+        queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), null);
       }
       // On success, sync is running - IPC progress events will handle state updates
     },
     onError: (error: Error, { projectId }) => {
       // Only handle mutation errors (onMutate threw error)
       toast.error(`${error.message}`);
-      // Clean up if we added to active syncs but mutation failed
-      queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
-        const newMap = new Map(oldMap || []);
-        newMap.delete(projectId);
-        return newMap;
-      });
+      // Clean up if we set sync status but mutation failed
+      queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), null);
     },
   });
 }
@@ -158,29 +140,34 @@ export function useSyncProgress() {
   useEffect(() => {
     // Setup status listener
     const cleanup = syncApi.onSyncProgress((projectId, direction, progress) => {
-      // Update active syncs in cache
-      queryClient.setQueryData<Map<string, ActiveSync>>(syncKeys.activeSyncs(), oldMap => {
-        const newMap = new Map(oldMap || []);
-
-        if (progress.status === 'started') {
-          // Add to active syncs when started
-          newMap.set(projectId, { direction });
-        } else if (progress.status === 'completed') {
-          // Remove from active syncs when finished
-          newMap.delete(projectId);
-          // Show success toast
-          toast.success(
-            direction === 'from' ? 'Sync from volume completed' : 'Sync to volume completed'
-          );
-        } else if (progress.status === 'failed') {
-          // Remove from active syncs when failed
-          newMap.delete(projectId);
-          // Show error toast
-          toast.error(direction === 'from' ? 'Sync from volume failed' : 'Sync to volume failed');
-        }
-
-        return newMap;
-      });
+      // Update individual project sync status in cache
+      if (progress.status === 'started') {
+        // Set sync status when started
+        queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), { direction });
+      } else if (progress.status === 'progress') {
+        // Update with progress data
+        queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), prev =>
+          prev
+            ? {
+                ...prev,
+                percentage: progress.percentage,
+                bytesTransferred: progress.bytesTransferred,
+              }
+            : prev
+        );
+      } else if (progress.status === 'completed') {
+        // Clear sync status when finished
+        queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), null);
+        // Show success toast
+        toast.success(
+          direction === 'from' ? 'Sync from volume completed' : 'Sync to volume completed'
+        );
+      } else if (progress.status === 'failed') {
+        // Clear sync status when failed
+        queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), null);
+        // Show error toast
+        toast.error(direction === 'from' ? 'Sync from volume failed' : 'Sync to volume failed');
+      }
     });
 
     return cleanup;
@@ -188,9 +175,24 @@ export function useSyncProgress() {
 }
 
 /**
- * Hook to get sync status for a specific project
+ * Hook to cancel an in-progress sync operation
  */
-export function useProjectSyncStatus(projectId: string) {
-  const { data: activeSyncs } = useActiveSyncs();
-  return activeSyncs?.get(projectId) ?? null;
+export function useCancelSync() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (projectId: string) => syncApi.cancel(projectId),
+    onSuccess: (result, projectId) => {
+      if (result.success) {
+        // Clear sync status immediately
+        queryClient.setQueryData<ActiveSync | null>(syncKeys.status(projectId), null);
+        toast.info('Sync cancelled');
+      } else {
+        toast.error(result.error || 'Failed to cancel sync');
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to cancel sync: ${error.message}`);
+    },
+  });
 }

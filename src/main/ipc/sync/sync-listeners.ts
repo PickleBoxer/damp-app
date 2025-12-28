@@ -6,8 +6,9 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import { z } from 'zod';
 import Docker from 'dockerode';
-import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_PROGRESS } from './sync-channels';
+import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_CANCEL, SYNC_PROGRESS } from './sync-channels';
 import { createLogger } from '@main/utils/logger';
+import { syncQueue } from '@main/services/projects/sync-queue';
 
 const logger = createLogger('sync-ipc');
 
@@ -40,6 +41,9 @@ const syncOptionsSchema = z
   })
   .optional();
 
+// Track active sync containers for cancellation support
+const activeSyncContainers = new Map<string, string>(); // projectId -> containerId
+
 /**
  * Add sync event listeners
  */
@@ -47,6 +51,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
   // Remove existing handlers to prevent duplicates
   ipcMain.removeHandler(SYNC_FROM_VOLUME);
   ipcMain.removeHandler(SYNC_TO_VOLUME);
+  ipcMain.removeHandler(SYNC_CANCEL);
 
   // Lazy-load and initialize project state manager once
   let projectManagerPromise: Promise<
@@ -128,39 +133,51 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
           mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'from', { status: 'started' });
         }
 
-        // Execute sync from volume to local folder asynchronously (non-blocking)
-        // Don't await - let it run in background and notify when done
+        // Execute sync from volume to local folder with queue management
         const { volumeManager } = await getVolumeManager();
-        volumeManager
-          .syncFromVolume(project.volumeName, project.path, {
-            includeNodeModules: options.includeNodeModules ?? false,
-            includeVendor: options.includeVendor ?? false,
-          })
-          .then(() => {
-            // Notify that sync has completed
-            if (
-              mainWindow &&
-              !mainWindow.isDestroyed() &&
-              mainWindow.webContents &&
-              !mainWindow.webContents.isDestroyed()
-            ) {
-              mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'from', {
-                status: 'completed',
-              });
+
+        await syncQueue.execute(projectId, async () => {
+          await volumeManager.syncFromVolume(
+            project.volumeName,
+            project.path,
+            {
+              includeNodeModules: options.includeNodeModules ?? false,
+              includeVendor: options.includeVendor ?? false,
+            },
+            containerId => {
+              // Track container for cancellation support
+              activeSyncContainers.set(projectId, containerId);
+            },
+            progress => {
+              // Forward progress updates to renderer
+              if (
+                mainWindow &&
+                !mainWindow.isDestroyed() &&
+                mainWindow.webContents &&
+                !mainWindow.webContents.isDestroyed()
+              ) {
+                mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'from', {
+                  status: 'progress',
+                  percentage: progress.percentage,
+                  bytesTransferred: progress.bytes,
+                });
+              }
             }
-          })
-          .catch((error: unknown) => {
-            logger.error('Failed to sync from volume', { error });
-            // Notify that sync has failed
-            if (
-              mainWindow &&
-              !mainWindow.isDestroyed() &&
-              mainWindow.webContents &&
-              !mainWindow.webContents.isDestroyed()
-            ) {
-              mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'from', { status: 'failed' });
-            }
+          );
+        });
+
+        // Sync completed successfully
+        activeSyncContainers.delete(projectId);
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          mainWindow.webContents &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'from', {
+            status: 'completed',
           });
+        }
 
         // Return immediately - sync runs in background
         return { success: true };
@@ -223,41 +240,66 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
           mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'to', { status: 'started' });
         }
 
-        // Execute sync from local folder to volume asynchronously (non-blocking)
-        // Don't await - let it run in background and notify when done
+        // Execute sync from local folder to volume with queue management
         const { volumeManager } = await getVolumeManager();
-        volumeManager
-          .syncToVolume(project.path, project.volumeName, {
-            includeNodeModules: options.includeNodeModules ?? false,
-            includeVendor: options.includeVendor ?? false,
-          })
-          .then(() => {
-            // Notify that sync has completed
-            if (
-              mainWindow &&
-              !mainWindow.isDestroyed() &&
-              mainWindow.webContents &&
-              !mainWindow.webContents.isDestroyed()
-            ) {
-              mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'to', { status: 'completed' });
+
+        await syncQueue.execute(projectId, async () => {
+          await volumeManager.syncToVolume(
+            project.path,
+            project.volumeName,
+            {
+              includeNodeModules: options.includeNodeModules ?? false,
+              includeVendor: options.includeVendor ?? false,
+            },
+            containerId => {
+              // Track container for cancellation support
+              activeSyncContainers.set(projectId, containerId);
+            },
+            progress => {
+              // Forward progress updates to renderer
+              if (
+                mainWindow &&
+                !mainWindow.isDestroyed() &&
+                mainWindow.webContents &&
+                !mainWindow.webContents.isDestroyed()
+              ) {
+                mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'to', {
+                  status: 'progress',
+                  percentage: progress.percentage,
+                  bytesTransferred: progress.bytes,
+                });
+              }
             }
-          })
-          .catch((error: unknown) => {
-            logger.error('Failed to sync to volume', { error });
-            // Notify that sync has failed
-            if (
-              mainWindow &&
-              !mainWindow.isDestroyed() &&
-              mainWindow.webContents &&
-              !mainWindow.webContents.isDestroyed()
-            ) {
-              mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'to', { status: 'failed' });
-            }
-          });
+          );
+        });
+
+        // Sync completed successfully
+        activeSyncContainers.delete(projectId);
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          mainWindow.webContents &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'to', { status: 'completed' });
+        }
 
         // Return immediately - sync runs in background
         return { success: true };
       } catch (error) {
+        // Clean up on error
+        activeSyncContainers.delete(projectId);
+
+        // Notify renderer of failure
+        if (
+          mainWindow &&
+          !mainWindow.isDestroyed() &&
+          mainWindow.webContents &&
+          !mainWindow.webContents.isDestroyed()
+        ) {
+          mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'to', { status: 'failed' });
+        }
+
         logger.error('Failed to get project details for sync to volume', { error });
         return {
           success: false,
@@ -266,4 +308,61 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
       }
     }
   );
+
+  /**
+   * Cancel an in-progress or queued sync operation
+   */
+  ipcMain.handle(SYNC_CANCEL, async (_event, projectId: string): Promise<SyncResult> => {
+    // Validate input
+    try {
+      projectIdSchema.parse(projectId);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errorMessage = error.issues.map(issue => issue.message).join(', ');
+        return { success: false, error: `Invalid input: ${errorMessage}` };
+      }
+    }
+
+    try {
+      // Try to cancel from queue first (if not yet started)
+      if (syncQueue.cancel(projectId)) {
+        logger.info(`Cancelled queued sync for project ${projectId}`);
+        return { success: true };
+      }
+
+      // Stop running container if exists
+      const containerId = activeSyncContainers.get(projectId);
+      if (!containerId) {
+        return { success: false, error: 'No active sync found for this project' };
+      }
+
+      logger.info(`Stopping active sync container ${containerId} for project ${projectId}`);
+
+      const container = docker.getContainer(containerId);
+      await container.stop({ t: 2 }); // 2 second graceful stop
+      await container.remove({ force: true });
+
+      // Clean up tracking
+      activeSyncContainers.delete(projectId);
+
+      // Notify renderer that sync was cancelled
+      if (
+        mainWindow &&
+        !mainWindow.isDestroyed() &&
+        mainWindow.webContents &&
+        !mainWindow.webContents.isDestroyed()
+      ) {
+        mainWindow.webContents.send(SYNC_PROGRESS, projectId, 'from', { status: 'failed' });
+      }
+
+      logger.info(`Successfully cancelled sync for project ${projectId}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Failed to cancel sync', { error, projectId });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  });
 }

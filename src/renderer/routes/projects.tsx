@@ -21,7 +21,7 @@ import {
 } from '@renderer/components/ui/resizable';
 import { projectsQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
 import { useReorderProjects } from '@renderer/hooks/use-projects';
-import { useActiveSyncs } from '@renderer/hooks/use-sync';
+import { useProjectSyncStatus } from '@renderer/hooks/use-sync';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';
 import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
@@ -57,16 +57,13 @@ export const Route = createFileRoute('/projects')({
 interface SortableProjectItemProps {
   project: Project;
   isSelected: boolean;
-  isSyncing?: boolean;
 }
 
-function SortableProjectItem({
-  project,
-  isSelected,
-  isSyncing,
-}: Readonly<SortableProjectItemProps>) {
+function SortableProjectItem({ project, isSelected }: Readonly<SortableProjectItemProps>) {
   // Each project fetches its own container state
   const { data: state } = useQuery(projectContainerStateQueryOptions(project.id));
+  // Get sync status for this project
+  const { data: syncStatus } = useProjectSyncStatus(project.id);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: project.id,
@@ -95,15 +92,25 @@ function SortableProjectItem({
         >
           <div className="flex w-full flex-1 items-center gap-3">
             <ProjectIcon projectType={project.type} className="h-10 w-10" />
-            {isSyncing && (
-              <div className="absolute top-1 right-1 rounded-full p-0.5">
-                <Loader2 className="text-primary h-3 w-3 animate-spin" />
-              </div>
-            )}
             <div className="w-full truncate">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold capitalize">{project.name}</span>
-                <ContainerStateIndicator status={state} />
+                <div className="flex items-center gap-1.5">
+                  {syncStatus && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="rounded-full p-0.5">
+                          <Loader2 className="text-primary h-3.5 w-3.5 animate-spin" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Syncing {syncStatus.direction === 'from' ? 'from' : 'to'} volume
+                        {syncStatus.percentage !== undefined && ` (${syncStatus.percentage}%)`}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  <ContainerStateIndicator status={state} />
+                </div>
               </div>
               <p className="text-muted-foreground flex items-center gap-1 text-xs">
                 <FaLink className="h-3 w-3 shrink-0" />
@@ -134,9 +141,6 @@ function ProjectsPage() {
 
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
-
-  // Get active syncs
-  const { data: activeSyncs } = useActiveSyncs();
 
   // Initialize or update project order when projects change
   const sortedProjects = useMemo(() => {
@@ -226,7 +230,7 @@ function ProjectsPage() {
                     <p className="text-destructive mb-2 text-sm font-medium">
                       Failed to load projects
                     </p>
-                    <p className="text-muted-foreground text-xs">{(error as Error).message}</p>
+                    <p className="text-muted-foreground text-xs">{error.message}</p>
                   </div>
                 )}
 
@@ -242,17 +246,13 @@ function ProjectsPage() {
                       items={sortedProjects.map(p => p.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      {sortedProjects.map(project => {
-                        const isSyncing = activeSyncs?.has(project.id) || false;
-                        return (
-                          <SortableProjectItem
-                            key={project.id}
-                            project={project}
-                            isSelected={selectedProjectId === project.id}
-                            isSyncing={isSyncing}
-                          />
-                        );
-                      })}
+                      {sortedProjects.map(project => (
+                        <SortableProjectItem
+                          key={project.id}
+                          project={project}
+                          isSelected={selectedProjectId === project.id}
+                        />
+                      ))}
                     </SortableContext>
                   </DndContext>
                 )}

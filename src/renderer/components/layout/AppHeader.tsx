@@ -11,7 +11,7 @@ export default function AppHeader() {
       <div className="relative z-10 flex h-full items-center justify-center">
         {/* Left section - App icon (draggable) */}
         {!isMacOS() && (
-          <div className="bg-primary text-primary-foreground absolute left-0 ml-2 flex aspect-square items-center justify-center p-1">
+          <div className="bg-primary text-primary-foreground absolute left-0 ml-2 flex aspect-square items-center justify-center rounded-[5px] p-1">
             <Box className="h-5 w-5" />
           </div>
         )}

@@ -16,14 +16,14 @@ import {
   Network,
 } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { useActiveSyncs } from '@renderer/hooks/use-sync';
+import type { ActiveSync } from '@renderer/hooks/use-sync';
 import { useActiveNgrokTunnels } from '@renderer/hooks/use-ngrok';
 import { useNavigate } from '@tanstack/react-router';
 
 /**
  * Format bytes to MB or GB depending on size
  */
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import type { Project } from '@shared/types/project';
 
 function formatMemory(bytes: number): string {
@@ -49,7 +49,6 @@ export default function DockerStatusFooter() {
   const { data: networkStatus } = useQuery(
     dockerNetworkStatusQueryOptions(dockerStatus?.isRunning ?? false)
   );
-  const { data: activeSyncs } = useActiveSyncs();
   const { data: projects } = useQuery<Project[]>({
     queryKey: projectKeys.list(),
     queryFn: () =>
@@ -139,23 +138,34 @@ export default function DockerStatusFooter() {
   // Calculate total CPU capacity (100% per core)
   const totalCpuCapacity = dockerInfo ? dockerInfo.cpus * 100 : 0;
 
+  // Subscribe to sync status for all projects using useQueries (built-in React Query reactivity)
+  const syncQueries = useQueries({
+    queries: (projects || []).map(project => ({
+      queryKey: ['syncs', project.id] as const,
+      queryFn: () => null as ActiveSync | null,
+      staleTime: Infinity,
+    })),
+  });
+
   // Count active syncs by direction and get project info
   const syncInfo = useMemo(() => {
     const counts = { from: 0, to: 0 };
     const fromProjects: Array<{ id: string; name: string }> = [];
     const toProjects: Array<{ id: string; name: string }> = [];
 
-    if (activeSyncs && projects) {
-      activeSyncs.forEach((sync, projectId) => {
-        const project = projects.find(p => p.id === projectId);
-        const projectInfo = { id: projectId, name: project?.name || projectId };
+    if (projects) {
+      projects.forEach((project, index) => {
+        const status = syncQueries[index]?.data;
+        if (status !== null && status !== undefined) {
+          const projectInfo = { id: project.id, name: project.name };
 
-        if (sync.direction === 'from') {
-          counts.from++;
-          fromProjects.push(projectInfo);
-        } else {
-          counts.to++;
-          toProjects.push(projectInfo);
+          if (status.direction === 'from') {
+            counts.from++;
+            fromProjects.push(projectInfo);
+          } else {
+            counts.to++;
+            toProjects.push(projectInfo);
+          }
         }
       });
     }
@@ -166,7 +176,7 @@ export default function DockerStatusFooter() {
       toProjects,
       total: counts.from + counts.to,
     };
-  }, [activeSyncs, projects]);
+  }, [projects, syncQueries]);
 
   // Use TanStack Query as single source of truth for ngrok tunnels
   // This reads from the query cache - no additional IPC calls!
@@ -314,9 +324,9 @@ export default function DockerStatusFooter() {
           </TooltipTrigger>
           <TooltipContent side="top" className="p-0">
             <div className="flex flex-col">
-              {syncInfo.fromProjects.map((project, idx) => (
+              {syncInfo.fromProjects.map(project => (
                 <button
-                  key={`from-${idx}`}
+                  key={`from-${project.id}`}
                   onClick={() =>
                     navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
                   }
@@ -329,9 +339,9 @@ export default function DockerStatusFooter() {
                   <span className="text-xs hover:underline">Open</span>
                 </button>
               ))}
-              {syncInfo.toProjects.map((project, idx) => (
+              {syncInfo.toProjects.map(project => (
                 <button
-                  key={`to-${idx}`}
+                  key={`to-${project.id}`}
                   onClick={() =>
                     navigate({ to: '/projects/$projectId', params: { projectId: project.id } })
                   }
@@ -362,9 +372,9 @@ export default function DockerStatusFooter() {
           </TooltipTrigger>
           <TooltipContent side="top" className="p-0">
             <div className="flex flex-col">
-              {ngrokInfo.activeTunnels.map((tunnel, idx) => (
+              {ngrokInfo.activeTunnels.map(tunnel => (
                 <button
-                  key={`tunnel-${idx}`}
+                  key={`tunnel-${tunnel.id}`}
                   onClick={() =>
                     navigate({ to: '/projects/$projectId', params: { projectId: tunnel.id } })
                   }

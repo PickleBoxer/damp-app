@@ -5,7 +5,7 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { SyncContext } from '@shared/types/ipc';
-import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_PROGRESS } from './sync-channels';
+import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_CANCEL, SYNC_PROGRESS } from './sync-channels';
 
 // Define types locally to match SyncContext interface
 interface SyncOptions {
@@ -20,6 +20,8 @@ export function exposeSyncContext() {
 
     toVolume: (projectId: string, options?: SyncOptions) =>
       ipcRenderer.invoke(SYNC_TO_VOLUME, projectId, options),
+
+    cancel: (projectId: string) => ipcRenderer.invoke(SYNC_CANCEL, projectId),
 
     onSyncProgress: callback => {
       const listener = (

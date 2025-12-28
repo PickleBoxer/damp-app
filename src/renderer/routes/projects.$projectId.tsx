@@ -16,7 +16,12 @@ import { TbWorld } from 'react-icons/tb';
 import { projectQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
 import { useDeleteProject } from '@renderer/hooks/use-projects';
 import { dockerStatusQueryOptions } from '@renderer/docker';
-import { useSyncFromVolume, useSyncToVolume, useProjectSyncStatus } from '@renderer/hooks/use-sync';
+import {
+  useSyncFromVolume,
+  useSyncToVolume,
+  useProjectSyncStatus,
+  useCancelSync,
+} from '@renderer/hooks/use-sync';
 import { useNgrokStatus, useStartNgrokTunnel, useStopNgrokTunnel } from '@renderer/hooks/use-ngrok';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';
@@ -34,6 +39,7 @@ import {
   Loader2,
   Copy,
   ExternalLink,
+  X,
 } from 'lucide-react';
 import { VscDebugStop, VscDebugStart, VscTerminal, VscVscode } from 'react-icons/vsc';
 import {
@@ -81,6 +87,7 @@ function ProjectDetailPage() {
   const deleteProjectMutation = useDeleteProject();
   const syncFromVolumeMutation = useSyncFromVolume();
   const syncToVolumeMutation = useSyncToVolume();
+  const cancelSyncMutation = useCancelSync();
   const startNgrokMutation = useStartNgrokTunnel();
   const stopNgrokMutation = useStopNgrokTunnel();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -96,7 +103,7 @@ function ProjectDetailPage() {
   const { data: dockerStatus } = useQuery(dockerStatusQueryOptions());
 
   // Get sync status for this project
-  const syncStatus = useProjectSyncStatus(projectId);
+  const { data: syncStatus } = useProjectSyncStatus(projectId);
 
   // Get ngrok tunnel status
   const { data: ngrokStatusData } = useNgrokStatus(projectId);
@@ -516,24 +523,38 @@ function ProjectDetailPage() {
                         </p>
                       </ItemContent>
                       <ItemActions>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={handleSyncFromVolume}
-                          disabled={
-                            !isDockerRunning ||
-                            syncFromVolumeMutation.isPending ||
-                            syncToVolumeMutation.isPending ||
-                            !!syncStatus
-                          }
-                        >
-                          {syncFromVolumeMutation.isPending || syncStatus?.direction === 'from' ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Download className="mr-2 h-4 w-4" />
-                          )}
-                          Sync Now
-                        </Button>
+                        {syncStatus?.direction === 'from' ? (
+                          <div className="flex items-center gap-2">
+                            {syncStatus.percentage !== undefined && (
+                              <span className="text-muted-foreground text-xs">
+                                {syncStatus.percentage}%
+                              </span>
+                            )}
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => cancelSyncMutation.mutate(projectId)}
+                              disabled={cancelSyncMutation.isPending}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleSyncFromVolume}
+                            disabled={!isDockerRunning || !!syncStatus}
+                          >
+                            {syncStatus ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="mr-2 h-4 w-4" />
+                            )}
+                            Sync Now
+                          </Button>
+                        )}
                       </ItemActions>
                     </Item>
 
@@ -601,24 +622,38 @@ function ProjectDetailPage() {
                         </p>
                       </ItemContent>
                       <ItemActions>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={handleSyncToVolume}
-                          disabled={
-                            !isDockerRunning ||
-                            syncFromVolumeMutation.isPending ||
-                            syncToVolumeMutation.isPending ||
-                            !!syncStatus
-                          }
-                        >
-                          {syncToVolumeMutation.isPending || syncStatus?.direction === 'to' ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Upload className="mr-2 h-4 w-4" />
-                          )}
-                          Sync Now
-                        </Button>
+                        {syncStatus?.direction === 'to' ? (
+                          <div className="flex items-center gap-2">
+                            {syncStatus.percentage !== undefined && (
+                              <span className="text-muted-foreground text-xs">
+                                {syncStatus.percentage}%
+                              </span>
+                            )}
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => cancelSyncMutation.mutate(projectId)}
+                              disabled={cancelSyncMutation.isPending}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleSyncToVolume}
+                            disabled={!isDockerRunning || !!syncStatus}
+                          >
+                            {syncStatus ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Upload className="mr-2 h-4 w-4" />
+                            )}
+                            Sync Now
+                          </Button>
+                        )}
                       </ItemActions>
                     </Item>
 

@@ -202,7 +202,9 @@ export interface AppContext {
  * Sync status update payload
  */
 export interface SyncStatus {
-  status: 'started' | 'completed' | 'failed';
+  status: 'started' | 'completed' | 'failed' | 'progress';
+  percentage?: number;
+  bytesTransferred?: number;
 }
 
 /**
@@ -217,6 +219,7 @@ export interface SyncContext {
     projectId: string,
     options?: { includeNodeModules?: boolean; includeVendor?: boolean }
   ) => Promise<{ success: boolean; error?: string }>;
+  cancel: (projectId: string) => Promise<{ success: boolean; error?: string }>;
   onSyncProgress: (
     callback: (projectId: string, direction: 'to' | 'from', progress: SyncStatus) => void
   ) => () => void;

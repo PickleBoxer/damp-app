@@ -6,6 +6,7 @@
 import Docker from 'dockerode';
 import type { VolumeCopyProgress } from '@shared/types/project';
 import { createLogger } from '@main/utils/logger';
+import { ensureRsyncImage, RSYNC_IMAGE_NAME } from './rsync-image-builder';
 
 const docker = new Docker();
 const logger = createLogger('VolumeManager');
@@ -233,9 +234,14 @@ class VolumeManager {
     options: {
       includeNodeModules?: boolean;
       includeVendor?: boolean;
-    } = {}
+    } = {},
+    onContainerCreated?: (containerId: string) => void,
+    onProgress?: (progress: { percentage: number; bytes: number }) => void
   ): Promise<void> {
     try {
+      // Ensure rsync image is built
+      await ensureRsyncImage();
+
       // Ensure volume exists
       const exists = await this.volumeExists(volumeName);
       if (!exists) {
@@ -256,15 +262,14 @@ class VolumeManager {
         exclusions.push('--exclude=vendor');
       }
 
-      // Create Alpine container with rsync installed
+      // Create Alpine container with rsync (using cached image)
       const container = await docker.createContainer({
-        Image: 'alpine:latest',
+        Image: RSYNC_IMAGE_NAME,
         Cmd: [
           'sh',
           '-c',
-          // Install rsync, sync files from volume to target, then fix ownership
-          `apk add --no-cache rsync && ` +
-            `rsync -a --no-perms --no-owner --no-group --chmod=ugo=rwX ${exclusions.join(' ')} /volume/ /target/`,
+          // Use rsync with compression and progress reporting
+          `rsync -az --info=progress2 --no-perms --no-owner --no-group --chmod=ugo=rwX ${exclusions.join(' ')} /volume/ /target/`,
         ],
         HostConfig: {
           Binds: [
@@ -279,8 +284,45 @@ class VolumeManager {
         // Start container and wait for it to complete
         await container.start();
 
-        // Wait for completion without timeout - sync can take as long as needed
-        await container.wait();
+        // Notify listener of container ID for cancellation support
+        if (onContainerCreated) {
+          onContainerCreated(container.id);
+        }
+
+        // Attach to container logs for progress monitoring
+        if (onProgress) {
+          const logStream = await container.attach({
+            stream: true,
+            stdout: true,
+            stderr: true,
+          });
+
+          docker.modem.demuxStream(
+            logStream,
+            {
+              write: (chunk: Buffer) => {
+                const line = chunk.toString('utf-8');
+                const progress = this.parseRsyncProgress(line);
+                if (progress) {
+                  onProgress(progress);
+                }
+              },
+            } as NodeJS.WritableStream,
+            { write: () => {} } as NodeJS.WritableStream
+          );
+        }
+
+        // Wait for completion with reasonable timeout (30 minutes for large projects)
+        const waitWithTimeout = Promise.race([
+          container.wait(),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Sync from volume timed out after 30 minutes')),
+              1800000
+            )
+          ),
+        ]);
+        await waitWithTimeout;
 
         // Check exit code
         const inspectData = await container.inspect();
@@ -319,9 +361,14 @@ class VolumeManager {
     options: {
       includeNodeModules?: boolean;
       includeVendor?: boolean;
-    } = {}
+    } = {},
+    onContainerCreated?: (containerId: string) => void,
+    onProgress?: (progress: { percentage: number; bytes: number }) => void
   ): Promise<void> {
     try {
+      // Ensure rsync image is built
+      await ensureRsyncImage();
+
       // Ensure volume exists
       await this.createVolume(volumeName);
 
@@ -339,15 +386,14 @@ class VolumeManager {
       // Get appropriate UID:GID for the platform
       const uidGid = await this.getUidGid();
 
-      // Create Alpine container with rsync installed
+      // Create Alpine container with rsync (using cached image)
       const container = await docker.createContainer({
-        Image: 'alpine:latest',
+        Image: RSYNC_IMAGE_NAME,
         Cmd: [
           'sh',
           '-c',
-          // Install rsync, sync files from source to volume, then fix ownership to container user
-          `apk add --no-cache rsync && ` +
-            `rsync -a ${exclusions.join(' ')} /source/ /volume/ && ` +
+          // Use rsync with compression and progress, then fix ownership to container user
+          `rsync -az --info=progress2 ${exclusions.join(' ')} /source/ /volume/ && ` +
             `chown -R ${uidGid} /volume`,
         ],
         HostConfig: {
@@ -363,8 +409,45 @@ class VolumeManager {
         // Start container and wait for it to complete
         await container.start();
 
-        // Wait for completion without timeout - sync can take as long as needed
-        await container.wait();
+        // Notify listener of container ID for cancellation support
+        if (onContainerCreated) {
+          onContainerCreated(container.id);
+        }
+
+        // Attach to container logs for progress monitoring
+        if (onProgress) {
+          const logStream = await container.attach({
+            stream: true,
+            stdout: true,
+            stderr: true,
+          });
+
+          docker.modem.demuxStream(
+            logStream,
+            {
+              write: (chunk: Buffer) => {
+                const line = chunk.toString('utf-8');
+                const progress = this.parseRsyncProgress(line);
+                if (progress) {
+                  onProgress(progress);
+                }
+              },
+            } as NodeJS.WritableStream,
+            { write: () => {} } as NodeJS.WritableStream
+          );
+        }
+
+        // Wait for completion with reasonable timeout (30 minutes for large projects)
+        const waitWithTimeout = Promise.race([
+          container.wait(),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Sync to volume timed out after 30 minutes')),
+              1800000
+            )
+          ),
+        ]);
+        await waitWithTimeout;
 
         // Check exit code
         const inspectData = await container.inspect();
@@ -390,6 +473,23 @@ class VolumeManager {
     } catch (error) {
       throw new Error(`Failed to sync files to volume: ${error}`);
     }
+  }
+
+  /**
+   * Parse rsync progress output
+   * Format: "      1,234,567  45%  123.45kB/s    0:00:12"
+   */
+  private parseRsyncProgress(line: string): { percentage: number; bytes: number } | null {
+    // Match rsync --info=progress2 output format
+    const regex = /^\s+([\d,]+)\s+(\d+)%/;
+    const match = regex.exec(line);
+    if (match) {
+      return {
+        bytes: Number.parseInt(match[1].replaceAll(',', ''), 10),
+        percentage: Number.parseInt(match[2], 10),
+      };
+    }
+    return null;
   }
 
   /**
