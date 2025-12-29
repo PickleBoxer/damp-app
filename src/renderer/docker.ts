@@ -29,12 +29,12 @@ export const dockerStatusQueryOptions = () =>
  * Query options for Docker system info (CPU, RAM, disk)
  * Polls every 15 seconds to reduce overhead
  */
-export const dockerInfoQueryOptions = (dockerIsRunning: boolean) =>
+export const dockerInfoQueryOptions = (dockerIsRunning: boolean, showStats = true) =>
   queryOptions({
     queryKey: dockerKeys.info(),
     queryFn: () => dockerApi.getInfo(),
-    refetchInterval: 15000, // Poll every 15 seconds
-    enabled: dockerIsRunning, // Only run when Docker is running
+    refetchInterval: dockerIsRunning && showStats ? 15000 : false, // Only poll when Docker is running AND stats are shown
+    enabled: dockerIsRunning && showStats, // Only run when Docker is running AND stats are shown
   });
 
 /**

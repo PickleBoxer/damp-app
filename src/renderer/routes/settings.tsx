@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { Button } from '@renderer/components/ui/button';
+import { Switch } from '@renderer/components/ui/switch';
 import { getSettings, updateSettings } from '@renderer/utils/settings';
 import { EDITOR_LABELS, TERMINAL_LABELS, NGROK_REGION_LABELS } from '@shared/types/settings';
 import type {
@@ -177,6 +178,17 @@ function SettingsPage() {
     }
   };
 
+  const handleShowDockerStatsChange = async (checked: boolean) => {
+    try {
+      const updated = await updateSettings({ showDockerStats: checked });
+      setSettings(updated);
+      toast.success(checked ? 'Docker stats enabled' : 'Docker stats disabled');
+    } catch (error) {
+      console.error('Failed to save Docker stats setting:', error);
+      toast.error('Failed to save Docker stats setting');
+    }
+  };
+
   // Show loading state while settings are being loaded
   if (isLoading || !settings) {
     return (
@@ -275,6 +287,20 @@ function SettingsPage() {
                     System
                   </Button>
                 </div>
+              </Field>
+
+              <FieldSeparator />
+
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor="docker-stats-toggle">Show Docker Stats</FieldLabel>
+                  <FieldDescription>Display CPU and RAM usage in the footer</FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="docker-stats-toggle"
+                  checked={settings.showDockerStats ?? true}
+                  onCheckedChange={handleShowDockerStatsChange}
+                />
               </Field>
             </FieldSet>
 

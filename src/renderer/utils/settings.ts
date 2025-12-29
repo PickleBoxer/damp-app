@@ -58,5 +58,9 @@ export async function updateSettings(updates: Partial<AppSettings>): Promise<App
   const current = await getSettings();
   const updated = { ...current, ...updates };
   await saveSettings(updated);
+
+  // Dispatch custom event to notify all listeners
+  window.dispatchEvent(new CustomEvent('settings-changed', { detail: updated }));
+
   return updated;
 }

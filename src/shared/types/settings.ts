@@ -11,6 +11,8 @@ export interface AppSettings {
   ngrokAuthToken?: string;
   /** Ngrok region (optional) */
   ngrokRegion?: NgrokRegion;
+  /** Show Docker stats (CPU/RAM) in footer */
+  showDockerStats?: boolean;
 }
 
 export type EditorChoice = 'code' | 'code-insiders' | 'cursor' | 'custom';
@@ -44,4 +46,5 @@ export const NGROK_REGION_LABELS: Record<NgrokRegion, string> = {
 export const DEFAULT_SETTINGS: AppSettings = {
   defaultEditor: 'code',
   defaultTerminal: 'wt',
+  showDockerStats: true,
 };

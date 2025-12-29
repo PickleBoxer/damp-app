@@ -19,6 +19,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import type { ActiveSync } from '@renderer/hooks/use-sync';
 import type { NgrokStatusData } from '@shared/types/ngrok';
 import { useNavigate } from '@tanstack/react-router';
+import { useSettings } from '@renderer/hooks/use-settings';
 
 /**
  * Format bytes to MB or GB depending on size
@@ -38,13 +39,16 @@ function formatMemory(bytes: number): string {
 
 export default function DockerStatusFooter() {
   const navigate = useNavigate();
+  const { settings } = useSettings();
+  const showDockerStats = settings?.showDockerStats ?? true;
+
   const {
     data: dockerStatus,
     isLoading: statusLoading,
     refetch: refetchStatus,
   } = useQuery(dockerStatusQueryOptions());
   const { data: dockerInfo, refetch: refetchInfo } = useQuery(
-    dockerInfoQueryOptions(dockerStatus?.isRunning ?? false)
+    dockerInfoQueryOptions(dockerStatus?.isRunning ?? false, showDockerStats)
   );
   const { data: networkStatus } = useQuery(
     dockerNetworkStatusQueryOptions(dockerStatus?.isRunning ?? false)
@@ -132,8 +136,8 @@ export default function DockerStatusFooter() {
     dotColor = 'bg-gray-500';
   }
 
-  // Show stats only when Docker is running
-  const showStats = dockerStatus?.isRunning && dockerInfo;
+  // Show stats only when Docker is running AND setting is enabled
+  const showStats = dockerStatus?.isRunning && dockerInfo && showDockerStats;
 
   // Calculate total CPU capacity (100% per core)
   const totalCpuCapacity = dockerInfo ? dockerInfo.cpus * 100 : 0;
