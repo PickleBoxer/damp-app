@@ -8,6 +8,7 @@ import {
   type ErrorComponentProps,
 } from '@tanstack/react-router';
 import { useState, useMemo } from 'react';
+import { usePanelSizes } from '@renderer/hooks/use-panel-sizes';
 import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { Plus, GripVertical, Loader2 } from 'lucide-react';
 import { FaLink } from 'react-icons/fa6';
@@ -141,6 +142,7 @@ function ProjectsPage() {
 
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
+  const { sizes, saveSizes } = usePanelSizes('projects', [45, 55]);
 
   // Initialize or update project order when projects change
   const sortedProjects = useMemo(() => {
@@ -192,9 +194,9 @@ function ProjectsPage() {
 
   return (
     <>
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+      <ResizablePanelGroup direction="horizontal" className="h-full" onLayout={saveSizes}>
         {/* Left side - Project List */}
-        <ResizablePanel defaultSize={45}>
+        <ResizablePanel defaultSize={sizes[0]}>
           <div className="flex h-full flex-col">
             {/* Header Bar */}
             <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
@@ -264,7 +266,7 @@ function ProjectsPage() {
         <ResizableHandle withHandle />
 
         {/* Right side - Project Detail */}
-        <ResizablePanel defaultSize={55}>
+        <ResizablePanel defaultSize={sizes[1]}>
           <div className="h-full overflow-hidden">
             <Outlet />
           </div>

@@ -1,4 +1,4 @@
-import { useQuery , useQueryErrorResetBoundary } from '@tanstack/react-query';
+import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import {
   createFileRoute,
@@ -9,6 +9,7 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
+import { usePanelSizes } from '@renderer/hooks/use-panel-sizes';
 import { PackageOpen, Loader2, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import {
@@ -130,6 +131,7 @@ function ServicesPage() {
   const { data: services, isLoading, isError, error } = useQuery(servicesQueryOptions());
 
   const [selectedType, setSelectedType] = useState<ServiceType | 'all'>('all');
+  const { sizes, saveSizes } = usePanelSizes('services', [45, 55]);
 
   // Memoize filtered services
   const filteredServices = useMemo(() => {
@@ -139,9 +141,9 @@ function ServicesPage() {
   }, [services, selectedType]);
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full">
+    <ResizablePanelGroup direction="horizontal" className="h-full" onLayout={saveSizes}>
       {/* Left side - Service List */}
-      <ResizablePanel defaultSize={45}>
+      <ResizablePanel defaultSize={sizes[0]}>
         <div className="flex h-full flex-col">
           {/* Header Bar */}
           <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
@@ -236,7 +238,7 @@ function ServicesPage() {
       <ResizableHandle withHandle />
 
       {/* Right side - Service Detail */}
-      <ResizablePanel defaultSize={55}>
+      <ResizablePanel defaultSize={sizes[1]}>
         <div className="h-full overflow-hidden">
           <Outlet />
         </div>
