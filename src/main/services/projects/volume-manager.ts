@@ -4,6 +4,7 @@
  */
 
 import Docker from 'dockerode';
+import { Writable } from 'node:stream';
 import type { VolumeCopyProgress } from '@shared/types/project';
 import {
   buildProjectVolumeLabels,
@@ -317,19 +318,24 @@ class VolumeManager {
             stderr: true,
           });
 
-          docker.modem.demuxStream(
-            logStream,
-            {
-              write: (chunk: Buffer) => {
-                const line = chunk.toString('utf-8');
-                const progress = this.parseRsyncProgress(line);
-                if (progress) {
-                  onProgress(progress);
-                }
-              },
-            } as NodeJS.WritableStream,
-            { write: () => {} } as NodeJS.WritableStream
-          );
+          const stdoutStream = new Writable({
+            write: (chunk: Buffer, _encoding, callback) => {
+              const line = chunk.toString('utf-8');
+              const progress = this.parseRsyncProgress(line);
+              if (progress) {
+                onProgress(progress);
+              }
+              callback();
+            },
+          });
+
+          const stderrStream = new Writable({
+            write: (_chunk: Buffer, _encoding, callback) => {
+              callback();
+            },
+          });
+
+          docker.modem.demuxStream(logStream, stdoutStream, stderrStream);
         }
 
         // Wait for completion with reasonable timeout (30 minutes for large projects)
@@ -449,19 +455,24 @@ class VolumeManager {
             stderr: true,
           });
 
-          docker.modem.demuxStream(
-            logStream,
-            {
-              write: (chunk: Buffer) => {
-                const line = chunk.toString('utf-8');
-                const progress = this.parseRsyncProgress(line);
-                if (progress) {
-                  onProgress(progress);
-                }
-              },
-            } as NodeJS.WritableStream,
-            { write: () => {} } as NodeJS.WritableStream
-          );
+          const stdoutStream = new Writable({
+            write: (chunk: Buffer, _encoding, callback) => {
+              const line = chunk.toString('utf-8');
+              const progress = this.parseRsyncProgress(line);
+              if (progress) {
+                onProgress(progress);
+              }
+              callback();
+            },
+          });
+
+          const stderrStream = new Writable({
+            write: (_chunk: Buffer, _encoding, callback) => {
+              callback();
+            },
+          });
+
+          docker.modem.demuxStream(logStream, stdoutStream, stderrStream);
         }
 
         // Wait for completion with reasonable timeout (30 minutes for large projects)
@@ -551,7 +562,7 @@ class VolumeManager {
       const gid = execSync('id -g', { encoding: 'utf-8' }).trim();
       return `${uid}:${gid}`;
     } catch (error) {
-      logger.warn('Failed to detect UID:GID, falling back to 1000:1000', error);
+      logger.warn('Failed to detect UID:GID, falling back to 1000:1000', { error });
       return '1000:1000';
     }
   }

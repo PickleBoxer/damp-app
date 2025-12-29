@@ -120,7 +120,7 @@ async function flattenVolumeStructure(
       await container.remove();
     }
   } catch (error) {
-    logger.error('Failed to flatten volume structure:', error);
+    logger.error('Failed to flatten volume structure:', { error });
     throw new Error(`Failed to flatten volume structure: ${error}`);
   }
 }
@@ -275,7 +275,7 @@ export async function installLaravelToVolume(
 
     logger.info(`Successfully installed Laravel to volume ${volumeName} (flat structure)`);
   } catch (error) {
-    logger.error('Failed to install Laravel:', error);
+    logger.error('Failed to install Laravel:', { error });
     throw new Error(`Failed to install Laravel: ${error}`);
   }
 }

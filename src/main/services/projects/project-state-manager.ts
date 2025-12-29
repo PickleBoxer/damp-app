@@ -77,7 +77,7 @@ class ProjectStateManager {
       this.initialized = true;
       logger.info('Project state manager initialized');
     } catch (error) {
-      logger.error('Failed to initialize project state manager:', error);
+      logger.error('Failed to initialize project state manager:', { error });
       throw error;
     }
   }
@@ -111,7 +111,7 @@ class ProjectStateManager {
         path: result.filePaths[0],
       };
     } catch (error) {
-      logger.error('Failed to open folder selection dialog:', error);
+      logger.error('Failed to open folder selection dialog:', { error });
       return {
         success: false,
         cancelled: false,
@@ -183,7 +183,7 @@ class ProjectStateManager {
 
       return { isLaravel: false };
     } catch (error) {
-      logger.error('Error detecting Laravel:', error);
+      logger.error('Error detecting Laravel:', { error });
       return { isLaravel: false };
     }
   }
@@ -890,7 +890,7 @@ class ProjectStateManager {
         success: true,
       };
     } catch (error) {
-      logger.error('Failed to delete project:', error);
+      logger.error('Failed to delete project:', { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -913,7 +913,7 @@ class ProjectStateManager {
         success: true,
       };
     } catch (error) {
-      logger.error('Failed to reorder projects:', error);
+      logger.error('Failed to reorder projects:', { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

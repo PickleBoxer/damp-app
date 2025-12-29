@@ -86,7 +86,7 @@ class ServiceStateManager {
       this.initialized = true;
       logger.info('Service state manager initialized');
     } catch (error) {
-      logger.error('Failed to initialize service state manager:', error);
+      logger.error('Failed to initialize service state manager:', { error });
       throw error;
     }
   }
@@ -382,7 +382,7 @@ class ServiceStateManager {
           }
         } catch (error) {
           // Graceful failure - service is still installed
-          logger.error(`Post-install hook failed for ${serviceId}:`, error);
+          logger.error(`Post-install hook failed for ${serviceId}:`, { error });
         }
       }
 
@@ -399,7 +399,7 @@ class ServiceStateManager {
         },
       };
     } catch (error) {
-      logger.error(`Failed to install service ${serviceId}:`, error);
+      logger.error(`Failed to install service ${serviceId}:`, { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -476,7 +476,7 @@ class ServiceStateManager {
         data: { message: `Service ${serviceId} uninstalled successfully` },
       };
     } catch (error) {
-      logger.error(`Failed to uninstall service ${serviceId}:`, error);
+      logger.error(`Failed to uninstall service ${serviceId}:`, { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -535,7 +535,7 @@ class ServiceStateManager {
         data: { message: `Service ${serviceId} started successfully` },
       };
     } catch (error) {
-      logger.error(`Failed to start service ${serviceId}:`, error);
+      logger.error(`Failed to start service ${serviceId}:`, { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -587,7 +587,7 @@ class ServiceStateManager {
         data: { message: `Service ${serviceId} stopped successfully` },
       };
     } catch (error) {
-      logger.error(`Failed to stop service ${serviceId}:`, error);
+      logger.error(`Failed to stop service ${serviceId}:`, { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -632,7 +632,7 @@ class ServiceStateManager {
         data: { message: `Service ${serviceId} restarted successfully` },
       };
     } catch (error) {
-      logger.error(`Failed to restart service ${serviceId}:`, error);
+      logger.error(`Failed to restart service ${serviceId}:`, { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -683,7 +683,7 @@ class ServiceStateManager {
         },
       };
     } catch (error) {
-      logger.error(`Failed to update service ${serviceId} configuration:`, error);
+      logger.error(`Failed to update service ${serviceId} configuration:`, { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

@@ -24,7 +24,7 @@ export const POST_INSTALL_HOOKS: Partial<Record<ServiceId, PostInstallHook>> = {
     if (syncResult.success) {
       logger.info('[Caddy Post-Install] Projects synchronized to reverse proxy');
     } else {
-      logger.warn('[Caddy Post-Install] Failed to sync projects:', syncResult.error);
+      logger.warn('[Caddy Post-Install] Failed to sync projects:', { error: syncResult.error });
     }
 
     return {
