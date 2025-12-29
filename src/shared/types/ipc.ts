@@ -229,6 +229,8 @@ export interface SyncContext {
   ) => () => void;
 }
 
+import type { NgrokStatusData } from './ngrok';
+
 /**
  * Ngrok tunnel management context
  */
@@ -237,16 +239,15 @@ export interface NgrokContext {
     projectId: string,
     authToken: string,
     region?: string
-  ) => Promise<{ success: boolean; data?: unknown; error?: string }>;
-  stopTunnel: (projectId: string) => Promise<{ success: boolean; error?: string }>;
-  getStatus: (projectId: string) => Promise<{
+  ) => Promise<{ success: boolean; data?: NgrokStatusData; error?: string }>;
+  stopTunnel: (projectId: string) => Promise<{
     success: boolean;
-    data?: { status: string; containerId?: string; publicUrl?: string };
+    data?: NgrokStatusData;
     error?: string;
   }>;
-  getPublicUrl: (projectId: string) => Promise<{
+  getStatus: (projectId: string) => Promise<{
     success: boolean;
-    data?: { url: string };
+    data?: NgrokStatusData;
     error?: string;
   }>;
 }

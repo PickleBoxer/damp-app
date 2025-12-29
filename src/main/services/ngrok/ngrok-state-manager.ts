@@ -3,7 +3,9 @@
  * Manages ngrok tunnel state for projects
  */
 
-export type NgrokStatus = 'starting' | 'active' | 'stopped' | 'error';
+import type { NgrokStatus } from '@shared/types/ngrok';
+
+export type { NgrokStatus };
 
 export interface NgrokState {
   projectId: string;

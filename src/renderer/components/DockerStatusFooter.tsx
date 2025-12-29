@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import type { ActiveSync } from '@renderer/hooks/use-sync';
-import { useActiveNgrokTunnels } from '@renderer/hooks/use-ngrok';
+import type { NgrokStatusData } from '@shared/types/ngrok';
 import { useNavigate } from '@tanstack/react-router';
 
 /**
@@ -178,24 +178,38 @@ export default function DockerStatusFooter() {
     };
   }, [projects, syncQueries]);
 
-  // Use TanStack Query as single source of truth for ngrok tunnels
-  // This reads from the query cache - no additional IPC calls!
-  const projectIds = projects?.map(p => p.id) || [];
-  const { data: activeTunnels = [] } = useActiveNgrokTunnels(projectIds);
+  // Subscribe to ngrok status for all projects using useQueries (same pattern as sync)
+  const ngrokQueries = useQueries({
+    queries: (projects || []).map(project => ({
+      queryKey: ['ngrok', project.id] as const,
+      queryFn: () => null as NgrokStatusData | null,
+      staleTime: Infinity,
+      notifyOnChangeProps: ['data'] as const, // Only re-render when data changes
+    })),
+  });
 
-  // Map tunnel data with project names
+  // Count active ngrok tunnels and get project info
   const ngrokInfo = useMemo(() => {
-    const tunnelsWithNames = activeTunnels.map(tunnel => ({
-      id: tunnel.id,
-      name: projects?.find(p => p.id === tunnel.id)?.name || tunnel.id,
-      url: tunnel.publicUrl,
-    }));
+    const activeTunnels: Array<{ id: string; name: string; url?: string }> = [];
+
+    if (projects) {
+      projects.forEach((project, index) => {
+        const status = ngrokQueries[index]?.data;
+        if (status?.status === 'active' || status?.status === 'starting') {
+          activeTunnels.push({
+            id: project.id,
+            name: project.name,
+            url: status.publicUrl,
+          });
+        }
+      });
+    }
 
     return {
-      activeTunnels: tunnelsWithNames,
-      total: tunnelsWithNames.length,
+      activeTunnels,
+      total: activeTunnels.length,
     };
-  }, [activeTunnels, projects]);
+  }, [projects, ngrokQueries]);
 
   return (
     <div className="flex h-full items-center">

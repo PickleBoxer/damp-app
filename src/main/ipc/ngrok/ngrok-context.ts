@@ -16,12 +16,6 @@ export function exposeNgrokContext(): void {
       ipcRenderer.invoke(NGROK_START_TUNNEL, projectId, authToken, region),
     stopTunnel: (projectId: string) => ipcRenderer.invoke(NGROK_STOP_TUNNEL, projectId),
     getStatus: (projectId: string) => ipcRenderer.invoke(NGROK_GET_STATUS, projectId),
-    getPublicUrl: (projectId: string) =>
-      ipcRenderer.invoke(NGROK_GET_STATUS, projectId).then(result => ({
-        success: result.success,
-        data: result.data?.publicUrl ? { url: result.data.publicUrl } : undefined,
-        error: result.error,
-      })),
   };
 
   contextBridge.exposeInMainWorld('ngrok', ngrokApi);

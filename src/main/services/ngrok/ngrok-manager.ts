@@ -44,7 +44,11 @@ class NgrokManager {
     project: Project,
     authToken: string,
     region?: string
-  ): Promise<{ success: boolean; data?: unknown; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    data?: { status: string; containerId?: string; publicUrl?: string; error?: string };
+    error?: string;
+  }> {
     try {
       // Check if Docker is available
       const isDockerRunning = await dockerManager.isDockerAvailable();
@@ -189,7 +193,11 @@ class NgrokManager {
 
         return {
           success: true,
-          data: { publicUrl, containerId },
+          data: {
+            status: 'active',
+            containerId,
+            publicUrl,
+          },
         };
       } else {
         // Failed to get public URL
@@ -234,7 +242,11 @@ class NgrokManager {
   /**
    * Stop ngrok tunnel for a project
    */
-  async stopTunnel(projectId: string): Promise<{ success: boolean; error?: string }> {
+  async stopTunnel(projectId: string): Promise<{
+    success: boolean;
+    data?: { status: string; containerId?: string; publicUrl?: string; error?: string };
+    error?: string;
+  }> {
     try {
       const state = ngrokStateManager.getState(projectId);
 
@@ -263,7 +275,14 @@ class NgrokManager {
 
       logger.info('Ngrok tunnel stopped', { projectId });
 
-      return { success: true };
+      return {
+        success: true,
+        data: {
+          status: 'stopped',
+          containerId: undefined,
+          publicUrl: undefined,
+        },
+      };
     } catch (error) {
       logger.error('Failed to stop ngrok tunnel', { projectId, error });
       return {

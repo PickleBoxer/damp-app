@@ -47,6 +47,14 @@ export function useDockerEvents() {
           queryKey: projectKeys.containerState(event.projectId),
           refetchType: 'active',
         });
+
+        // Handle ngrok tunnel container events (event-driven updates)
+        if (event.resourceType === 'ngrok-tunnel') {
+          queryClient.invalidateQueries({
+            queryKey: ['ngrok', event.projectId],
+            refetchType: 'active',
+          });
+        }
       }
 
       // Handle service container events (serviceId label present)
@@ -65,9 +73,6 @@ export function useDockerEvents() {
           refetchType: 'active',
         });
       }
-
-      // ✅ No bulk status invalidations - per-container queries are precise
-      // ✅ No list invalidations - lists contain static definitions only
     });
 
     // Subscribe to Docker events connection status changes
