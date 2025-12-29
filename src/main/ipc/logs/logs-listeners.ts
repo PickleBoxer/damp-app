@@ -5,8 +5,9 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { z } from 'zod';
 import { LOGS_START_CHANNEL, LOGS_STOP_CHANNEL, LOGS_LINE_CHANNEL } from './logs-channels';
-import { dockerManager } from '@main/services/docker/docker-manager';
-import { projectStateManager } from '@main/services/projects/project-state-manager';
+import { findContainerByLabel, streamContainerLogs } from '@main/core/docker';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import { projectStateManager } from '@main/domains/projects/project-state-manager';
 import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('logs-ipc');
@@ -48,7 +49,11 @@ async function handleStartLogs(
     }
 
     // Find container by project ID label
-    const containerInfo = await dockerManager.findContainerByProjectId(projectId);
+    const containerInfo = await findContainerByLabel(
+      LABEL_KEYS.PROJECT_ID,
+      projectId,
+      RESOURCE_TYPES.PROJECT_CONTAINER
+    );
     if (!containerInfo) {
       return {
         success: false,
@@ -57,7 +62,7 @@ async function handleStartLogs(
     }
 
     // Start streaming using container ID
-    const stopFn = await dockerManager.streamContainerLogs(
+    const stopFn = await streamContainerLogs(
       containerInfo.Id,
       (line: string, stream: 'stdout' | 'stderr') => {
         // Send log line to renderer

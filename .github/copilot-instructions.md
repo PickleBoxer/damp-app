@@ -86,14 +86,32 @@ pnpm format:write   # Prettier auto-fix
 
 ### File Organization
 
-- **Main process**: `src/main/` - index.ts, ipc/, services/, electron/, utils/
-- **Renderer process**: `src/renderer/` - App.tsx, routes/, components/, queries/, hooks/, utils/, assets/, styles/
-- **Shared code**: `src/shared/` - types/, constants/
-- **IPC modules**: Group by feature in `src/main/ipc/{feature}/` (channels, context, listeners)
+#### Main Process Structure (`src/main/`)
+
+- **Core infrastructure** (`core/`):
+  - `docker/` - Docker operations (dockerManager, volumeManager, port-checker, rsync-image-builder)
+  - `storage/` - Data persistence (BaseStorage, project-storage, service-storage)
+  - `reverse-proxy/` - Caddy configuration (caddy-config, caddy-setup)
+- **Domain logic** (`domains/`):
+  - `projects/` - Project management (project-state-manager, project-templates, laravel-installer, sync-queue)
+  - `services/` - Service management (service-state-manager, service-definitions, hooks/)
+- **IPC layer** (`ipc/`): Group by feature (channels, context, listeners)
+- **Platform code** (`electron/`): Electron-specific code (TrayMenu)
+- **Services** (`services/`): Specific implementations (ngrok/)
+- **Utilities** (`utils/`): Shared helper functions
+
+#### Renderer Process Structure (`src/renderer/`)
+
+- `App.tsx`, `routes/`, `components/`, `queries/`, `hooks/`, `utils/`, `assets/`, `styles/`
 - **Routes**: Add `.tsx` files in `src/renderer/routes/` (auto-generated tree)
 - **Layout components**: `src/renderer/components/layout/` (Sidebar, Footer)
 - **UI components**: `src/renderer/components/ui/` (shadcn/ui)
 - **Queries**: Data fetching with TanStack Query in `src/renderer/queries/`
+
+#### Shared Code Structure (`src/shared/`)
+
+- `types/` - TypeScript type definitions
+- `constants/` - Shared constants
 
 ### Path Aliases
 
@@ -187,6 +205,7 @@ import { EXAMPLE_DO_SOMETHING } from './example-channels';
 export function addExampleListeners() {
   ipcMain.handle(EXAMPLE_DO_SOMETHING, async () => {
     // Implementation with Node.js access (file system, etc.)
+    // Can import from core/ or domains/ as needed
     return { success: true };
   });
 }

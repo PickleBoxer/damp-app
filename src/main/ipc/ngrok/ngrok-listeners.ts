@@ -7,7 +7,7 @@ import { ipcMain } from 'electron';
 import { z } from 'zod';
 import { NGROK_START_TUNNEL, NGROK_STOP_TUNNEL, NGROK_GET_STATUS } from './ngrok-channels';
 import { ngrokManager } from '@main/services/ngrok/ngrok-manager';
-import { projectStorage } from '@main/services/projects/project-storage';
+import { projectStorage } from '@main/core/storage/project-storage';
 import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('ngrok-ipc');

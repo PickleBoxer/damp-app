@@ -21,6 +21,20 @@ import { createLogger } from '@main/utils/logger';
 const logger = createLogger('DockerManager');
 
 /**
+ * Docker operation timeout constants (in milliseconds)
+ */
+export const DOCKER_TIMEOUTS = {
+  /** Timeout for Docker daemon ping operation */
+  PING: 3000,
+  /** Timeout for Docker info retrieval */
+  INFO: 3000,
+  /** Timeout for listing containers */
+  LIST_CONTAINERS: 3000,
+  /** Timeout for getting container stats */
+  CONTAINER_STATS: 2000,
+} as const;
+
+/**
  * Docker manager singleton
  */
 class DockerManager {
@@ -84,17 +98,6 @@ class DockerManager {
       return networks.some(net => net.Name === DAMP_NETWORK_NAME);
     } catch {
       return false;
-    }
-  }
-
-  /**
-   * Get Docker version information
-   */
-  async getDockerVersion(): Promise<unknown> {
-    try {
-      return await this.docker.version();
-    } catch (error) {
-      throw new Error(`Failed to get Docker version: ${error}`);
     }
   }
 
@@ -494,24 +497,6 @@ class DockerManager {
   }
 
   /**
-   * Get container logs
-   */
-  async getContainerLogs(containerId: string, tail = 100): Promise<string> {
-    try {
-      const container = this.docker.getContainer(containerId);
-      const logs = await container.logs({
-        stdout: true,
-        stderr: true,
-        tail,
-        timestamps: true,
-      });
-      return logs.toString();
-    } catch (error) {
-      throw new Error(`Failed to get container logs: ${error}`);
-    }
-  }
-
-  /**
    * Execute a command inside a container
    * @param containerIdOrName Container ID or name
    * @param cmd Command to execute (e.g., ['ls', '-la', '/data'])
@@ -734,43 +719,231 @@ class DockerManager {
     }
   }
   /**
-   * Find container by project ID using labels
+   * Generic method to find container by any label key-value pair
+   * Works for projects, services, helpers, and ngrok tunnels
    */
-  async findContainerByProjectId(projectId: string): Promise<Docker.ContainerInfo | null> {
+  async findContainerByLabel(
+    labelKey: string,
+    labelValue: string,
+    resourceType?: string
+  ): Promise<Docker.ContainerInfo | null> {
     try {
+      const filters: string[] = [`${labelKey}=${labelValue}`];
+
+      if (resourceType) {
+        filters.push(`${LABEL_KEYS.TYPE}=${resourceType}`);
+      }
+
       const containers = await this.docker.listContainers({
         all: true,
-        filters: {
-          label: [
-            `${LABEL_KEYS.PROJECT_ID}=${projectId}`,
-            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.PROJECT_CONTAINER}`,
-          ],
-        },
+        filters: { label: filters },
       });
+
       return containers[0] || null;
     } catch (error) {
-      logger.error('Failed to find container by project ID', { projectId, error });
+      logger.error('Failed to find container by label', { labelKey, labelValue, error });
       return null;
     }
   }
 
   /**
-   * Find container by service ID using labels
+   * Get container state by label (combines find + inspect in 1 operation)
+   * More efficient than calling findContainerByLabel + getContainerState separately
    */
-  async findContainerByServiceId(serviceId: string): Promise<Docker.ContainerInfo | null> {
+  async getContainerStateByLabel(
+    labelKey: string,
+    labelValue: string,
+    resourceType?: string
+  ): Promise<ContainerState> {
+    const containerInfo = await this.findContainerByLabel(labelKey, labelValue, resourceType);
+
+    if (!containerInfo) {
+      return {
+        exists: false,
+        running: false,
+        state: null,
+        container_id: null,
+        ports: [],
+        health_status: 'none',
+      };
+    }
+
+    return this.getContainerState(containerInfo.Id);
+  }
+
+  /**
+   * Get Docker system stats including CPU and memory usage for managed containers
+   */
+  async getManagedContainersStats(): Promise<{
+    cpus: number;
+    cpuUsagePercent: number;
+    memTotal: number;
+    memUsed: number;
+  }> {
+    try {
+      // Get Docker info with timeout
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Docker info timeout (${DOCKER_TIMEOUTS.INFO}ms)`)),
+          DOCKER_TIMEOUTS.INFO
+        )
+      );
+
+      const info = await Promise.race([this.docker.info(), timeoutPromise]);
+
+      // Get running managed containers for CPU and memory calculation
+      let cpuUsagePercent = 0;
+      let memoryUsed = 0;
+
+      try {
+        // List containers with timeout
+        const listTimeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(
+            () =>
+              reject(new Error(`List containers timeout (${DOCKER_TIMEOUTS.LIST_CONTAINERS}ms)`)),
+            DOCKER_TIMEOUTS.LIST_CONTAINERS
+          )
+        );
+
+        // Filter containers to only app-managed containers
+        const containers = await Promise.race([
+          this.docker.listContainers({
+            all: false,
+            filters: {
+              label: [`${LABEL_KEYS.MANAGED}=true`],
+            },
+          }),
+          listTimeoutPromise,
+        ]);
+
+        if (containers.length > 0) {
+          // Get stats for all running containers
+          const statsPromises = containers.map(async containerInfo => {
+            try {
+              const container = this.docker.getContainer(containerInfo.Id);
+
+              // Get stats with timeout
+              const statsTimeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(
+                  () =>
+                    reject(
+                      new Error(`Container stats timeout (${DOCKER_TIMEOUTS.CONTAINER_STATS}ms)`)
+                    ),
+                  DOCKER_TIMEOUTS.CONTAINER_STATS
+                )
+              );
+              const stats = await Promise.race([
+                container.stats({ stream: false }),
+                statsTimeoutPromise,
+              ]);
+
+              // Calculate CPU percentage
+              const cpuDelta =
+                stats.cpu_stats.cpu_usage.total_usage -
+                (stats.precpu_stats.cpu_usage?.total_usage || 0);
+              const systemDelta =
+                stats.cpu_stats.system_cpu_usage - (stats.precpu_stats.system_cpu_usage || 0);
+              const cpuCount = stats.cpu_stats.online_cpus || info.NCPU || 1;
+
+              let cpuPercent = 0;
+              if (systemDelta > 0 && cpuDelta > 0) {
+                cpuPercent = (cpuDelta / systemDelta) * cpuCount * 100;
+              }
+
+              // Get memory usage
+              const memUsage = stats.memory_stats.usage || 0;
+
+              return { cpu: cpuPercent, memory: memUsage };
+            } catch {
+              return { cpu: 0, memory: 0 };
+            }
+          });
+
+          const allStats = await Promise.all(statsPromises);
+          cpuUsagePercent = allStats.reduce((sum, stat) => sum + stat.cpu, 0);
+          memoryUsed = allStats.reduce((sum, stat) => sum + stat.memory, 0);
+        }
+      } catch (error) {
+        logger.warn('Failed to get container stats', { error });
+      }
+
+      return {
+        cpus: info.NCPU || 0,
+        cpuUsagePercent: Math.round(cpuUsagePercent * 100) / 100, // Round to 2 decimals
+        memTotal: info.MemTotal || 0,
+        memUsed: memoryUsed,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to get Docker system stats', { error: errorMessage });
+      throw new Error(`Failed to get Docker system stats: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Remove containers matching the specified labels
+   */
+  async removeContainersByLabels(labels: string[]): Promise<void> {
     try {
       const containers = await this.docker.listContainers({
         all: true,
-        filters: {
-          label: [
-            `${LABEL_KEYS.SERVICE_ID}=${serviceId}`,
-            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`,
-          ],
-        },
+        filters: { label: labels },
       });
-      return containers[0] || null;
+
+      for (const containerInfo of containers) {
+        try {
+          const container = this.docker.getContainer(containerInfo.Id);
+          await container.remove({ v: false, force: true });
+        } catch (error) {
+          // Ignore individual container removal failures
+          logger.debug('Failed to remove container', { containerId: containerInfo.Id, error });
+        }
+      }
     } catch (error) {
-      logger.error('Failed to find container by service ID', { serviceId, error });
+      logger.error('Failed to remove containers by labels', { labels, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Stop and remove a container
+   */
+  async stopAndRemoveContainer(containerId: string, stopTimeout = 10): Promise<void> {
+    try {
+      const container = this.docker.getContainer(containerId);
+      await container.stop({ t: stopTimeout });
+      await container.remove({ v: false, force: true });
+    } catch (error) {
+      // Log but don't throw - container might already be stopped/removed
+      logger.debug('Failed to stop/remove container', { containerId, error });
+    }
+  }
+
+  /**
+   * Check if a container is running
+   */
+  async isContainerRunning(containerId: string): Promise<boolean> {
+    try {
+      const container = this.docker.getContainer(containerId);
+      const containerInfo = await container.inspect();
+      return containerInfo.State.Running;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get the host port mapped to a container port
+   */
+  async getContainerHostPort(containerId: string, containerPort: string): Promise<string | null> {
+    try {
+      const container = this.docker.getContainer(containerId);
+      const containerInfo = await container.inspect();
+      const ports = containerInfo.NetworkSettings.Ports;
+      const hostPort = ports?.[containerPort]?.[0]?.HostPort;
+      return hostPort || null;
+    } catch (error) {
+      logger.debug('Failed to get container host port', { containerId, containerPort, error });
       return null;
     }
   }

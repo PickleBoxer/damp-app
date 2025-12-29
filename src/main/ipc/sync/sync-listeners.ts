@@ -5,14 +5,17 @@
 
 import { ipcMain, BrowserWindow } from 'electron';
 import { z } from 'zod';
-import Docker from 'dockerode';
 import { SYNC_FROM_VOLUME, SYNC_TO_VOLUME, SYNC_CANCEL, SYNC_PROGRESS } from './sync-channels';
+import {
+  isDockerAvailable,
+  stopAndRemoveContainer,
+  syncFromVolume,
+  syncToVolume,
+} from '@main/core/docker';
 import { createLogger } from '@main/utils/logger';
-import { syncQueue } from '@main/services/projects/sync-queue';
+import { syncQueue } from '@main/domains/projects/sync-queue';
 
 const logger = createLogger('sync-ipc');
-
-const docker = new Docker();
 
 // Define types locally
 interface SyncOptions {
@@ -55,13 +58,13 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
 
   // Lazy-load and initialize project state manager once
   let projectManagerPromise: Promise<
-    typeof import('@main/services/projects/project-state-manager')
+    typeof import('@main/domains/projects/project-state-manager')
   > | null = null;
   let isProjectManagerInitialized = false;
   let initializationPromise: Promise<void> | null = null;
 
   const getProjectManager = async () => {
-    projectManagerPromise ??= import('@main/services/projects/project-state-manager');
+    projectManagerPromise ??= import('@main/domains/projects/project-state-manager');
     const module = await projectManagerPromise;
 
     // Initialize once with guard against race conditions
@@ -73,14 +76,6 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
     }
 
     return module;
-  };
-
-  let volumeManagerPromise: Promise<
-    typeof import('@main/services/projects/volume-manager')
-  > | null = null;
-  const getVolumeManager = async () => {
-    volumeManagerPromise ??= import('@main/services/projects/volume-manager');
-    return volumeManagerPromise;
   };
 
   /**
@@ -101,10 +96,9 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
       }
 
       // Check if Docker is running
-      try {
-        await docker.ping();
-      } catch (error) {
-        logger.error('Docker ping failed', { error });
+      const isDockerRunning = await isDockerAvailable();
+      if (!isDockerRunning) {
+        logger.error('Docker is not available');
         return {
           success: false,
           error: 'Docker is not running. Please start Docker Desktop.',
@@ -134,10 +128,8 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
         }
 
         // Execute sync from volume to local folder with queue management
-        const { volumeManager } = await getVolumeManager();
-
         await syncQueue.execute(projectId, async () => {
-          await volumeManager.syncFromVolume(
+          await syncFromVolume(
             project.volumeName,
             project.path,
             project.id,
@@ -210,9 +202,8 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
       }
 
       // Check if Docker is running
-      try {
-        await docker.ping();
-      } catch {
+      const isDockerRunning = await isDockerAvailable();
+      if (!isDockerRunning) {
         return {
           success: false,
           error: 'Docker is not running. Please start Docker Desktop.',
@@ -242,10 +233,8 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
         }
 
         // Execute sync from local folder to volume with queue management
-        const { volumeManager } = await getVolumeManager();
-
         await syncQueue.execute(projectId, async () => {
-          await volumeManager.syncToVolume(
+          await syncToVolume(
             project.path,
             project.volumeName,
             project.id,
@@ -340,9 +329,7 @@ export function addSyncListeners(mainWindow: BrowserWindow): void {
 
       logger.info(`Stopping active sync container ${containerId} for project ${projectId}`);
 
-      const container = docker.getContainer(containerId);
-      await container.stop({ t: 2 }); // 2 second graceful stop
-      await container.remove({ force: true });
+      await stopAndRemoveContainer(containerId, 2);
 
       // Clean up tracking
       activeSyncContainers.delete(projectId);

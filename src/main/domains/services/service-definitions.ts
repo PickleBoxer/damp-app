@@ -2,40 +2,11 @@
  * Service registry with all predefined service definitions
  */
 
-import { ServiceDefinition, ServiceId, PostInstallHook } from '@shared/types/service';
-import { setupCaddySSL } from '../docker/caddy-setup';
-import { syncProjectsToCaddy } from '../docker/caddy-config';
-import { createLogger } from '@main/utils/logger';
+import type { ServiceDefinition } from '@shared/types/service';
+import { ServiceId } from '@shared/types/service';
 
-const logger = createLogger('ServiceDefinitions');
-
-/**
- * Post-install hooks for services (backend only - not serialized)
- * Maps service ID to post-install function
- * Hooks receive context (serviceId, containerId, containerName, customConfig)
- * and return result with success status, message, and optional metadata
- */
-export const POST_INSTALL_HOOKS: Partial<Record<ServiceId, PostInstallHook>> = {
-  [ServiceId.Caddy]: async context => {
-    const result = await setupCaddySSL(context.containerName);
-
-    // Sync all existing projects to Caddy
-    const syncResult = await syncProjectsToCaddy();
-    if (syncResult.success) {
-      logger.info('[Caddy Post-Install] Projects synchronized to reverse proxy');
-    } else {
-      logger.warn('[Caddy Post-Install] Failed to sync projects:', { error: syncResult.error });
-    }
-
-    return {
-      success: result.success,
-      message: result.message,
-      metadata: {
-        certInstalled: result.certInstalled,
-      },
-    };
-  },
-};
+// Post-install hooks are exported from hooks/index.ts
+export { POST_INSTALL_HOOKS } from './hooks/index';
 
 /**
  * Registry of all available services

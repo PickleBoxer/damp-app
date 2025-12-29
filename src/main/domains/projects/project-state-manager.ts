@@ -8,6 +8,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import semver from 'semver';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { addHostEntry, removeHostEntry } from '@main/utils/hosts';
 import { createLogger } from '@main/utils/logger';
 import type { ContainerStateData } from '@shared/types/container';
@@ -23,15 +24,20 @@ import type {
   TemplateContext,
 } from '@shared/types/project';
 import type { Result } from '@shared/types/result';
-import { projectStorage } from './project-storage';
-import { volumeManager } from './volume-manager';
+import { projectStorage } from '@main/core/storage/project-storage';
+import {
+  createProjectVolume,
+  removeVolume as removeDockerVolume,
+  copyToVolume,
+  getContainerStateByLabel,
+} from '@main/core/docker';
 import {
   generateIndexPhp,
   generateProjectTemplates,
   getPostCreateCommand,
   getPostStartCommand,
 } from './project-templates';
-import { syncProjectsToCaddy } from '../docker/caddy-config';
+import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 import { installLaravelToVolume } from './laravel-installer';
 import { FORWARDED_PORT } from '@shared/constants/ports';
 
@@ -567,7 +573,7 @@ class ProjectStateManager {
       // Remove Docker volume if created
       if (volumeCreated && project) {
         try {
-          await volumeManager.removeVolume(project.volumeName);
+          await removeDockerVolume(project.volumeName);
           logger.info('Rollback: Removed Docker volume');
         } catch (rollbackError) {
           logger.warn('Rollback failed: Could not remove volume', { error: rollbackError });
@@ -642,7 +648,7 @@ class ProjectStateManager {
           stage: 'creating-volume',
         });
       }
-      await volumeManager.createVolume(project.volumeName, project.id);
+      await createProjectVolume(project.volumeName, project.id);
       volumeCreated = true;
 
       // Step 6: Install Laravel if needed
@@ -674,7 +680,7 @@ class ProjectStateManager {
           stage: 'copying-files',
         });
       }
-      await volumeManager.copyToVolume(projectPath, project.volumeName, project.id, onProgress);
+      await copyToVolume(projectPath, project.volumeName, project.id, onProgress);
       project.volumeCopied = true;
 
       // Step 9: Update hosts file
@@ -702,7 +708,7 @@ class ProjectStateManager {
       await projectStorage.setProject(project);
 
       // Step 11: Sync project to Caddy (non-blocking)
-      syncProjectsToCaddy().catch(error => {
+      syncProjectsToCaddy(projectStorage.getAllProjects()).catch(error => {
         logger.warn('Failed to sync project to Caddy:', { error });
       });
 
@@ -868,7 +874,7 @@ class ProjectStateManager {
 
       // Remove Docker volume if requested
       if (removeVolume) {
-        await volumeManager.removeVolume(project.volumeName);
+        await removeDockerVolume(project.volumeName);
       }
 
       // Remove project folder if requested
@@ -880,7 +886,7 @@ class ProjectStateManager {
       await projectStorage.deleteProject(projectId);
 
       // Sync Caddy to remove project (non-blocking)
-      syncProjectsToCaddy().catch(error => {
+      syncProjectsToCaddy(projectStorage.getAllProjects()).catch(error => {
         logger.warn('Failed to sync Caddy after project deletion:', error);
       });
 
@@ -933,23 +939,12 @@ class ProjectStateManager {
     }
 
     try {
-      const { dockerManager } = await import('@main/services/docker/docker-manager');
-
-      // Find container by project ID label
-      const containerInfo = await dockerManager.findContainerByProjectId(projectId);
-
-      if (!containerInfo) {
-        return {
-          id: project.id,
-          running: false,
-          exists: false,
-          state: null,
-          ports: [],
-          health_status: 'none',
-        };
-      }
-
-      const containerState = await dockerManager.getContainerState(containerInfo.Id);
+      // Use unified container state query (single call instead of find + inspect)
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.PROJECT_ID,
+        projectId,
+        RESOURCE_TYPES.PROJECT_CONTAINER
+      );
 
       return {
         id: project.id,
@@ -960,7 +955,6 @@ class ProjectStateManager {
         health_status: containerState.health_status ?? 'none',
       };
     } catch (error) {
-      const logger = (await import('@main/utils/logger')).createLogger('ProjectStateManager');
       logger.error('Failed to get project container state', { projectId, error });
       return {
         id: project.id,

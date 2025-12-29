@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import os from 'node:os';
-import { projectStorage } from '@main/services/projects/project-storage';
+import { projectStorage } from '@main/core/storage/project-storage';
 import type { ShellOperationResult, ShellSettings } from './shell-context';
 import {
   SHELL_OPEN_FOLDER_CHANNEL,

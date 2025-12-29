@@ -1,6 +1,14 @@
 import { ipcMain, app } from 'electron';
 import { APP_GET_INFO_CHANNEL } from './app-channels';
-import type { AppInfo } from './app-context';
+
+interface AppInfo {
+  appName: string;
+  appVersion: string;
+  electronVersion: string;
+  chromeVersion: string;
+  nodeVersion: string;
+  v8Version: string;
+}
 
 // Prevent duplicate listener registration
 let listenersAdded = false;

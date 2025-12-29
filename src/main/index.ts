@@ -5,7 +5,7 @@ import path from 'node:path';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import { TrayMenu } from './electron/TrayMenu';
 import { ngrokManager } from './services/ngrok/ngrok-manager';
-import { dockerManager } from './services/docker/docker-manager';
+import { ensureNetworkExists } from '@main/core/docker';
 import { createLogger } from '@main/utils/logger';
 import { updateElectronApp } from 'update-electron-app';
 
@@ -82,7 +82,7 @@ app.whenReady().then(async () => {
 
   // Initialize Docker network (non-blocking)
   // If Docker is not running, this will fail silently and network will be created on-demand
-  dockerManager.ensureNetworkExists().catch((error: unknown) => {
+  ensureNetworkExists().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     logger.info('Network initialization skipped', { error: message });
   });

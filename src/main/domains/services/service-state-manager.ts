@@ -3,8 +3,6 @@
  * Coordinates between service registry, Docker manager, and storage
  */
 
-import type Docker from 'dockerode';
-
 import type {
   ServiceState,
   ServiceInfo,
@@ -27,10 +25,21 @@ import {
   getServiceDefinition,
   getAllServiceDefinitions,
   POST_INSTALL_HOOKS,
-} from '../registry/service-definitions';
-import { dockerManager } from '../docker/docker-manager';
-import { serviceStorage } from './service-storage';
-import { syncProjectsToCaddy } from '../docker/caddy-config';
+} from './service-definitions';
+import {
+  isDockerAvailable,
+  pullImage,
+  createContainer,
+  startContainer,
+  getContainerState,
+  getContainerStateByLabel,
+  removeContainer,
+  stopContainer,
+  restartContainer,
+  removeServiceVolumes,
+} from '@main/core/docker';
+import { serviceStorage } from '@main/core/storage/service-storage';
+import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 
 const logger = createLogger('ServiceStateManager');
 
@@ -102,7 +111,7 @@ class ServiceStateManager {
 
   /**
    * Get all services with their definitions only (no state)
-   * Does NOT include Docker container status - use getServicesState() for that
+   * Does NOT include Docker container status
    */
   async getAllServices(): Promise<ServiceDefinition[]> {
     this.ensureInitialized();
@@ -110,81 +119,6 @@ class ServiceStateManager {
     const definitions = getAllServiceDefinitions();
 
     return definitions;
-  }
-
-  /**
-   * Get bulk status for all services using a single Docker API call
-   * Uses label-based filtering for reliability
-   * More efficient than calling getService() for each service individually
-   */
-  async getServicesState(): Promise<ContainerStateData[]> {
-    this.ensureInitialized();
-
-    const definitions = getAllServiceDefinitions();
-
-    try {
-      // Single Docker API call filtered by DAMP-managed service containers
-      const containers = await dockerManager.docker.listContainers({
-        all: true,
-        filters: {
-          label: [
-            `${LABEL_KEYS.MANAGED}=true`,
-            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`,
-          ],
-        },
-      });
-
-      // Build map by serviceId from labels
-      const containersByServiceId = new Map<ServiceId, Docker.ContainerInfo>();
-      for (const container of containers) {
-        const serviceId = container.Labels?.[LABEL_KEYS.SERVICE_ID];
-        if (serviceId) {
-          containersByServiceId.set(serviceId as ServiceId, container);
-        }
-      }
-
-      // Build status array for all services
-      const statuses: ContainerStateData[] = [];
-      for (const definition of definitions) {
-        const containerInfo = containersByServiceId.get(definition.id);
-
-        if (!containerInfo) {
-          // Container doesn't exist for this service
-          statuses.push({
-            id: definition.id,
-            running: false,
-            exists: false,
-            state: null,
-            ports: [],
-            health_status: 'none',
-          });
-        } else {
-          // Build state from container info
-          const state = await dockerManager.getContainerState(containerInfo.Id);
-          statuses.push({
-            id: definition.id,
-            running: state.running,
-            exists: state.exists,
-            state: state.state,
-            ports: state.ports,
-            health_status: state.health_status ?? 'none',
-          });
-        }
-      }
-
-      return statuses;
-    } catch (error) {
-      logger.error('Failed to get services state', { error });
-      // Return default states on error
-      return definitions.map(def => ({
-        id: def.id,
-        running: false,
-        exists: false,
-        state: null,
-        ports: [],
-        health_status: 'none',
-      }));
-    }
   }
 
   /**
@@ -199,21 +133,12 @@ class ServiceStateManager {
     }
 
     try {
-      // Find container by service ID label
-      const containerInfo = await dockerManager.findContainerByServiceId(serviceId);
-
-      if (!containerInfo) {
-        return {
-          id: serviceId,
-          running: false,
-          exists: false,
-          state: null,
-          ports: [],
-          health_status: 'none',
-        };
-      }
-
-      const containerState = await dockerManager.getContainerState(containerInfo.Id);
+      // Use unified container state query (single call instead of find + inspect)
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        serviceId,
+        RESOURCE_TYPES.SERVICE_CONTAINER
+      );
 
       return {
         id: serviceId,
@@ -279,7 +204,7 @@ class ServiceStateManager {
       }
 
       // Check if Docker is available
-      const dockerAvailable = await dockerManager.isDockerAvailable();
+      const dockerAvailable = await isDockerAvailable();
       if (!dockerAvailable) {
         return {
           success: false,
@@ -289,7 +214,7 @@ class ServiceStateManager {
 
       // Pull image
       logger.info(`Pulling image ${definition.default_config.image}...`);
-      await dockerManager.pullImage(definition.default_config.image, onProgress);
+      await pullImage(definition.default_config.image, onProgress);
 
       // Create container with port resolution
       logger.info(`Creating container for ${serviceId}...`);
@@ -304,7 +229,7 @@ class ServiceStateManager {
         })
       );
 
-      const containerId = await dockerManager.createContainer(
+      const containerId = await createContainer(
         definition.default_config,
         {
           serviceId,
@@ -318,11 +243,11 @@ class ServiceStateManager {
       // Start container if requested
       if (options?.start_immediately !== false) {
         logger.info(`Starting container ${containerId}...`);
-        await dockerManager.startContainer(containerId);
+        await startContainer(containerId);
       }
 
       // Get actual port mappings after creation
-      const containerState = await dockerManager.getContainerState(
+      const containerState = await getContainerState(
         options?.custom_config?.container_name || definition.default_config.container_name
       );
 
@@ -345,13 +270,13 @@ class ServiceStateManager {
       if (postInstallHook) {
         try {
           // Ensure container is running before executing hook
-          const currentStatus = await dockerManager.getContainerState(
+          const currentStatus = await getContainerState(
             options?.custom_config?.container_name || definition.default_config.container_name
           );
 
           if (currentStatus?.exists && currentStatus.container_id && !currentStatus.running) {
             logger.info(`Starting container for post-install hook...`);
-            await dockerManager.startContainer(currentStatus.container_id);
+            await startContainer(currentStatus.container_id);
           }
 
           // Execute hook with context
@@ -430,7 +355,7 @@ class ServiceStateManager {
         state?.custom_config?.container_name || definition.default_config.container_name;
 
       // Check if container exists in Docker
-      const containerState = await dockerManager.getContainerState(containerName);
+      const containerState = await getContainerState(containerName);
       if (!containerState?.exists) {
         return {
           success: false,
@@ -440,7 +365,7 @@ class ServiceStateManager {
 
       if (containerState.container_id) {
         // Remove container (but not volumes yet)
-        await dockerManager.removeContainer(containerState.container_id, false);
+        await removeContainer(containerState.container_id, false);
       }
 
       // Remove volumes if requested
@@ -456,7 +381,7 @@ class ServiceStateManager {
             .filter((name): name is string => name !== null && !name.startsWith('/'));
 
           if (volumeNames.length > 0) {
-            await dockerManager.removeServiceVolumes(volumeNames);
+            await removeServiceVolumes(volumeNames);
           }
         }
       }
@@ -503,7 +428,7 @@ class ServiceStateManager {
       const containerName =
         state?.custom_config?.container_name || definition.default_config.container_name;
 
-      const containerState = await dockerManager.getContainerState(containerName);
+      const containerState = await getContainerState(containerName);
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -519,11 +444,14 @@ class ServiceStateManager {
         };
       }
 
-      await dockerManager.startContainer(containerState.container_id);
+      await startContainer(containerState.container_id);
 
-      // If Caddy was started, sync all projects
+      // If Caddy was started, sync all projects (requires project storage)
       if (serviceId === ServiceId.Caddy) {
-        syncProjectsToCaddy().catch(error => {
+        // Import projectStorage dynamically to avoid circular dependency
+        const { projectStorage } = await import('@main/core/storage/project-storage');
+        const projects = projectStorage.getAllProjects();
+        syncProjectsToCaddy(projects).catch(error => {
           logger.warn('Failed to sync projects to Caddy on startup:', error);
         });
       }
@@ -562,7 +490,7 @@ class ServiceStateManager {
       const containerName =
         state?.custom_config?.container_name || definition.default_config.container_name;
 
-      const containerState = await dockerManager.getContainerState(containerName);
+      const containerState = await getContainerState(containerName);
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -578,7 +506,7 @@ class ServiceStateManager {
         };
       }
 
-      await dockerManager.stopContainer(containerState.container_id);
+      await stopContainer(containerState.container_id);
 
       logger.info(`Service ${serviceId} stopped successfully`);
 
@@ -614,7 +542,7 @@ class ServiceStateManager {
       const containerName =
         state?.custom_config?.container_name || definition.default_config.container_name;
 
-      const containerState = await dockerManager.getContainerState(containerName);
+      const containerState = await getContainerState(containerName);
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -623,7 +551,7 @@ class ServiceStateManager {
         };
       }
 
-      await dockerManager.restartContainer(containerState.container_id);
+      await restartContainer(containerState.container_id);
 
       logger.info(`Service ${serviceId} restarted successfully`);
 
@@ -656,7 +584,7 @@ class ServiceStateManager {
         getServiceDefinition(serviceId)?.default_config.container_name;
 
       if (containerName) {
-        const containerState = await dockerManager.getContainerState(containerName);
+        const containerState = await getContainerState(containerName);
         if (!containerState?.exists) {
           return {
             success: false,

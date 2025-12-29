@@ -10,7 +10,7 @@ import type {
   UpdateProjectInput,
   VolumeCopyProgress,
 } from '@shared/types/project';
-import { projectStateManager } from '@main/services/projects/project-state-manager';
+import { projectStateManager } from '@main/domains/projects/project-state-manager';
 import * as CHANNELS from './projects-channels';
 import { createLogger } from '@main/utils/logger';
 

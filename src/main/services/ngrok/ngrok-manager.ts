@@ -3,10 +3,19 @@
  * Manages ngrok tunnel containers for projects
  */
 
-import Docker from 'dockerode';
 import { z } from 'zod';
 import type { Project } from '@shared/types/project';
-import { dockerManager } from '../docker/docker-manager';
+import {
+  docker,
+  isDockerAvailable,
+  ensureNetworkExists,
+  pullImage,
+  findContainerByLabel,
+  removeContainersByLabels,
+  stopAndRemoveContainer,
+  isContainerRunning,
+  getContainerHostPort,
+} from '@main/core/docker';
 import { buildNgrokLabels, LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { ngrokStateManager, type NgrokStatus } from './ngrok-state-manager';
 import { createLogger } from '@main/utils/logger';
@@ -32,11 +41,6 @@ const ngrokApiResponseSchema = z.object({
  * Ngrok manager class
  */
 class NgrokManager {
-  private readonly docker: Docker;
-
-  constructor() {
-    this.docker = new Docker();
-  }
   /**
    * Start ngrok tunnel for a project
    */
@@ -51,7 +55,7 @@ class NgrokManager {
   }> {
     try {
       // Check if Docker is available
-      const isDockerRunning = await dockerManager.isDockerAvailable();
+      const isDockerRunning = await isDockerAvailable();
       if (!isDockerRunning) {
         return {
           success: false,
@@ -84,11 +88,11 @@ class NgrokManager {
       });
 
       // Ensure network exists
-      await dockerManager.ensureNetworkExists();
+      await ensureNetworkExists();
 
       // Pull ngrok image if not present
       try {
-        await dockerManager.pullImage(NGROK_IMAGE);
+        await pullImage(NGROK_IMAGE);
       } catch (error) {
         logger.error('Failed to pull ngrok image', { projectId: project.id, error });
         ngrokStateManager.updateState(project.id, {
@@ -102,27 +106,17 @@ class NgrokManager {
       }
 
       // Find and remove existing ngrok container by label
-      const existingContainers = await this.docker.listContainers({
-        all: true,
-        filters: {
-          label: [
-            `${LABEL_KEYS.PROJECT_ID}=${project.id}`,
-            `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.NGROK_TUNNEL}`,
-          ],
-        },
-      });
-
-      for (const containerInfo of existingContainers) {
-        try {
-          const container = this.docker.getContainer(containerInfo.Id);
-          await container.remove({ v: false, force: true });
-        } catch {
-          // Ignore if container removal fails
-        }
-      }
+      await removeContainersByLabels([
+        `${LABEL_KEYS.PROJECT_ID}=${project.id}`,
+        `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.NGROK_TUNNEL}`,
+      ]);
 
       // Find project container by label to get network address
-      const projectContainer = await dockerManager.findContainerByProjectId(project.id);
+      const projectContainer = await findContainerByLabel(
+        LABEL_KEYS.PROJECT_ID,
+        project.id,
+        RESOURCE_TYPES.PROJECT_CONTAINER
+      );
 
       if (!projectContainer) {
         return {
@@ -141,7 +135,7 @@ class NgrokManager {
       }
 
       // Create ngrok container pointing to project container by ID
-      const container = await this.docker.createContainer({
+      const container = await docker.createContainer({
         name: `ngrok_${project.id}`, // Use project ID for stability
         Image: NGROK_IMAGE,
         Env: env,
@@ -207,13 +201,7 @@ class NgrokManager {
         });
 
         // Clean up container
-        try {
-          const container = this.docker.getContainer(containerId);
-          await container.stop({ t: 10 });
-          await container.remove({ v: false, force: true });
-        } catch {
-          // Ignore cleanup errors
-        }
+        await stopAndRemoveContainer(containerId);
 
         return {
           success: false,
@@ -258,14 +246,7 @@ class NgrokManager {
       }
 
       // Stop and remove container
-      try {
-        const container = this.docker.getContainer(state.containerId);
-        await container.stop({ t: 10 });
-        await container.remove({ v: false, force: true });
-      } catch (error) {
-        logger.warn('Failed to stop/remove container', { projectId, error });
-        // Continue to clean up state
-      }
+      await stopAndRemoveContainer(state.containerId);
 
       // Update state
       ngrokStateManager.updateState(projectId, {
@@ -312,22 +293,9 @@ class NgrokManager {
 
       // Verify container is actually running if status is active
       if (state.status === 'active' && state.containerId) {
-        try {
-          const container = this.docker.getContainer(state.containerId);
-          const containerInfo = await container.inspect();
-          if (!containerInfo.State.Running) {
-            // Container stopped unexpectedly
-            ngrokStateManager.updateState(projectId, {
-              status: 'stopped',
-              publicUrl: '',
-            });
-            return {
-              success: true,
-              data: { status: 'stopped' },
-            };
-          }
-        } catch {
-          // Container doesn't exist
+        const isRunning = await isContainerRunning(state.containerId);
+        if (!isRunning) {
+          // Container stopped unexpectedly or doesn't exist
           ngrokStateManager.updateState(projectId, {
             status: 'stopped',
             publicUrl: '',
@@ -366,18 +334,15 @@ class NgrokManager {
 
     while (Date.now() - startTime < timeoutMs) {
       try {
-        // Get container port mapping for ngrok API (port 4040)
-        const container = this.docker.getContainer(containerId);
-        const containerInfo = await container.inspect();
-
-        if (!containerInfo.State.Running) {
+        // Check if container is still running
+        const isRunning = await isContainerRunning(containerId);
+        if (!isRunning) {
           logger.error('Ngrok container stopped unexpectedly', { containerId });
           return null;
         }
 
-        // Find the exposed port for 4040
-        const ports = containerInfo.NetworkSettings.Ports;
-        const ngrokApiPort = ports?.['4040/tcp']?.[0]?.HostPort;
+        // Get container port mapping for ngrok API (port 4040)
+        const ngrokApiPort = await getContainerHostPort(containerId, '4040/tcp');
 
         if (ngrokApiPort) {
           // Query ngrok API for tunnels
@@ -424,24 +389,14 @@ class NgrokManager {
 
     for (const state of states) {
       if (state.containerId) {
-        try {
-          const container = this.docker.getContainer(state.containerId);
-          const containerInfo = await container.inspect();
-          if (!containerInfo.State.Running) {
-            // Container is not running, clean up state
-            ngrokStateManager.updateState(state.projectId, {
-              status: 'stopped',
-              publicUrl: '',
-            });
-            logger.debug('Cleaned up stopped tunnel', { projectId: state.projectId });
-          }
-        } catch {
-          // Container doesn't exist, clean up state
+        const isRunning = await isContainerRunning(state.containerId);
+        if (!isRunning) {
+          // Container is not running or doesn't exist, clean up state
           ngrokStateManager.updateState(state.projectId, {
             status: 'stopped',
             publicUrl: '',
           });
-          logger.debug('Cleaned up orphaned tunnel state', { projectId: state.projectId });
+          logger.debug('Cleaned up stopped/orphaned tunnel', { projectId: state.projectId });
         }
       }
     }

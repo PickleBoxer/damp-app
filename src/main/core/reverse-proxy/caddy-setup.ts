@@ -3,7 +3,7 @@
  * Handles automatic SSL certificate generation and system installation for Caddy
  */
 
-import { dockerManager } from './docker-manager';
+import { execCommand, getFileFromContainer } from '@main/core/docker';
 import { isWindows, isMacOS } from '@shared/utils/platform';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -149,7 +149,7 @@ async function createCaddyfile(containerName: string): Promise<void> {
   const escapedContent = DEFAULT_CADDYFILE.replaceAll("'", String.raw`'\''`);
   const cmd = ['sh', '-c', `echo '${escapedContent}' > ${CADDYFILE_PATH}`];
 
-  const result = await dockerManager.execCommand(containerName, cmd);
+  const result = await execCommand(containerName, cmd);
 
   if (result.exitCode !== 0) {
     throw new Error(`Failed to create Caddyfile: ${result.stderr}`);
@@ -162,7 +162,7 @@ async function createCaddyfile(containerName: string): Promise<void> {
 async function formatCaddyfile(containerName: string): Promise<void> {
   const cmd = ['caddy', 'fmt', '--overwrite', CADDYFILE_PATH];
 
-  const result = await dockerManager.execCommand(containerName, cmd);
+  const result = await execCommand(containerName, cmd);
 
   if (result.exitCode !== 0) {
     throw new Error(`Failed to format Caddyfile: ${result.stderr}`);
@@ -175,7 +175,7 @@ async function formatCaddyfile(containerName: string): Promise<void> {
 async function reloadCaddy(containerName: string): Promise<void> {
   const cmd = ['caddy', 'reload', '--config', CADDYFILE_PATH];
 
-  const result = await dockerManager.execCommand(containerName, cmd);
+  const result = await execCommand(containerName, cmd);
 
   if (result.exitCode !== 0) {
     throw new Error(`Failed to reload Caddy: ${result.stderr}`);
@@ -196,7 +196,7 @@ async function waitForCertificate(containerName: string): Promise<boolean> {
     try {
       // Check if certificate file exists
       const cmd = ['test', '-f', CADDY_ROOT_CERT_PATH];
-      const result = await dockerManager.execCommand(containerName, cmd);
+      const result = await execCommand(containerName, cmd);
 
       if (result.exitCode === 0) {
         return true;
@@ -220,7 +220,7 @@ async function waitForCertificate(containerName: string): Promise<boolean> {
  * @returns Path to the extracted certificate file on the host
  */
 async function extractCertificate(containerName: string): Promise<string> {
-  const certBuffer = await dockerManager.getFileFromContainer(containerName, CADDY_ROOT_CERT_PATH);
+  const certBuffer = await getFileFromContainer(containerName, CADDY_ROOT_CERT_PATH);
 
   // Save to temporary file
   const tempDir = tmpdir();

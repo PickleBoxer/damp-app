@@ -3,8 +3,7 @@
  * Handles Caddyfile generation and synchronization for project reverse proxy
  */
 
-import { dockerManager } from './docker-manager';
-import { projectStorage } from '../projects/project-storage';
+import { execCommand, getContainerState } from '@main/core/docker';
 import type { Project } from '@shared/types/project';
 import { createLogger } from '@main/utils/logger';
 
@@ -60,12 +59,15 @@ function generateCaddyfile(projects: Project[]): string {
  * Synchronize all projects to Caddy configuration
  * This function is idempotent and can be called multiple times safely
  *
+ * @param projects - Array of projects to configure in Caddy
  * @returns Promise resolving to success status
  */
-export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?: string }> {
+export async function syncProjectsToCaddy(
+  projects: Project[]
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if Caddy container is running
-    const containerState = await dockerManager.getContainerState(CADDY_CONTAINER_NAME);
+    const containerState = await getContainerState(CADDY_CONTAINER_NAME);
 
     if (!containerState?.running) {
       logger.info('Skipping - Caddy container not running');
@@ -74,8 +76,6 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
 
     logger.info('Syncing projects to Caddy configuration...');
 
-    // Get all projects
-    const projects = projectStorage.getAllProjects();
     logger.info(`Found ${projects.length} project(s) to configure`);
 
     // Generate Caddyfile content
@@ -85,21 +85,21 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
     const escapedContent = caddyfileContent.replaceAll("'", String.raw`'\''`);
     const writeCmd = ['sh', '-c', `echo '${escapedContent}' > ${CADDYFILE_PATH}`];
 
-    const writeResult = await dockerManager.execCommand(CADDY_CONTAINER_NAME, writeCmd);
+    const writeResult = await execCommand(CADDY_CONTAINER_NAME, writeCmd);
     if (writeResult.exitCode !== 0) {
       throw new Error(`Failed to write Caddyfile: ${writeResult.stderr}`);
     }
 
     // Format Caddyfile
     const formatCmd = ['caddy', 'fmt', '--overwrite', CADDYFILE_PATH];
-    const formatResult = await dockerManager.execCommand(CADDY_CONTAINER_NAME, formatCmd);
+    const formatResult = await execCommand(CADDY_CONTAINER_NAME, formatCmd);
     if (formatResult.exitCode !== 0) {
       throw new Error(`Failed to format Caddyfile: ${formatResult.stderr}`);
     }
 
     // Reload Caddy configuration
     const reloadCmd = ['caddy', 'reload', '--config', CADDYFILE_PATH];
-    const reloadResult = await dockerManager.execCommand(CADDY_CONTAINER_NAME, reloadCmd);
+    const reloadResult = await execCommand(CADDY_CONTAINER_NAME, reloadCmd);
     if (reloadResult.exitCode !== 0) {
       throw new Error(`Failed to reload Caddy: ${reloadResult.stderr}`);
     }
@@ -123,7 +123,7 @@ export async function syncProjectsToCaddy(): Promise<{ success: boolean; error?:
  */
 export async function isCaddyReady(): Promise<boolean> {
   try {
-    const containerState = await dockerManager.getContainerState(CADDY_CONTAINER_NAME);
+    const containerState = await getContainerState(CADDY_CONTAINER_NAME);
     return containerState?.running ?? false;
   } catch {
     return false;

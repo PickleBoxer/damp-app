@@ -5,7 +5,7 @@
 
 import { ipcMain, BrowserWindow } from 'electron';
 import type { ServiceId, InstallOptions, CustomConfig } from '@shared/types/service';
-import { serviceStateManager } from '@main/services/state/service-state-manager';
+import { serviceStateManager } from '@main/domains/services/service-state-manager';
 import * as CHANNELS from './services-channels';
 import { createLogger } from '@main/utils/logger';
 
@@ -50,19 +50,6 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       return await serviceStateManager.getService(serviceId);
     } catch (error) {
       logger.error('Failed to get service', { serviceId, error });
-      throw error;
-    }
-  });
-
-  /**
-   * Get bulk status for all services
-   */
-  ipcMain.handle(CHANNELS.SERVICES_GET_STATUS, async () => {
-    try {
-      await ensureInitialized();
-      return await serviceStateManager.getServicesState();
-    } catch (error) {
-      logger.error('Failed to get services status', { error });
       throw error;
     }
   });
@@ -181,12 +168,12 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT, async () => {
     try {
       const { dialog } = await import('electron');
-      const { dockerManager } = await import('@main/services/docker/docker-manager');
+      const { getFileFromContainer } = await import('@main/core/docker');
       const { writeFileSync } = await import('node:fs');
 
       // Get certificate from container
       const CADDY_ROOT_CERT_PATH = '/data/caddy/pki/authorities/local/root.crt';
-      const certBuffer = await dockerManager.getFileFromContainer('damp-web', CADDY_ROOT_CERT_PATH);
+      const certBuffer = await getFileFromContainer('damp-web', CADDY_ROOT_CERT_PATH);
 
       // Show save dialog
       const result = await dialog.showSaveDialog(mainWindow, {
