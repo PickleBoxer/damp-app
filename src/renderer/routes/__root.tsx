@@ -1,6 +1,6 @@
 import { Outlet, createRootRouteWithContext, Link } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+//import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
+//import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useSyncProgress } from '@renderer/hooks/use-sync';
 import { useDockerEvents } from '@renderer/hooks/use-docker-events';
 import AppHeader from '@renderer/components/layout/AppHeader';
@@ -54,9 +54,9 @@ function RootComponent() {
         }}
       />
       {/* Uncomment the following line to enable the router devtools */}
-      <TanStackRouterDevtools position="bottom-right" />
+      {/* <TanStackRouterDevtools position="bottom-right" /> */}
       {/* Uncomment the following line to enable the React Query devtools */}
-      <ReactQueryDevtools buttonPosition="top-right" />
+      {/*<ReactQueryDevtools buttonPosition="top-right" /> */}
     </div>
   );
 }
