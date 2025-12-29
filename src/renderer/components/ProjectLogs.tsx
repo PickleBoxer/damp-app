@@ -16,6 +16,7 @@ interface LogLine {
 interface ProjectLogsProps {
   projectId: string;
   maxLines?: number;
+  isActive?: boolean;
 }
 
 export interface ProjectLogsRef {
@@ -24,7 +25,7 @@ export interface ProjectLogsRef {
 }
 
 export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
-  ({ projectId, maxLines = 1000 }, ref) => {
+  ({ projectId, maxLines = 1000, isActive = true }, ref) => {
     const [logs, setLogs] = useState<LogLine[]>([]);
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -65,8 +66,13 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
       }
     }, [logs, autoScroll]);
 
-    // Start/stop streaming on mount/unmount
+    // Start/stop streaming based on isActive prop
     useEffect(() => {
+      // Don't start streaming if not active
+      if (!isActive) {
+        return;
+      }
+
       let unsubscribe: (() => void) | null = null;
       let mounted = true;
 
@@ -122,7 +128,7 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
 
       startStreaming();
 
-      // Cleanup on unmount
+      // Cleanup on unmount or when becoming inactive
       return () => {
         mounted = false;
         if (unsubscribe) {
@@ -132,7 +138,7 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
           window.projectLogs.stop(projectId);
         }
       };
-    }, [projectId, maxLines]);
+    }, [projectId, maxLines, isActive]);
 
     const handleScrollChange = (event: React.UIEvent<HTMLDivElement>) => {
       const target = event.target as HTMLDivElement;

@@ -79,7 +79,7 @@ async function handleStartLogs(
     // Store stop function
     activeStreams.set(projectId, stopFn);
 
-    logger.debug('Started streaming for project', { projectName: project.name });
+    logger.debug('Started streaming for project', { projectId });
 
     return { success: true };
   } catch (error) {

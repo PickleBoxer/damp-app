@@ -25,7 +25,7 @@ import {
 import { useNgrokStatus, useStartNgrokTunnel, useStopNgrokTunnel } from '@renderer/hooks/use-ngrok';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';
-import { ProjectLogs } from '@renderer/components/ProjectLogs';
+import { ProjectLogs, type ProjectLogsRef } from '@renderer/components/ProjectLogs';
 import {
   Globe,
   FolderOpen,
@@ -64,7 +64,7 @@ import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
 import { Input } from '@renderer/components/ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@renderer/components/ui/tooltip';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSettings } from '@renderer/utils/settings';
 import { useSettings } from '@renderer/hooks/use-settings';
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
@@ -95,6 +95,12 @@ function ProjectDetailPage() {
   const [consoleExpanded, setConsoleExpanded] = useState(false);
   const [includeNodeModules, setIncludeNodeModules] = useState(false);
   const [includeVendor, setIncludeVendor] = useState(false);
+  const projectLogsRef = useRef<ProjectLogsRef>(null);
+
+  // Close console and clear logs when navigating to a different project
+  useEffect(() => {
+    projectLogsRef.current?.clear();
+  }, [projectId]);
 
   // Load settings for ngrok token check
   const { hasNgrokToken } = useSettings();
@@ -888,11 +894,9 @@ function ProjectDetailPage() {
         </button>
 
         {/* Logs Content */}
-        {consoleExpanded && (
-          <div className="flex-1 overflow-hidden">
-            <ProjectLogs key={project.id} projectId={project.id} />
-          </div>
-        )}
+        <div className={`flex-1 overflow-hidden ${!consoleExpanded ? 'hidden' : ''}`}>
+          <ProjectLogs ref={projectLogsRef} projectId={project.id} isActive={consoleExpanded} />
+        </div>
       </div>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
