@@ -15,11 +15,8 @@ import { FaLink } from 'react-icons/fa6';
 import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@renderer/components/ui/tooltip';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@renderer/components/ui/resizable';
+import { ResizablePanelGroup, ResizablePanel } from '@renderer/components/ui/resizable';
+import { ResizableHandleWithControls } from '@renderer/components/ResizableHandleWithControls';
 import { projectsQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
 import { useReorderProjects } from '@renderer/hooks/use-projects';
 import { useProjectSyncStatus } from '@renderer/hooks/use-sync';
@@ -142,7 +139,10 @@ function ProjectsPage() {
 
   const [projectOrder, setProjectOrder] = useState<string[]>([]);
   const reorderMutation = useReorderProjects();
-  const { sizes, saveSizes } = usePanelSizes('projects', [45, 55]);
+  const { initialSizes, saveSizes, resetSizes, equalSplit, resetKey } = usePanelSizes(
+    'projects',
+    [45, 55]
+  );
 
   // Initialize or update project order when projects change
   const sortedProjects = useMemo(() => {
@@ -194,9 +194,14 @@ function ProjectsPage() {
 
   return (
     <>
-      <ResizablePanelGroup direction="horizontal" className="h-full" onLayout={saveSizes}>
+      <ResizablePanelGroup
+        key={resetKey}
+        direction="horizontal"
+        className="h-full"
+        onLayout={saveSizes}
+      >
         {/* Left side - Project List */}
-        <ResizablePanel defaultSize={sizes[0]}>
+        <ResizablePanel defaultSize={initialSizes[0]}>
           <div className="flex h-full flex-col">
             {/* Header Bar */}
             <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
@@ -263,10 +268,10 @@ function ProjectsPage() {
           </div>
         </ResizablePanel>
 
-        <ResizableHandle withHandle />
+        <ResizableHandleWithControls onReset={resetSizes} onEqualSplit={equalSplit} />
 
         {/* Right side - Project Detail */}
-        <ResizablePanel defaultSize={sizes[1]}>
+        <ResizablePanel defaultSize={initialSizes[1]}>
           <div className="h-full overflow-hidden">
             <Outlet />
           </div>

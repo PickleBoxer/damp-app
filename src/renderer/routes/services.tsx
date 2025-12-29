@@ -12,11 +12,8 @@ import {
 import { usePanelSizes } from '@renderer/hooks/use-panel-sizes';
 import { PackageOpen, Loader2, AlertCircle } from 'lucide-react';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@renderer/components/ui/resizable';
+import { ResizablePanelGroup, ResizablePanel } from '@renderer/components/ui/resizable';
+import { ResizableHandleWithControls } from '@renderer/components/ResizableHandleWithControls';
 
 import { servicesQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
 // useQuery already imported above
@@ -131,7 +128,10 @@ function ServicesPage() {
   const { data: services, isLoading, isError, error } = useQuery(servicesQueryOptions());
 
   const [selectedType, setSelectedType] = useState<ServiceType | 'all'>('all');
-  const { sizes, saveSizes } = usePanelSizes('services', [45, 55]);
+  const { initialSizes, saveSizes, resetSizes, equalSplit, resetKey } = usePanelSizes(
+    'services',
+    [45, 55]
+  );
 
   // Memoize filtered services
   const filteredServices = useMemo(() => {
@@ -141,9 +141,14 @@ function ServicesPage() {
   }, [services, selectedType]);
 
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full" onLayout={saveSizes}>
+    <ResizablePanelGroup
+      key={resetKey}
+      direction="horizontal"
+      className="h-full"
+      onLayout={saveSizes}
+    >
       {/* Left side - Service List */}
-      <ResizablePanel defaultSize={sizes[0]}>
+      <ResizablePanel defaultSize={initialSizes[0]}>
         <div className="flex h-full flex-col">
           {/* Header Bar */}
           <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
@@ -235,10 +240,10 @@ function ServicesPage() {
         </div>
       </ResizablePanel>
 
-      <ResizableHandle withHandle />
+      <ResizableHandleWithControls onReset={resetSizes} onEqualSplit={equalSplit} />
 
       {/* Right side - Service Detail */}
-      <ResizablePanel defaultSize={sizes[1]}>
+      <ResizablePanel defaultSize={initialSizes[1]}>
         <div className="h-full overflow-hidden">
           <Outlet />
         </div>
