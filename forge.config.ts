@@ -1,17 +1,21 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
+import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
-import { PublisherGithub } from '@electron-forge/publisher-github';
+import { PublisherS3 } from '@electron-forge/publisher-s3';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack:
+        '**/node_modules/{dockerode,ssh2,cpu-features,tar-fs,@vscode/sudo-prompt,hostile}/**/*',
+    },
     icon: './src/main/icon/icon',
   },
   rebuildConfig: {},
-  makers: [new MakerSquirrel({})],
+  makers: [new MakerSquirrel({}), new MakerZIP({}, ['win32'])],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
@@ -54,13 +58,16 @@ const config: ForgeConfig = {
     },
   ],
   publishers: [
-    new PublisherGithub({
-      repository: {
-        owner: 'PickleBoxer',
-        name: 'damp-app',
+    new PublisherS3({
+      endpoint: process.env.R2_ENDPOINT,
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      region: 'auto',
+      bucket: process.env.R2_BUCKET || '',
+      public: true,
+      keyResolver: (fileName, platform, arch) => {
+        return `${platform}/${arch}/${fileName}`;
       },
-      prerelease: false,
-      draft: true,
     }),
   ],
 };

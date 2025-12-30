@@ -1,6 +1,6 @@
 {
-  "name": "damp-app",
-  "productName": "Damp",
+  "name": "damp",
+  "productName": "damp",
   "version": "0.1.0",
   "description": "Docker local development environment manager",
   "main": ".vite/build/index.js",
@@ -38,6 +38,7 @@
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron-forge/plugin-vite": "^7.10.2",
     "@electron-forge/publisher-github": "^7.10.2",
+    "@electron-forge/publisher-s3": "^7.10.2",
     "@electron-forge/shared-types": "^7.10.2",
     "@electron/fuses": "~1.8.0",
     "@eslint/compat": "^1.4.1",

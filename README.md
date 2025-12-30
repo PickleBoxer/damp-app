@@ -206,13 +206,11 @@ npm run start
 
 ## Releasing
 
-This project uses semantic versioning and automated GitHub releases.
+This project uses semantic versioning and automated GitHub releases with Cloudflare R2 backup.
 
 ### Release Process
 
-1. **Update CHANGELOG.md**
-   - Document all changes in the appropriate section (Added, Changed, Fixed, etc.)
-   - Use the format from [Keep a Changelog](https://keepachangelog.com/)
+1. **Update CHANGELOG.md** — Document changes in [Keep a Changelog](https://keepachangelog.com/) format
 
 2. **Bump version**
    ```bash
@@ -220,26 +218,24 @@ This project uses semantic versioning and automated GitHub releases.
    pnpm version minor   # 0.1.0 → 0.2.0 (new features)
    pnpm version major   # 0.1.0 → 1.0.0 (breaking changes)
    ```
-   This creates a git commit and tag automatically.
 
-3. **Push to GitHub**
-   ```bash
-   git push && git push --tags
-   ```
-   This triggers the GitHub Actions workflow that builds and publishes the release.
+3. **Push tags** — `git push && git push --tags` triggers automated build/publish
 
-4. **Review and publish**
-   - GitHub Actions creates a **draft release** with the Windows installer
-   - Review the draft release on GitHub
-   - Click "Publish release" to make it public
+4. **Review draft** — GitHub Actions creates draft release with auto-generated notes from commits/PRs
 
-### Version Strategy
+### Build Outputs
 
-- **0.x.x** - Pre-release versions (breaking changes expected)
-- **1.0.0** - First stable release
-- **Prerelease tags** - Use `-beta.1`, `-alpha.1`, `-rc.1` for testing versions
+- **Installer** — `.exe` (Squirrel installer with auto-update support)
+- **Portable** — `.zip` (extract and run, no installation required)
 
-### Auto-Updates
+Both uploaded to GitHub Releases and Cloudflare R2 automatically.
 
-The app automatically checks for updates every hour when running in production mode. Users will be notified when a new version is available and can update with one click.
+### GitHub Secrets Required
+
+Configure in repository Settings → Secrets:
+- `R2_ACCESS_KEY_ID` — Cloudflare R2 access key
+- `R2_SECRET_ACCESS_KEY` — Cloudflare R2 secret key
+- `R2_BUCKET` — R2 bucket name
+- `R2_ENDPOINT` — R2 endpoint URL (e.g., `https://<account-id>.r2.cloudflarestorage.com`)
+
 
