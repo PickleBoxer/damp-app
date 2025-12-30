@@ -1,22 +1,38 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
+import type { Module } from 'flora-colossus';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { VitePlugin } from '@electron-forge/plugin-vite';
+import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { PublisherS3 } from '@electron-forge/publisher-s3';
+import { Walker, DepType } from 'flora-colossus';
+import path from 'node:path';
+import { cp, mkdir } from 'node:fs/promises';
+
+type CopyClass<T> = {
+  [P in keyof T]: T[P];
+};
+
+type CustomWalker = CopyClass<Walker> & {
+  modules: Module[];
+  walkDependenciesForModule: (moduleRoot: string, depType: DepType) => Promise<void>;
+};
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: {
-      unpack:
-        '**/node_modules/{dockerode,ssh2,cpu-features,tar-fs,@vscode/sudo-prompt,hostile}/**/*',
-    },
+    asar: true,
     icon: './src/main/icon/icon',
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    // Rebuild native modules for Electron's ABI
+    onlyModules: ['dockerode', 'hostile', '@vscode/sudo-prompt'],
+    force: true,
+  },
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['win32'])],
   plugins: [
+    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
       // If you are familiar with Vite configuration, it will look really familiar.
@@ -51,12 +67,36 @@ const config: ForgeConfig = {
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),
-    // This plugin automatically unpacks native modules from the asar archive
-    {
-      name: '@electron-forge/plugin-auto-unpack-natives',
-      config: {},
-    },
   ],
+  hooks: {
+    async packageAfterCopy(_forgeConfig, buildPath) {
+      const externalDependencies = ['dockerode', 'hostile', '@vscode/sudo-prompt'];
+      const depsToCopy = new Set<string>(externalDependencies);
+
+      const sourceNodeModulesPath = path.resolve(__dirname, 'node_modules');
+      const destNodeModulesPath = path.resolve(buildPath, 'node_modules');
+
+      for (const dep of externalDependencies) {
+        const walker = new Walker(path.join(sourceNodeModulesPath, dep)) as unknown as CustomWalker;
+
+        await walker.walkDependenciesForModule(path.join(sourceNodeModulesPath, dep), DepType.PROD);
+
+        walker.modules.forEach(treeDep => {
+          depsToCopy.add(treeDep.name);
+        });
+      }
+
+      await Promise.all(
+        Array.from(depsToCopy.values()).map(async packageName => {
+          const sourcePath = path.join(sourceNodeModulesPath, packageName);
+          const destPath = path.join(destNodeModulesPath, packageName);
+
+          await mkdir(path.dirname(destPath), { recursive: true });
+          await cp(sourcePath, destPath, { recursive: true, preserveTimestamps: true });
+        })
+      );
+    },
+  },
   publishers: [
     new PublisherS3({
       endpoint: process.env.R2_ENDPOINT,

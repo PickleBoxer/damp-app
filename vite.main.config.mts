@@ -16,6 +16,7 @@ export default defineConfig({
       external: [
         'dockerode',
         'hostile',
+        '@vscode/sudo-prompt',
         // Add other native dependencies if needed
       ],
     },
