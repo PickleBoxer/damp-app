@@ -15,7 +15,6 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'dockerode',
-        'hostile',
         '@vscode/sudo-prompt',
         // Add other native dependencies if needed
       ],

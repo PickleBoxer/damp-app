@@ -27,7 +27,7 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {
     // Rebuild native modules for Electron's ABI
-    onlyModules: ['dockerode', 'hostile', '@vscode/sudo-prompt'],
+    onlyModules: ['dockerode', '@vscode/sudo-prompt'],
     force: true,
   },
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['win32'])],
@@ -70,7 +70,8 @@ const config: ForgeConfig = {
   ],
   hooks: {
     async packageAfterCopy(_forgeConfig, buildPath) {
-      const externalDependencies = ['dockerode', 'hostile', '@vscode/sudo-prompt'];
+      // Copy external dependencies
+      const externalDependencies = ['dockerode', '@vscode/sudo-prompt'];
       const depsToCopy = new Set<string>(externalDependencies);
 
       const sourceNodeModulesPath = path.resolve(__dirname, 'node_modules');
@@ -95,6 +96,13 @@ const config: ForgeConfig = {
           await cp(sourcePath, destPath, { recursive: true, preserveTimestamps: true });
         })
       );
+
+      // Copy hosts helper script to resources/bin
+      const sourceBinPath = path.resolve(__dirname, 'src/main/bin');
+      const destBinPath = path.resolve(buildPath, '../bin');
+
+      await mkdir(destBinPath, { recursive: true });
+      await cp(sourceBinPath, destBinPath, { recursive: true });
     },
   },
   publishers: [

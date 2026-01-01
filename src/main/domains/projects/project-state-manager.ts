@@ -9,7 +9,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import semver from 'semver';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
-import { addHostEntry, removeHostEntry } from '@main/utils/hosts';
+import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
 import { createLogger } from '@main/utils/logger';
 import type { ContainerStateData } from '@shared/types/container';
 import type {
