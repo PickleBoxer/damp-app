@@ -1,4 +1,5 @@
-import { app, Tray, Menu, nativeImage, BrowserWindow } from 'electron';
+import { Tray, Menu, nativeImage, BrowserWindow } from 'electron';
+import { getIconPath, isMacOS } from '../utils/icon-path';
 
 export class TrayMenu {
   // Create a variable to store our tray
@@ -6,8 +7,6 @@ export class TrayMenu {
   // Readonly: Value can't be changed
   public readonly tray: Tray;
 
-  // Path where should we fetch our icon;
-  private readonly iconPath: string = '/icon/icon.ico';
   private contextMenu: Menu;
 
   constructor() {
@@ -64,11 +63,15 @@ export class TrayMenu {
   }
 
   createNativeImage() {
-    // Use absolute path from app base directory
-    const path = app.getAppPath() + this.iconPath;
-    const image = nativeImage.createFromPath(path);
-    // Marks the image as a template image.
-    image.setTemplateImage(true);
+    const iconPath = getIconPath('tray');
+    const image = nativeImage.createFromPath(iconPath);
+
+    // Template images are only used on macOS for automatic dark mode color inversion
+    // They should be monochrome images (black with transparent background)
+    if (isMacOS()) {
+      image.setTemplateImage(true);
+    }
+
     return image;
   }
 }

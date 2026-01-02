@@ -23,7 +23,8 @@ type CustomWalker = CopyClass<Walker> & {
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    icon: './src/main/icon/icon',
+    icon: './resources/icons/icon',
+    extraResource: ['resources'],
   },
   rebuildConfig: {
     // Rebuild native modules for Electron's ABI
@@ -96,13 +97,6 @@ const config: ForgeConfig = {
           await cp(sourcePath, destPath, { recursive: true, preserveTimestamps: true });
         })
       );
-
-      // Copy hosts helper script to resources/bin
-      const sourceBinPath = path.resolve(__dirname, 'src/main/bin');
-      const destBinPath = path.resolve(buildPath, '../bin');
-
-      await mkdir(destBinPath, { recursive: true });
-      await cp(sourceBinPath, destBinPath, { recursive: true });
     },
   },
   publishers: [
