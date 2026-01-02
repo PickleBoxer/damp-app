@@ -382,35 +382,6 @@ class NgrokManager {
   }
 
   /**
-   * Cleanup stopped tunnels (call this periodically or on project stop)
-   */
-  async cleanupStoppedTunnels(): Promise<void> {
-    const states = ngrokStateManager.getAllStates();
-
-    for (const state of states) {
-      if (state.containerId) {
-        const isRunning = await isContainerRunning(state.containerId);
-        if (!isRunning) {
-          // Container is not running or doesn't exist, clean up state
-          ngrokStateManager.updateState(state.projectId, {
-            status: 'stopped',
-            publicUrl: '',
-          });
-          logger.debug('Cleaned up stopped/orphaned tunnel', { projectId: state.projectId });
-        }
-      }
-    }
-  }
-
-  /**
-   * Check if there are any active tunnels being tracked
-   */
-  hasActiveTunnels(): boolean {
-    const states = ngrokStateManager.getAllStates();
-    return states.some(state => state.status === 'active' || state.status === 'starting');
-  }
-
-  /**
    * Stop all active tunnels (call on app shutdown)
    */
   async stopAllTunnels(): Promise<void> {

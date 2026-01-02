@@ -11,9 +11,21 @@ import { updateElectronApp } from 'update-electron-app';
 
 const logger = createLogger('main');
 
+// Prevent multiple instances - focus existing window instead
+if (!app.requestSingleInstanceLock()) {
+  logger.info('Another instance is already running, exiting...');
+  app.quit();
+  process.exit(0);
+}
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
+}
+
+// Set App User Model ID for Windows (proper taskbar grouping and notifications)
+if (process.platform === 'win32') {
+  app.setAppUserModelId(app.getName());
 }
 
 const inDevelopment = process.env.NODE_ENV === 'development';
@@ -62,12 +74,23 @@ function createWindow() {
   }
 }
 
+// Handle second instance attempts - focus the existing window
+app.on('second-instance', () => {
+  logger.info('Second instance detected, focusing existing window');
+  const windows = BrowserWindow.getAllWindows();
+  if (windows.length > 0) {
+    const mainWindow = windows[0];
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+    mainWindow.show();
+  }
+});
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-// app.on('ready', createWindow);
-// The Tray object can only be instantiated after the 'ready' event is fired
-
 app.whenReady().then(async () => {
   if (inDevelopment) {
     try {
@@ -80,7 +103,7 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // Initialize Docker network (non-blocking)
+  // Initialize Docker network (non-blocking, fails silently if Docker not running)
   // If Docker is not running, this will fail silently and network will be created on-demand
   ensureNetworkExists().catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
@@ -90,21 +113,6 @@ app.whenReady().then(async () => {
   // Use TrayMenu class for tray setup
   void new TrayMenu();
   logger.info('Tray menu initialized');
-
-  // Setup automatic cleanup for stopped tunnels (every 60 seconds, only when needed)
-  const cleanupInterval = setInterval(() => {
-    // Only run cleanup if there are tracked tunnels
-    if (ngrokManager.hasActiveTunnels()) {
-      ngrokManager.cleanupStoppedTunnels().catch((error: unknown) => {
-        logger.error('Failed to cleanup stopped tunnels', { error });
-      });
-    }
-  }, 60000);
-
-  // Clear interval on quit
-  app.on('before-quit', () => {
-    clearInterval(cleanupInterval);
-  });
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

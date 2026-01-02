@@ -108,10 +108,10 @@ export function useNgrokStatus(projectId: string, options?: { enabled?: boolean 
     },
     // Non-blocking startup configuration
     refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
     refetchOnReconnect: false,
     initialData: { status: 'stopped' }, // Placeholder data instead of null
-    staleTime: 4000,
+    staleTime: 25000,
     // Default gcTime is 5 minutes - queries auto-cleanup after going inactive
     enabled: options?.enabled ?? true,
   });
