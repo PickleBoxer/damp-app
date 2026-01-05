@@ -23,6 +23,8 @@ import type {
 import type { Result } from './result';
 import type { ContainerStateData } from './container';
 
+import type { NgrokStatusData } from './ngrok';
+
 /**
  * Theme mode management context
  */
@@ -67,7 +69,7 @@ export interface DockerContainerEvent {
   containerId: string;
   action: 'start' | 'stop' | 'die' | 'health_status' | 'kill' | 'pause' | 'unpause' | 'restart';
   timestamp: number;
-  // Metadata from com.damp.* labels
+  // Metadata from com.pickleboxer.damp.* labels
   serviceId?: string;
   projectId?: string;
   resourceType?: string;
@@ -226,8 +228,6 @@ export interface SyncContext {
     callback: (projectId: string, direction: 'to' | 'from', progress: SyncStatus) => void
   ) => () => void;
 }
-
-import type { NgrokStatusData } from './ngrok';
 
 /**
  * Ngrok tunnel management context

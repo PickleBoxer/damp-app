@@ -24,8 +24,9 @@ if (started) {
 }
 
 // Set App User Model ID for Windows (proper taskbar grouping and notifications)
+// Using reverse domain notation for global uniqueness and proper Windows shell integration
 if (process.platform === 'win32') {
-  app.setAppUserModelId(app.getName());
+  app.setAppUserModelId('com.pickleboxer.damp');
 }
 
 const inDevelopment = process.env.NODE_ENV === 'development';

@@ -6,7 +6,7 @@
 import type { ServiceId, ServiceType } from '@shared/types/service';
 
 // Label namespace prefix (Docker best practice)
-export const LABEL_NAMESPACE = 'com.damp' as const;
+export const LABEL_NAMESPACE = 'com.pickleboxer.damp' as const;
 
 /**
  * Label keys - centralized constants for all DAMP labels

@@ -31,7 +31,12 @@ const config: ForgeConfig = {
     onlyModules: ['dockerode', '@vscode/sudo-prompt'],
     force: true,
   },
-  makers: [new MakerSquirrel({}), new MakerZIP({}, ['win32'])],
+  makers: [
+    new MakerSquirrel({
+      name: 'com.pickleboxer.damp',
+    }),
+    new MakerZIP({}, ['win32']),
+  ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new VitePlugin({

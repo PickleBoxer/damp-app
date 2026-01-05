@@ -168,9 +168,9 @@ async function startEventMonitoring(
           action: event.Action || event.status,
           timestamp: event.time ? event.time * 1000 : Date.now(), // Convert to milliseconds
           // Include metadata from our label system
-          serviceId: labels['com.damp.service-id'],
-          projectId: labels['com.damp.project-id'],
-          resourceType: labels['com.damp.type'],
+          serviceId: labels['com.pickleboxer.damp.service-id'],
+          projectId: labels['com.pickleboxer.damp.project-id'],
+          resourceType: labels['com.pickleboxer.damp.type'],
         };
 
         logger.debug('Docker event received', containerEvent);
