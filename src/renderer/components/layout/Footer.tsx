@@ -42,7 +42,7 @@ export default function Footer() {
 
   const handleOpenTerminal = async () => {
     try {
-      const settings = getSettings();
+      const settings = await getSettings();
       const result = await window.shell.openHomeTerminal({
         defaultEditor: settings.defaultEditor,
         defaultTerminal: settings.defaultTerminal,
@@ -61,7 +61,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-background flex h-8 w-full shrink-0 items-center justify-between border-t text-xs">
+    <footer className="bg-background flex h-6 w-full shrink-0 items-center justify-between border-t text-xs">
       <DockerStatusFooter />
       <div className="flex h-full">
         <Tooltip>

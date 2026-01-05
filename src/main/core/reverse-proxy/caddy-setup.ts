@@ -3,7 +3,9 @@
  * Handles automatic SSL certificate generation and system installation for Caddy
  */
 
-import { execCommand, getFileFromContainer } from '@main/core/docker';
+import { execCommand, getFileFromContainer, findContainerByLabel } from '@main/core/docker';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import { ServiceId } from '@shared/types/service';
 import { isWindows, isMacOS } from '@shared/utils/platform';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -67,13 +69,29 @@ export interface CaddySSLSetupResult {
  * 5. Extract certificate from container
  * 6. Install certificate to system trust store
  *
- * @param containerName Name of the Caddy container (default: 'damp-web')
  * @returns Result object with success status and messages
  */
-export async function setupCaddySSL(containerName = 'damp-web'): Promise<CaddySSLSetupResult> {
+export async function setupCaddySSL(): Promise<CaddySSLSetupResult> {
   logger.info('Starting certificate setup...');
 
   try {
+    // Find Caddy container by label
+    const caddyContainer = await findContainerByLabel(
+      LABEL_KEYS.SERVICE_ID,
+      ServiceId.Caddy,
+      RESOURCE_TYPES.SERVICE_CONTAINER
+    );
+
+    if (!caddyContainer) {
+      return {
+        success: false,
+        certInstalled: false,
+        message: 'Caddy container not found',
+      };
+    }
+
+    const containerName = caddyContainer.Names[0]?.replace(/^\//, '') || caddyContainer.Id;
+
     // Step 1: Create Caddyfile
     logger.info('Creating default Caddyfile...');
     await createCaddyfile(containerName);

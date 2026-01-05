@@ -52,8 +52,6 @@ export interface HealthCheckConfig {
 export interface ServiceConfig {
   /** Docker image name and tag */
   image: string;
-  /** Container name */
-  container_name: string;
   /** Port mappings */
   ports: PortMapping[];
   /** Named volumes (without bindings) */
@@ -76,8 +74,6 @@ export interface CustomConfig {
   ports?: PortMapping[];
   /** Custom environment variables (merged with defaults) */
   environment_vars?: string[];
-  /** Custom container name */
-  container_name?: string;
   /** Custom volume bindings */
   volume_bindings?: string[];
   /** Generic metadata from post-install hooks (e.g., certInstalled, dbInitialized) */
@@ -189,8 +185,6 @@ export interface PostInstallHookContext {
   serviceId: ServiceId;
   /** Container ID */
   containerId: string;
-  /** Container name */
-  containerName: string;
   /** Custom configuration (if any) */
   customConfig: CustomConfig | null;
 }

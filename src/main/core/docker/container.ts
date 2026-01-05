@@ -101,7 +101,6 @@ export async function createContainer(
 
     // Build container configuration
     const containerConfig: ContainerCreateOptions = {
-      name: finalConfig.container_name,
       Image: finalConfig.image,
       Env: finalConfig.environment_vars,
       ExposedPorts: buildExposedPorts(portMappings),
@@ -654,7 +653,6 @@ function mergeConfigs(defaultConfig: ServiceConfig, customConfig?: CustomConfig)
 
   return {
     ...defaultConfig,
-    container_name: customConfig.container_name || defaultConfig.container_name,
     ports: customConfig.ports || defaultConfig.ports,
     environment_vars: customConfig.environment_vars
       ? [...defaultConfig.environment_vars, ...customConfig.environment_vars]

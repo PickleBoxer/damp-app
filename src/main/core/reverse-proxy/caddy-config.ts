@@ -3,7 +3,9 @@
  * Handles Caddyfile generation and synchronization for project reverse proxy
  */
 
-import { execCommand, getContainerState } from '@main/core/docker';
+import { execCommand, findContainerByLabel } from '@main/core/docker';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import { ServiceId } from '@shared/types/service';
 import type { Project } from '@shared/types/project';
 import { createLogger } from '@main/utils/logger';
 
@@ -15,14 +17,9 @@ const logger = createLogger('CaddyConfig');
 const CADDYFILE_PATH = '/etc/caddy/Caddyfile';
 
 /**
- * Default Caddy container name
- */
-const CADDY_CONTAINER_NAME = 'damp-web';
-
-/**
  * Generate Caddyfile content with all project reverse proxy rules
  */
-function generateCaddyfile(projects: Project[]): string {
+async function generateCaddyfile(projects: Project[]): Promise<string> {
   const lines: string[] = [
     '# DAMP Reverse Proxy Configuration',
     '# Auto-generated - Do not edit manually',
@@ -40,10 +37,25 @@ function generateCaddyfile(projects: Project[]): string {
     // Use project's configured forwarded port (stored in project state)
     const internalPort = project.forwardedPort;
 
+    // Find project container by label to get Docker-generated name/ID
+    const projectContainer = await findContainerByLabel(
+      LABEL_KEYS.PROJECT_ID,
+      project.id,
+      RESOURCE_TYPES.PROJECT_CONTAINER
+    );
+
+    if (!projectContainer) {
+      logger.warn(`Project container not found for ${project.name}, skipping Caddy config`);
+      continue;
+    }
+
+    // Use container ID (first 12 chars) as network address
+    const containerAddress = projectContainer.Id.substring(0, 12);
+
     // HTTPS upstream with TLS insecure skip verify for self-signed certs
     lines.push(`${project.domain} {`);
     lines.push('    tls internal');
-    lines.push(`    reverse_proxy https://${project.containerName}:${internalPort} {`);
+    lines.push(`    reverse_proxy https://${containerAddress}:${internalPort} {`);
     lines.push('        transport http {');
     lines.push('            tls_insecure_skip_verify');
     lines.push('        }');
@@ -66,40 +78,52 @@ export async function syncProjectsToCaddy(
   projects: Project[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if Caddy container is running
-    const containerState = await getContainerState(CADDY_CONTAINER_NAME);
+    // Find Caddy container by label instead of hardcoded name
+    const caddyContainer = await findContainerByLabel(
+      LABEL_KEYS.SERVICE_ID,
+      ServiceId.Caddy,
+      RESOURCE_TYPES.SERVICE_CONTAINER
+    );
 
-    if (!containerState?.running) {
+    if (!caddyContainer) {
+      logger.info('Skipping - Caddy container not found');
+      return { success: true }; // Not an error - just skip
+    }
+
+    // Check if container is running
+    if (caddyContainer.State !== 'running') {
       logger.info('Skipping - Caddy container not running');
       return { success: true }; // Not an error - just skip
     }
+
+    const caddyContainerName = caddyContainer.Names[0]?.replace(/^\//, '') || caddyContainer.Id;
 
     logger.info('Syncing projects to Caddy configuration...');
 
     logger.info(`Found ${projects.length} project(s) to configure`);
 
     // Generate Caddyfile content
-    const caddyfileContent = generateCaddyfile(projects);
+    const caddyfileContent = await generateCaddyfile(projects);
 
     // Write Caddyfile to container
     const escapedContent = caddyfileContent.replaceAll("'", String.raw`'\''`);
     const writeCmd = ['sh', '-c', `echo '${escapedContent}' > ${CADDYFILE_PATH}`];
 
-    const writeResult = await execCommand(CADDY_CONTAINER_NAME, writeCmd);
+    const writeResult = await execCommand(caddyContainerName, writeCmd);
     if (writeResult.exitCode !== 0) {
       throw new Error(`Failed to write Caddyfile: ${writeResult.stderr}`);
     }
 
     // Format Caddyfile
     const formatCmd = ['caddy', 'fmt', '--overwrite', CADDYFILE_PATH];
-    const formatResult = await execCommand(CADDY_CONTAINER_NAME, formatCmd);
+    const formatResult = await execCommand(caddyContainerName, formatCmd);
     if (formatResult.exitCode !== 0) {
       throw new Error(`Failed to format Caddyfile: ${formatResult.stderr}`);
     }
 
     // Reload Caddy configuration
     const reloadCmd = ['caddy', 'reload', '--config', CADDYFILE_PATH];
-    const reloadResult = await execCommand(CADDY_CONTAINER_NAME, reloadCmd);
+    const reloadResult = await execCommand(caddyContainerName, reloadCmd);
     if (reloadResult.exitCode !== 0) {
       throw new Error(`Failed to reload Caddy: ${reloadResult.stderr}`);
     }
@@ -123,8 +147,12 @@ export async function syncProjectsToCaddy(
  */
 export async function isCaddyReady(): Promise<boolean> {
   try {
-    const containerState = await getContainerState(CADDY_CONTAINER_NAME);
-    return containerState?.running ?? false;
+    const caddyContainer = await findContainerByLabel(
+      LABEL_KEYS.SERVICE_ID,
+      ServiceId.Caddy,
+      RESOURCE_TYPES.SERVICE_CONTAINER
+    );
+    return caddyContainer?.State === 'running';
   } catch {
     return false;
   }

@@ -208,12 +208,8 @@ function ProjectsPage() {
               <h2 className="text-sm font-semibold tracking-wide">Projects</h2>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleAddProject}
-                    className="h-7 w-7"
-                  >
+                  <Button size="sm" variant="outline" onClick={handleAddProject} className="h-7">
+                    Add
                     <Plus className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>

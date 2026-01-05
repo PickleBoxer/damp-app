@@ -222,13 +222,6 @@ class ProjectStateManager {
   }
 
   /**
-   * Generate container name from project name (expects pre-sanitized name)
-   */
-  private generateContainerName(projectName: string): string {
-    return `${projectName}_container`;
-  }
-
-  /**
    * Validate PHP version for Laravel projects
    */
   private validatePhpVersion(type: ProjectType, phpVersion: PhpVersion): Result<void> {
@@ -288,7 +281,6 @@ class ProjectStateManager {
         phpExtensions: project.phpExtensions.join(' '),
         documentRoot,
         networkName: project.networkName,
-        containerName: this.generateContainerName(project.name),
         forwardedPort: project.forwardedPort,
         enableClaudeAi: project.enableClaudeAi,
         postStartCommand: project.postStartCommand,
@@ -507,7 +499,6 @@ class ProjectStateManager {
       importMethod,
       path: projectPath,
       volumeName: this.generateVolumeName(sanitizedName),
-      containerName: this.generateContainerName(sanitizedName),
       domain: this.generateDomain(sanitizedName),
       phpVersion: input.phpVersion,
       phpVariant: input.phpVariant,

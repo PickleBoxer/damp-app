@@ -15,8 +15,8 @@ const logger = createLogger('CaddyHook');
  * - Sets up SSL certificates
  * - Syncs existing projects to Caddy
  */
-export const caddyPostInstallHook: PostInstallHook = async context => {
-  const result = await setupCaddySSL(context.containerName);
+export const caddyPostInstallHook: PostInstallHook = async () => {
+  const result = await setupCaddySSL();
 
   // Sync existing projects to Caddy (dynamically import to avoid circular dependency)
   const { projectStorage } = await import('@main/core/storage/project-storage');

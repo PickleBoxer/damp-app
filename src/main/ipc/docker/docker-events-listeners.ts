@@ -165,7 +165,6 @@ async function startEventMonitoring(
         const labels = event.Actor?.Attributes || {};
         const containerEvent = {
           containerId: event.Actor?.ID || event.id,
-          containerName: labels.name || '',
           action: event.Action || event.status,
           timestamp: event.time ? event.time * 1000 : Date.now(), // Convert to milliseconds
           // Include metadata from our label system

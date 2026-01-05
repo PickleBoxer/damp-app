@@ -136,7 +136,6 @@ class NgrokManager {
 
       // Create ngrok container pointing to project container by ID
       const container = await docker.createContainer({
-        name: `ngrok_${project.id}`, // Use project ID for stability
         Image: NGROK_IMAGE,
         Env: env,
         Cmd: ['http', `https://${projectContainerId}:${project.forwardedPort}`],

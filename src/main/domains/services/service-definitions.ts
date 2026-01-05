@@ -22,7 +22,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: true,
     default_config: {
       image: 'caddy:latest',
-      container_name: 'damp-web',
       ports: [
         ['80', '80'],
         ['443', '443'],
@@ -46,7 +45,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'mysql:latest',
-      container_name: 'damp-mysql',
       ports: [['3306', '3306']],
       volumes: [],
       environment_vars: [
@@ -77,7 +75,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'axllent/mailpit:latest',
-      container_name: 'damp-mailpit',
       ports: [
         ['1025', '1025'], // SMTP
         ['8025', '8025'], // Web UI
@@ -105,7 +102,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'postgres:17-alpine',
-      container_name: 'damp-postgresql',
       ports: [['5432', '5432']],
       volumes: [],
       environment_vars: [
@@ -135,7 +131,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'mariadb:11',
-      container_name: 'damp-mariadb',
       ports: [['3306', '3306']],
       volumes: [],
       environment_vars: [
@@ -166,7 +161,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'mongodb/mongodb-atlas-local:latest',
-      container_name: 'damp-mongodb',
       ports: [['27017', '27017']],
       volumes: [],
       environment_vars: [
@@ -200,7 +194,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'redis:alpine',
-      container_name: 'damp-redis',
       ports: [['6379', '6379']],
       volumes: [],
       environment_vars: [],
@@ -226,7 +219,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'getmeili/meilisearch:latest',
-      container_name: 'damp-meilisearch',
       ports: [['7700', '7700']],
       volumes: [],
       environment_vars: ['MEILI_NO_ANALYTICS=false', 'MEILI_MASTER_KEY=masterkey'],
@@ -252,7 +244,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'minio/minio:latest',
-      container_name: 'damp-minio',
       ports: [
         ['9000', '9000'], // API
         ['8900', '8900'], // Console
@@ -281,7 +272,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'memcached:alpine',
-      container_name: 'damp-memcached',
       ports: [['11211', '11211']],
       volumes: [],
       environment_vars: [],
@@ -302,7 +292,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'rabbitmq:4-management-alpine',
-      container_name: 'damp-rabbitmq',
       ports: [
         ['5672', '5672'], // AMQP
         ['15672', '15672'], // Management UI
@@ -331,7 +320,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'typesense/typesense:27.1',
-      container_name: 'damp-typesense',
       ports: [['8108', '8108']],
       volumes: [],
       environment_vars: [
@@ -366,7 +354,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'valkey/valkey:alpine',
-      container_name: 'damp-valkey',
       ports: [['6379', '6379']],
       volumes: [],
       environment_vars: [],
@@ -392,7 +379,6 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     required: false,
     default_config: {
       image: 'rustfs/rustfs:latest',
-      container_name: 'damp-rustfs',
       ports: [
         ['9000', '9000'], // API
         ['9001', '9001'], // Console

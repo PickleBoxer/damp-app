@@ -56,8 +56,6 @@ export interface Project {
   path: string;
   /** Docker volume name (damp_project_{name}) */
   volumeName: string;
-  /** Docker container name ({name}_devcontainer) */
-  containerName: string;
   /** Local domain (e.g., myproject.local) */
   domain: string;
   /** PHP version */
@@ -157,7 +155,6 @@ export interface TemplateContext {
   phpVariant: PhpVariant;
   documentRoot: string;
   networkName: string;
-  containerName: string;
   forwardedPort: number;
   enableClaudeAi: boolean;
   postStartCommand: string;

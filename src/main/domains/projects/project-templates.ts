@@ -75,7 +75,6 @@ function renderTemplate(template: string, context: TemplateContext): string {
     .replaceAll('{{SERVICE_TYPE}}', serviceType)
     .replaceAll('{{DOCUMENT_ROOT}}', context.documentRoot)
     .replaceAll('{{NETWORK_NAME}}', context.networkName)
-    .replaceAll('{{CONTAINER_NAME}}', context.containerName)
     .replaceAll('{{FORWARDED_PORT}}', context.forwardedPort.toString())
     .replaceAll('{{LABEL_MANAGED}}', `${LABEL_KEYS.MANAGED}=${labels[LABEL_KEYS.MANAGED]}`)
     .replaceAll('{{LABEL_TYPE}}', `${LABEL_KEYS.TYPE}=${labels[LABEL_KEYS.TYPE]}`)
@@ -122,8 +121,7 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
         "target": "development",
         "args": {
             "USER_ID": "\${localEnv:UID:1000}",
-            "GROUP_ID": "\${localEnv:GID:1000}",
-            "CONTAINER_NAME": "{{CONTAINER_NAME}}"
+            "GROUP_ID": "\${localEnv:GID:1000}"
         }
     },
 
@@ -159,7 +157,6 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
 
     "runArgs": [
         "--network={{NETWORK_NAME}}",
-        "--name={{CONTAINER_NAME}}",
         "--label={{LABEL_MANAGED}}",
         "--label={{LABEL_TYPE}}",
         "--label={{LABEL_PROJECT_ID}}",
@@ -237,19 +234,6 @@ RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master
     && sed -i 's/plugins=(git)/plugins=(git node npm composer sudo command-not-found zsh-autosuggestions zsh-syntax-highlighting zsh-completions)/' ~/.zshrc
 
 USER root
-
-# Add custom Apache/Nginx configuration to inject container identification headers
-ARG CONTAINER_NAME
-# Apache: Use static header with build-time value
-RUN if [ -d /etc/apache2/conf-enabled ]; then \\
-        echo '# Container identification header' > /etc/apache2/conf-enabled/container-headers.conf && \\
-        echo "Header set X-Container-Name \\"\${CONTAINER_NAME}\\"" >> /etc/apache2/conf-enabled/container-headers.conf; \\
-    fi
-
-# Nginx: Use static header with build-time value
-RUN if [ -d /etc/nginx/server-opts.d ]; then \\
-        echo "add_header X-Container-Name \${CONTAINER_NAME} always;" > /etc/nginx/server-opts.d/container-headers.conf; \\
-    fi
 
 # Switch to www-data user (S6 Overlay runs services as www-data)
 # VS Code connects as www-data via remoteUser
@@ -377,8 +361,6 @@ services:
         PHP_VARIANT: {{PHP_VARIANT}}
         USER_ID: \${UID:-1000}
         GROUP_ID: \${GID:-1000}
-        CONTAINER_NAME: {{CONTAINER_NAME}}_dev
-    container_name: {{CONTAINER_NAME}}_dev
     restart: unless-stopped
 
     ports:
@@ -418,10 +400,9 @@ services:
         PHP_VARIANT: {{PHP_VARIANT}}
 
     # Option 2: Use pre-built image (comment 'build' above and uncomment 'image' below)
-    # Build image first: docker build --target production -t {{CONTAINER_NAME}}:latest .
-    # image: {{CONTAINER_NAME}}:latest
+    # Build image first: docker build --target production -t {{PROJECT_NAME}}:latest .
+    # image: {{PROJECT_NAME}}:latest
 
-    container_name: {{CONTAINER_NAME}}_prod
     restart: unless-stopped
 
     ports:

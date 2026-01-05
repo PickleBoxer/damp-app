@@ -31,7 +31,6 @@ import {
   pullImage,
   createContainer,
   startContainer,
-  getContainerState,
   getContainerStateByLabel,
   removeContainer,
   stopContainer,
@@ -246,9 +245,11 @@ class ServiceStateManager {
         await startContainer(containerId);
       }
 
-      // Get actual port mappings after creation
-      const containerState = await getContainerState(
-        options?.custom_config?.container_name || definition.default_config.container_name
+      // Get actual port mappings after creation using label-based lookup
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        serviceId,
+        RESOURCE_TYPES.SERVICE_CONTAINER
       );
 
       // Save custom config with actual ports
@@ -270,8 +271,10 @@ class ServiceStateManager {
       if (postInstallHook) {
         try {
           // Ensure container is running before executing hook
-          const currentStatus = await getContainerState(
-            options?.custom_config?.container_name || definition.default_config.container_name
+          const currentStatus = await getContainerStateByLabel(
+            LABEL_KEYS.SERVICE_ID,
+            serviceId,
+            RESOURCE_TYPES.SERVICE_CONTAINER
           );
 
           if (currentStatus?.exists && currentStatus.container_id && !currentStatus.running) {
@@ -284,8 +287,6 @@ class ServiceStateManager {
           const hookResult = await postInstallHook({
             serviceId,
             containerId,
-            containerName:
-              options?.custom_config?.container_name || definition.default_config.container_name,
             customConfig,
           });
 
@@ -351,11 +352,13 @@ class ServiceStateManager {
       }
 
       const state = serviceStorage.getServiceState(serviceId);
-      const containerName =
-        state?.custom_config?.container_name || definition.default_config.container_name;
 
-      // Check if container exists in Docker
-      const containerState = await getContainerState(containerName);
+      // Check if container exists in Docker using label-based lookup
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        serviceId,
+        RESOURCE_TYPES.SERVICE_CONTAINER
+      );
       if (!containerState?.exists) {
         return {
           success: false,
@@ -424,11 +427,11 @@ class ServiceStateManager {
         };
       }
 
-      const state = serviceStorage.getServiceState(serviceId);
-      const containerName =
-        state?.custom_config?.container_name || definition.default_config.container_name;
-
-      const containerState = await getContainerState(containerName);
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        serviceId,
+        RESOURCE_TYPES.SERVICE_CONTAINER
+      );
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -486,11 +489,11 @@ class ServiceStateManager {
         };
       }
 
-      const state = serviceStorage.getServiceState(serviceId);
-      const containerName =
-        state?.custom_config?.container_name || definition.default_config.container_name;
-
-      const containerState = await getContainerState(containerName);
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        serviceId,
+        RESOURCE_TYPES.SERVICE_CONTAINER
+      );
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -538,11 +541,11 @@ class ServiceStateManager {
         };
       }
 
-      const state = serviceStorage.getServiceState(serviceId);
-      const containerName =
-        state?.custom_config?.container_name || definition.default_config.container_name;
-
-      const containerState = await getContainerState(containerName);
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        serviceId,
+        RESOURCE_TYPES.SERVICE_CONTAINER
+      );
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -578,14 +581,15 @@ class ServiceStateManager {
     this.ensureInitialized();
 
     try {
-      const state = serviceStorage.getServiceState(serviceId);
-      const containerName =
-        state?.custom_config?.container_name ||
-        getServiceDefinition(serviceId)?.default_config.container_name;
+      // Check if service is installed using label-based lookup
+      const containerState = await getContainerStateByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        serviceId,
+        RESOURCE_TYPES.SERVICE_CONTAINER
+      );
 
-      if (containerName) {
-        const containerState = await getContainerState(containerName);
-        if (!containerState?.exists) {
+      if (containerState) {
+        if (!containerState.exists) {
           return {
             success: false,
             error: `Service ${serviceId} is not installed`,

@@ -65,7 +65,6 @@ export interface DockerContext {
  */
 export interface DockerContainerEvent {
   containerId: string;
-  containerName: string;
   action: 'start' | 'stop' | 'die' | 'health_status' | 'kill' | 'pause' | 'unpause' | 'restart';
   timestamp: number;
   // Metadata from com.damp.* labels
