@@ -11,11 +11,24 @@ interface ProjectPreviewProps {
 export function ProjectPreview({ project, isRunning = false }: Readonly<ProjectPreviewProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [shouldShow, setShouldShow] = useState(isRunning);
 
   // Use Caddy domain for preview
   const previewUrl = `https://${project.domain}`;
   const displayUrl = project.domain;
 
+  // Handle fade in when isRunning changes
+  useEffect(() => {
+    if (isRunning) {
+      // Small delay to ensure transition is visible
+      const timer = setTimeout(() => setShouldShow(true), 50);
+      return () => clearTimeout(timer);
+    }
+    // When not running, reset immediately without state update in effect
+    return () => setShouldShow(false);
+  }, [isRunning]);
+
+  // Handle scale updates
   useEffect(() => {
     const updateScale = () => {
       const el = containerRef.current;
@@ -42,9 +55,22 @@ export function ProjectPreview({ project, isRunning = false }: Readonly<ProjectP
               ref={containerRef}
               className="bg-card flex h-full w-full items-center justify-center overflow-hidden"
             >
-              {isRunning ? (
+              {/* Placeholder - visible when not running */}
+              <div
+                className={`text-muted-foreground absolute inset-0 flex flex-col items-center justify-center gap-2 transition-opacity duration-300 ${
+                  isRunning ? 'pointer-events-none opacity-0' : 'opacity-100'
+                }`}
+              >
+                <Globe className="h-8 w-8 opacity-50" />
+                <p className="text-xs">Project not running</p>
+              </div>
+
+              {/* Webview - fades in when running */}
+              {isRunning && (
                 <div
-                  className="relative h-full w-full overflow-hidden"
+                  className={`relative h-full w-full overflow-hidden transition-opacity duration-300 ${
+                    shouldShow ? 'opacity-100' : 'opacity-0'
+                  }`}
                   style={{
                     pointerEvents: 'none',
                   }}
@@ -58,16 +84,10 @@ export function ProjectPreview({ project, isRunning = false }: Readonly<ProjectP
                     }}
                   >
                     <webview
-                      key={previewUrl}
                       src={previewUrl}
                       style={{ width: '1920px', height: '1080px', pointerEvents: 'none' }}
                     />
                   </div>
-                </div>
-              ) : (
-                <div className="text-muted-foreground flex flex-col items-center gap-2">
-                  <Globe className="h-8 w-8 opacity-50" />
-                  <p className="text-xs">Project not running</p>
                 </div>
               )}
             </div>
