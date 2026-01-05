@@ -21,7 +21,7 @@ import type {
   PullProgress,
 } from './service';
 import type { Result } from './result';
-import type { ContainerStateData } from './container';
+import type { ContainerState } from './container';
 
 import type { NgrokStatusData } from './ngrok';
 
@@ -101,7 +101,7 @@ export interface DockerEventsContext {
 export interface ServicesContext {
   getAllServices: () => Promise<ServiceDefinition[]>;
   getService: (serviceId: ServiceId) => Promise<ServiceInfo>;
-  getServiceContainerState: (serviceId: ServiceId) => Promise<ContainerStateData | null>;
+  getServiceContainerState: (serviceId: ServiceId) => Promise<ContainerState | null>;
   installService: (
     serviceId: ServiceId,
     options?: InstallOptions
@@ -140,7 +140,7 @@ export interface ProjectsContext {
   ) => Promise<Result<void>>;
   reorderProjects: (projectIds: string[]) => Promise<Result<void>>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
-  getProjectContainerState: (projectId: string) => Promise<ContainerStateData | null>;
+  getProjectContainerState: (projectId: string) => Promise<ContainerState | null>;
   onCopyProgress: (
     callback: (projectId: string, progress: VolumeCopyProgress) => void
   ) => () => void;

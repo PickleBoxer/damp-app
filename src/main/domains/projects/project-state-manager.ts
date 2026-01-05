@@ -11,7 +11,7 @@ import semver from 'semver';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
 import { createLogger } from '@main/utils/logger';
-import type { ContainerStateData } from '@shared/types/container';
+import type { ContainerState } from '@shared/types/container';
 import type {
   Project,
   ProjectType,
@@ -921,7 +921,7 @@ class ProjectStateManager {
   /**
    * Get container status for a specific project using label-based lookup
    */
-  async getProjectContainerState(projectId: string): Promise<ContainerStateData | null> {
+  async getProjectContainerState(projectId: string): Promise<ContainerState | null> {
     this.ensureInitialized();
 
     const project = projectStorage.getProject(projectId);
@@ -938,9 +938,10 @@ class ProjectStateManager {
       );
 
       return {
-        id: project.id,
         running: containerState.running,
         exists: containerState.exists,
+        container_id: containerState.container_id,
+        container_name: containerState.container_name,
         state: containerState.state,
         ports: containerState.ports,
         health_status: containerState.health_status ?? 'none',
@@ -948,9 +949,10 @@ class ProjectStateManager {
     } catch (error) {
       logger.error('Failed to get project container state', { projectId, error });
       return {
-        id: project.id,
         running: false,
         exists: false,
+        container_id: null,
+        container_name: null,
         state: null,
         ports: [],
         health_status: 'none',

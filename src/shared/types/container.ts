@@ -10,16 +10,18 @@
 export type PortMapping = [string, string];
 
 /**
- * Standardized container status data (shared between projects and services)
+ * Docker container status
  * Contains Docker container runtime state - direct from Docker API
  */
-export interface ContainerStateData {
-  /** Unique identifier (projectId or serviceId) */
-  id: string;
-  /** Whether container is running */
-  running: boolean;
+export interface ContainerState {
   /** Whether container exists */
   exists: boolean;
+  /** Whether container is running */
+  running: boolean;
+  /** Container ID if exists */
+  container_id: string | null;
+  /** Actual container name from Docker (e.g., 'quirky_archimedes' or 'damp-mysql') */
+  container_name: string | null;
   /** Container state (created, running, paused, restarting, removing, exited, dead) */
   state: string | null;
   /** Port mappings [hostPort, containerPort] */

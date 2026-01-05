@@ -10,7 +10,7 @@ import { projectsQueryOptions, projectContainerStateQueryOptions } from '@render
 import type { Project } from '@shared/types/project';
 import type { ServiceDefinition } from '@shared/types/service';
 // ...existing code...
-import type { ContainerStateData } from '@shared/types/container';
+import type { ContainerState } from '@shared/types/container';
 
 export interface DashboardService extends ServiceDefinition {
   /** Whether service container exists (replaces installed) */
@@ -18,7 +18,7 @@ export interface DashboardService extends ServiceDefinition {
   /** Whether container is running (replaces enabled) */
   running: boolean;
   /** Health status of the container */
-  health_status: ContainerStateData['health_status'];
+  health_status: ContainerState['health_status'];
 }
 
 export interface DashboardData {
@@ -51,19 +51,14 @@ export function useDashboardData(): DashboardData {
   });
 
   const isLoadingServicesStatus = serviceStatusQueries.some(q => q.isLoading);
-  const servicesStatus = serviceStatusQueries
-    .map(q => q.data ?? { id: '', exists: false, running: false, health_status: 'none' })
-    .filter((s: { id: string }) => s.id !== '');
+
+  // Extract data for stable dependencies
+  const serviceStatusData = serviceStatusQueries.map(q => q.data);
 
   // Merge definitions with statuses
   const mergedServices = useMemo(() => {
-    const statusMap = new Map(
-      servicesStatus.map(
-        (s: { id: string; exists: boolean; running: boolean; health_status: string }) => [s.id, s]
-      )
-    );
-    return services.map((service: ServiceDefinition) => {
-      const status = statusMap.get(service.id);
+    return services.map((service: ServiceDefinition, index: number) => {
+      const status = serviceStatusData[index];
       return {
         ...service,
         exists: status?.exists ?? false,
@@ -71,7 +66,7 @@ export function useDashboardData(): DashboardData {
         health_status: status?.health_status ?? 'none',
       } as DashboardService;
     });
-  }, [services, servicesStatus]);
+  }, [services, serviceStatusData]);
 
   // Fetch projects (non-blocking)
   const { data: projects = [], isLoading: isLoadingProjectsList } = useQuery<Project[], Error>({
@@ -84,9 +79,9 @@ export function useDashboardData(): DashboardData {
   });
 
   const isLoadingBatchStatus = projectStatusQueries.some(q => q.isLoading);
-  const batchStatus = projectStatusQueries
-    .map(q => q.data ?? { id: '', running: false })
-    .filter((s: { id: string; running: boolean }) => s.id !== '');
+
+  // Extract data for stable dependencies
+  const projectStatusData = projectStatusQueries.map(q => q.data);
 
   // Filter for running services only
   const runningServices = useMemo(
@@ -105,16 +100,13 @@ export function useDashboardData(): DashboardData {
 
   // Combine projects with their running status and filter for running only
   const runningProjects = useMemo(() => {
-    const statusMap = new Map(
-      batchStatus.map((s: { id: string; running: boolean }) => [s.id, s.running])
-    );
     return projects
-      .map((project: Project) => ({
+      .map((project: Project, index: number) => ({
         ...project,
-        isRunning: statusMap.get(project.id) ?? false,
+        isRunning: projectStatusData[index]?.running ?? false,
       }))
       .filter((project: Project & { isRunning?: boolean }) => project.isRunning);
-  }, [projects, batchStatus]);
+  }, [projects, projectStatusData]);
 
   const isLoadingProjects = isLoadingProjectsList || isLoadingBatchStatus;
   const isLoadingServices = isLoadingServicesList || isLoadingServicesStatus;

@@ -114,24 +114,6 @@ export interface ServiceState {
 }
 
 /**
- * Docker container status
- */
-export interface ContainerState {
-  /** Whether container exists */
-  exists: boolean;
-  /** Whether container is running */
-  running: boolean;
-  /** Container ID if exists */
-  container_id: string | null;
-  /** Container state (created, running, paused, restarting, removing, exited, dead) */
-  state: string | null;
-  /** Actual port mappings (may differ from config if auto-adjusted) */
-  ports: PortMapping[];
-  /** Health status of the container */
-  health_status?: 'starting' | 'healthy' | 'unhealthy' | 'none';
-}
-
-/**
  * Progress information during image pull
  */
 export interface PullProgress {

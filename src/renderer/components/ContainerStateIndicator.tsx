@@ -5,11 +5,11 @@
  */
 
 import { HiOutlineStatusOnline } from 'react-icons/hi';
-import type { ContainerStateData } from '@shared/types/container';
+import type { ContainerState } from '@shared/types/container';
 
 interface ContainerStateIndicatorProps {
   /** Container status object */
-  status?: ContainerStateData | null;
+  status?: ContainerState | null;
   /** Optional custom className */
   className?: string;
 }

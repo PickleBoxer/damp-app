@@ -28,7 +28,7 @@ export function useDockerEvents() {
     // Subscribe to Docker container events
     const unsubscribe = dockerEventsApi.onEvent(event => {
       // Log event for debugging
-      console.debug('[Docker Event]', event.action, event.containerName, {
+      console.debug('[Docker Event]', event.action, event.containerId, {
         serviceId: event.serviceId,
         projectId: event.projectId,
         resourceType: event.resourceType,

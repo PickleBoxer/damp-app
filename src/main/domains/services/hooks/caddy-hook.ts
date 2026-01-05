@@ -3,7 +3,7 @@
  * Sets up SSL certificates and syncs existing projects
  */
 
-import type { PostInstallHook } from '@shared/types/service';
+import type { PostInstallHook, PostInstallHookResult } from '@shared/types/service';
 import { setupCaddySSL } from '@main/core/reverse-proxy/caddy-setup';
 import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 import { createLogger } from '@main/utils/logger';
@@ -15,7 +15,7 @@ const logger = createLogger('CaddyHook');
  * - Sets up SSL certificates
  * - Syncs existing projects to Caddy
  */
-export const caddyPostInstallHook: PostInstallHook = async () => {
+export const caddyPostInstallHook: PostInstallHook = async (): Promise<PostInstallHookResult> => {
   const result = await setupCaddySSL();
 
   // Sync existing projects to Caddy (dynamically import to avoid circular dependency)
@@ -32,7 +32,7 @@ export const caddyPostInstallHook: PostInstallHook = async () => {
   return {
     success: result.success,
     message: result.message,
-    metadata: {
+    data: {
       certInstalled: result.certInstalled,
     },
   };

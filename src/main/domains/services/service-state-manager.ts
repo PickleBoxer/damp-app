@@ -12,7 +12,7 @@ import type {
   PullProgress,
 } from '@shared/types/service';
 import type { Result } from '@shared/types/result';
-import type { ContainerStateData, PortMapping } from '@shared/types/container';
+import type { ContainerState, PortMapping } from '@shared/types/container';
 import { ServiceId } from '@shared/types/service';
 import {
   buildServiceContainerLabels,
@@ -123,7 +123,7 @@ class ServiceStateManager {
   /**
    * Get container status for a specific service using label-based lookup
    */
-  async getServiceContainerState(serviceId: ServiceId): Promise<ContainerStateData | null> {
+  async getServiceContainerState(serviceId: ServiceId): Promise<ContainerState | null> {
     this.ensureInitialized();
 
     const definition = getServiceDefinition(serviceId);
@@ -140,9 +140,10 @@ class ServiceStateManager {
       );
 
       return {
-        id: serviceId,
         running: containerState.running,
         exists: containerState.exists,
+        container_id: containerState.container_id,
+        container_name: containerState.container_name,
         state: containerState.state,
         ports: containerState.ports,
         health_status: containerState.health_status ?? 'none',
@@ -150,9 +151,10 @@ class ServiceStateManager {
     } catch (error) {
       logger.error('Failed to get service container state', { serviceId, error });
       return {
-        id: serviceId,
         running: false,
         exists: false,
+        container_id: null,
+        container_name: null,
         state: null,
         ports: [],
         health_status: 'none',

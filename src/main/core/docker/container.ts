@@ -5,13 +5,8 @@
 
 import Docker from 'dockerode';
 import type { ContainerCreateOptions } from 'dockerode';
-import type {
-  ServiceConfig,
-  CustomConfig,
-  PullProgress,
-  ContainerState,
-} from '@shared/types/service';
-import type { PortMapping } from '@shared/types/container';
+import type { ServiceConfig, CustomConfig, PullProgress } from '@shared/types/service';
+import type { PortMapping, ContainerState } from '@shared/types/container';
 import { docker } from './docker';
 import { ensureNetworkExists } from './network';
 import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
@@ -274,10 +269,14 @@ export async function getContainerState(containerNameOrId: string): Promise<Cont
       ? healthStatusMap[inspection.State.Health.Status] || 'none'
       : 'none';
 
+    // Extract container name (remove leading '/')
+    const containerName = inspection.Name?.replace(/^\//, '') || null;
+
     return {
       exists: true,
       running: inspection.State.Running,
       container_id: inspection.Id,
+      container_name: containerName,
       state: inspection.State.Status,
       ports,
       health_status: healthStatus,
@@ -288,6 +287,7 @@ export async function getContainerState(containerNameOrId: string): Promise<Cont
       exists: false,
       running: false,
       container_id: null,
+      container_name: null,
       state: null,
       ports: [],
       health_status: 'none',
@@ -340,6 +340,7 @@ export async function getContainerStateByLabel(
       running: false,
       state: null,
       container_id: null,
+      container_name: null,
       ports: [],
       health_status: 'none',
     };

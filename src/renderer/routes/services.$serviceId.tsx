@@ -216,7 +216,10 @@ function formatAsLaravelEnv(service: ServiceInfo, host: string, port: string): s
 
 // Connection info component
 function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
-  const containerName = `damp-${service.id}`;
+  const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
+
+  // Use actual container name from Docker, fallback to display format
+  const containerName = state?.container_name || `damp-${service.id}`;
   const port = getServicePort(service, 0);
   const internalPort = service.default_config.ports?.[0]?.[1] || port;
 
