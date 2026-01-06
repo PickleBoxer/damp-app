@@ -7,7 +7,7 @@ import { TrayMenu } from './electron/TrayMenu';
 import { ngrokManager } from './services/ngrok/ngrok-manager';
 import { ensureNetworkExists } from '@main/core/docker';
 import { createLogger } from '@main/utils/logger';
-import { updateElectronApp } from 'update-electron-app';
+import { setupAutoUpdater } from './ipc/updater/updater-listeners';
 
 const logger = createLogger('main');
 
@@ -30,12 +30,6 @@ if (process.platform === 'win32') {
 }
 
 const inDevelopment = process.env.NODE_ENV === 'development';
-
-// Auto-update setup (checks GitHub Releases via update.electronjs.org)
-updateElectronApp({
-  updateInterval: '1 hour',
-  logger: logger,
-});
 
 function createWindow() {
   const preload = path.join(__dirname, 'preload.js');
@@ -110,6 +104,12 @@ app.whenReady().then(async () => {
     const message = error instanceof Error ? error.message : String(error);
     logger.info('Network initialization skipped', { error: message });
   });
+
+  // Set up auto-updater (deferred to not block app initialization)
+  // Delayed by 5 seconds to ensure app is fully initialized
+  setTimeout(() => {
+    setupAutoUpdater();
+  }, 5000);
 
   // Use TrayMenu class for tray setup
   void new TrayMenu();

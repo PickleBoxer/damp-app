@@ -24,7 +24,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: './resources/icons/icon',
-    extraResource: ['resources'],
+    extraResource: ['resources/bin', 'resources/icons'],
   },
   rebuildConfig: {
     // Rebuild native modules for Electron's ABI
@@ -33,7 +33,7 @@ const config: ForgeConfig = {
   },
   makers: [
     new MakerSquirrel({
-      name: 'com.pickleboxer.damp',
+      remoteReleases: 'https://releases.getdamp.app/win32/x64',
     }),
     new MakerZIP({}, ['win32']),
   ],

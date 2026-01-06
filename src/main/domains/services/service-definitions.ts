@@ -17,7 +17,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     id: ServiceId.Caddy,
     name: 'caddy',
     display_name: 'Web Server',
-    description: 'Caddy reverse proxy server for local development',
+    description: 'Caddy reverse proxy server',
     service_type: 'web',
     required: true,
     default_config: {
@@ -40,7 +40,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     id: ServiceId.MySQL,
     name: 'mysql',
     display_name: 'MySQL Database',
-    description: 'MySQL database server for local development',
+    description: 'MySQL database server',
     service_type: 'database',
     required: false,
     default_config: {
@@ -69,8 +69,8 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
   [ServiceId.Mailpit]: {
     id: ServiceId.Mailpit,
     name: 'mailpit',
-    display_name: 'Mail Testing',
-    description: 'Email testing server for local development',
+    display_name: 'Mailpit',
+    description: 'Email testing server',
     service_type: 'email',
     required: false,
     default_config: {
@@ -97,7 +97,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     id: ServiceId.PostgreSQL,
     name: 'postgresql',
     display_name: 'PostgreSQL Database',
-    description: 'PostgreSQL database server for local development',
+    description: 'PostgreSQL database server',
     service_type: 'database',
     required: false,
     default_config: {
@@ -126,7 +126,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     id: ServiceId.MariaDB,
     name: 'mariadb',
     display_name: 'MariaDB Database',
-    description: 'MariaDB database server for local development',
+    description: 'MariaDB database server',
     service_type: 'database',
     required: false,
     default_config: {
@@ -156,7 +156,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     id: ServiceId.MongoDB,
     name: 'mongodb',
     display_name: 'MongoDB Database',
-    description: 'MongoDB document database for local development',
+    description: 'MongoDB document database',
     service_type: 'database',
     required: false,
     default_config: {

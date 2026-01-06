@@ -50,6 +50,7 @@ function RootComponent() {
             padding: '8px 12px',
             minHeight: '40px',
             fontSize: '11px',
+            borderRadius: '0',
           },
         }}
       />

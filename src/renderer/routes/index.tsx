@@ -166,14 +166,14 @@ function DashboardPage() {
               <Button
                 size="sm"
                 variant="secondary"
-                className="bg-white/20 hover:bg-white/30"
+                className="bg-white/20 text-white hover:bg-white/30"
                 asChild
               >
                 <Link to="/services">Browse services</Link>
               </Button>
               <Button
                 variant="ghost"
-                className="hover:bg-white/30"
+                className="text-white hover:bg-white/30 hover:text-white dark:hover:bg-white/30"
                 size="sm"
                 onClick={() =>
                   (globalThis as unknown as Window).electronWindow.openExternal(
@@ -361,7 +361,7 @@ function DashboardPage() {
             >
               <CarouselContent className="-ml-2">
                 {displayServices.map(service => (
-                  <CarouselItem className="basis-1/2 pl-2" key={service.id}>
+                  <CarouselItem className="basis-1/2 p-3" key={service.id}>
                     <ServiceStatusCard service={service} isRequired={service.required} />
                   </CarouselItem>
                 ))}
@@ -489,7 +489,8 @@ function ServiceStatusCard({
               status={
                 isInstalled
                   ? {
-                      id: service.id,
+                      container_id: null,
+                      container_name: null,
                       running: isRunning,
                       health_status: service.health_status,
                       exists: true,

@@ -24,6 +24,7 @@ import type { Result } from './result';
 import type { ContainerState } from './container';
 
 import type { NgrokStatusData } from './ngrok';
+import type { UpdateState, DownloadProgress } from './updater';
 
 /**
  * Theme mode management context
@@ -258,4 +259,17 @@ export interface SecureStorageContext {
   getSecret: (key: string) => Promise<{ success: boolean; value: string | null; error?: string }>;
   deleteSecret: (key: string) => Promise<{ success: boolean; error?: string }>;
   isAvailable: () => Promise<boolean>;
+}
+
+/**
+ * Application auto-updater context
+ */
+export interface UpdaterContext {
+  checkForUpdates: () => Promise<{ success: boolean }>;
+  quitAndInstall: () => Promise<void>;
+  getStatus: () => Promise<UpdateState>;
+  skipVersion: (version: string) => Promise<{ success: boolean }>;
+  onProgress: (callback: (progress: DownloadProgress) => void) => () => void;
+  onStatusChange: (callback: (state: UpdateState) => void) => () => void;
+  onError: (callback: (error: { message: string; code?: string }) => void) => () => void;
 }

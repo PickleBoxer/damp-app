@@ -21,7 +21,17 @@ import type {
 import { useTheme } from '@renderer/hooks/use-theme';
 import type { ThemeMode } from '@shared/types/theme-mode';
 import { toast } from 'sonner';
-import { Monitor, Sun, Moon, CheckCircle, XCircle, Eye, EyeOff } from 'lucide-react';
+import {
+  Monitor,
+  Sun,
+  Moon,
+  CheckCircle,
+  XCircle,
+  Eye,
+  EyeOff,
+  Download,
+  RefreshCw,
+} from 'lucide-react';
 import { Input } from '@renderer/components/ui/input';
 import {
   FieldSet,
@@ -34,6 +44,10 @@ import {
   FieldDescription,
   FieldSeparator,
 } from '@renderer/components/ui/field';
+import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
+import { Badge } from '@renderer/components/ui/badge';
+import { Progress } from '@renderer/components/ui/progress';
+import type { UpdateState } from '@shared/types/updater';
 
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,
@@ -44,7 +58,7 @@ function SettingsPage() {
   const validateNgrokToken = (token: string): boolean => {
     if (!token) return true; // Empty is valid (optional field)
     // Ngrok tokens are typically alphanumeric with underscores, minimum 20 chars
-    const tokenRegex = /^[a-zA-Z0-9_]{20,}$/;
+    const tokenRegex = /^\w{20,}$/;
     return tokenRegex.test(token);
   };
 
@@ -55,6 +69,11 @@ function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingToken, setIsSavingToken] = useState(false);
   const [showToken, setShowToken] = useState(false);
+
+  // Update state
+  const [updateState, setUpdateState] = useState<UpdateState | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   // Refs for debounce and tracking last saved value
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,6 +96,63 @@ function SettingsPage() {
         setIsLoading(false);
       });
   }, []);
+
+  // Load update status and set up listeners
+  useEffect(() => {
+    // Get initial status
+    window.updater
+      .getStatus()
+      .then(status => setUpdateState(status))
+      .catch((error: unknown) => console.error('Failed to get update status:', error));
+
+    // Listen for status changes
+    const unsubscribeStatus = window.updater.onStatusChange(state => {
+      setUpdateState(state);
+      setIsCheckingUpdate(false);
+    });
+
+    // Listen for download progress
+    const unsubscribeProgress = window.updater.onProgress(progress => {
+      setDownloadProgress(progress.percent);
+    });
+
+    // Listen for errors
+    const unsubscribeError = window.updater.onError(error => {
+      toast.error('Update error', {
+        description: error.message,
+        action: {
+          label: 'Retry',
+          onClick: () => {
+            void handleCheckForUpdates();
+          },
+        },
+      });
+      setIsCheckingUpdate(false);
+    });
+
+    // Show toast when update is downloaded
+    const checkForDownloadedUpdate = () => {
+      if (updateState?.status === 'downloaded' && updateState.info?.version) {
+        toast.success('Update ready to install', {
+          description: `Version ${updateState.info.version} • Restart to update`,
+          duration: Infinity,
+          action: {
+            label: 'Restart Now',
+            onClick: () => {
+              void handleInstallUpdate();
+            },
+          },
+        });
+      }
+    };
+    checkForDownloadedUpdate();
+
+    return () => {
+      unsubscribeStatus();
+      unsubscribeProgress();
+      unsubscribeError();
+    };
+  }, [updateState?.status]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -187,6 +263,47 @@ function SettingsPage() {
       console.error('Failed to save Docker stats setting:', error);
       toast.error('Failed to save Docker stats setting');
     }
+  };
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      await window.updater.checkForUpdates();
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    try {
+      await window.updater.quitAndInstall();
+    } catch (error) {
+      console.error('Failed to install update:', error);
+      toast.error('Failed to install update');
+    }
+  };
+
+  const handleSkipVersion = async () => {
+    if (!updateState?.info?.version) return;
+    try {
+      await window.updater.skipVersion(updateState.info.version);
+      toast.success(`Version ${updateState.info.version} skipped`);
+    } catch (error) {
+      console.error('Failed to skip version:', error);
+      toast.error('Failed to skip version');
+    }
+  };
+
+  // Get input className based on validation state
+  const getNgrokTokenInputClassName = () => {
+    if (ngrokTokenValid === false) {
+      return 'pr-20 border-red-500 focus-visible:ring-red-500';
+    }
+    if (ngrokTokenValid === true && ngrokTokenInput) {
+      return 'pr-20 border-green-500 focus-visible:ring-green-500';
+    }
+    return 'pr-20';
   };
 
   // Show loading state while settings are being loaded
@@ -323,13 +440,7 @@ function SettingsPage() {
                     onChange={e => handleNgrokAuthTokenChange(e.target.value)}
                     onBlur={handleNgrokAuthTokenBlur}
                     disabled={isSavingToken}
-                    className={`pr-20 ${
-                      ngrokTokenValid === false
-                        ? 'border-red-500 focus-visible:ring-red-500'
-                        : ngrokTokenValid === true && ngrokTokenInput
-                          ? 'border-green-500 focus-visible:ring-green-500'
-                          : ''
-                    }`}
+                    className={getNgrokTokenInputClassName()}
                   />
                   <div className="absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-2">
                     {ngrokTokenInput && (
@@ -403,6 +514,113 @@ function SettingsPage() {
                     <SelectItem value="in">{NGROK_REGION_LABELS.in}</SelectItem>
                   </SelectContent>
                 </Select>
+              </Field>
+            </FieldSet>
+
+            <FieldSeparator />
+
+            {/* Application Updates */}
+            <FieldSet>
+              <FieldLegend>Application Updates</FieldLegend>
+              <FieldDescription>Manage app updates and version information</FieldDescription>
+
+              <Field orientation="vertical">
+                <FieldTitle>Update Status</FieldTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-xs">
+                    Current version: {updateState?.currentVersion || 'Unknown'}
+                  </span>
+                  {updateState?.status === 'available' && (
+                    <Badge variant="default">Update Available</Badge>
+                  )}
+                  {updateState?.status === 'downloaded' && (
+                    <Badge variant="default">Ready to Install</Badge>
+                  )}
+                  {updateState?.status === 'not-available' && (
+                    <Badge variant="outline">Up to date</Badge>
+                  )}
+                </div>
+
+                {updateState?.status === 'checking' && (
+                  <Alert>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <AlertTitle>Checking for updates...</AlertTitle>
+                    <AlertDescription>Please wait while we check for new versions</AlertDescription>
+                  </Alert>
+                )}
+
+                {updateState?.status === 'downloading' && (
+                  <Alert>
+                    <Download className="h-4 w-4" />
+                    <AlertTitle>Downloading update...</AlertTitle>
+                    <AlertDescription>
+                      {downloadProgress > 0 ? (
+                        <div className="mt-2 space-y-2">
+                          <Progress value={downloadProgress} className="h-2" />
+                          <span className="text-xs">{Math.round(downloadProgress)}% complete</span>
+                        </div>
+                      ) : (
+                        'Download started...'
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {updateState?.status === 'downloaded' && updateState.info && (
+                  <Alert>
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <AlertTitle>Update ready to install</AlertTitle>
+                    <AlertDescription>
+                      <div className="mt-2 space-y-3">
+                        <p>
+                          Version <strong>{updateState.info.version}</strong> has been downloaded
+                          and is ready to install.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={handleInstallUpdate}>
+                            Restart & Install
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={handleSkipVersion}>
+                            Skip This Version
+                          </Button>
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {updateState?.status === 'not-available' && (
+                  <p className="text-muted-foreground text-xs">You're running the latest version</p>
+                )}
+
+                {updateState?.status === 'error' && updateState.error && (
+                  <Alert variant="destructive">
+                    <XCircle className="h-4 w-4" />
+                    <AlertTitle>Update error</AlertTitle>
+                    <AlertDescription>
+                      <div className="mt-2 space-y-2">
+                        <p>{updateState.error.message}</p>
+                        <Button size="sm" variant="outline" onClick={handleCheckForUpdates}>
+                          Retry
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {(!updateState || updateState.status === 'idle') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCheckForUpdates}
+                    disabled={isCheckingUpdate}
+                  >
+                    <RefreshCw
+                      className={`mr-2 h-4 w-4 ${isCheckingUpdate ? 'animate-spin' : ''}`}
+                    />
+                    Check for Updates
+                  </Button>
+                )}
               </Field>
             </FieldSet>
           </FieldGroup>

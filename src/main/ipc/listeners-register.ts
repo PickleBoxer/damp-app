@@ -11,6 +11,7 @@ import { addAppEventListeners } from './app/app-listeners';
 import { addSyncListeners } from './sync/sync-listeners';
 import { addNgrokListeners } from './ngrok/ngrok-listeners';
 import { addStorageListeners } from './storage/storage-listeners';
+import { addUpdaterListeners } from './updater/updater-listeners';
 
 export default function registerListeners(mainWindow: BrowserWindow) {
   addWindowEventListeners(mainWindow);
@@ -25,4 +26,5 @@ export default function registerListeners(mainWindow: BrowserWindow) {
   addSyncListeners(mainWindow);
   addNgrokListeners();
   addStorageListeners();
+  addUpdaterListeners();
 }
