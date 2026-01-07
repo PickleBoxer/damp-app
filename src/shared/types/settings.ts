@@ -16,7 +16,7 @@ export interface AppSettings {
 }
 
 export type EditorChoice = 'code' | 'code-insiders' | 'cursor' | 'custom';
-export type TerminalChoice = 'wt' | 'powershell' | 'cmd' | 'custom';
+export type TerminalChoice = 'default' | 'wt' | 'powershell' | 'cmd';
 export type NgrokRegion = 'us' | 'eu' | 'ap' | 'au' | 'sa' | 'jp' | 'in';
 
 export const EDITOR_LABELS: Record<EditorChoice, string> = {
@@ -27,10 +27,10 @@ export const EDITOR_LABELS: Record<EditorChoice, string> = {
 };
 
 export const TERMINAL_LABELS: Record<TerminalChoice, string> = {
+  default: 'System Default',
   wt: 'Windows Terminal',
   powershell: 'PowerShell',
   cmd: 'Command Prompt',
-  custom: 'Custom Command',
 };
 
 export const NGROK_REGION_LABELS: Record<NgrokRegion, string> = {
@@ -45,6 +45,6 @@ export const NGROK_REGION_LABELS: Record<NgrokRegion, string> = {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   defaultEditor: 'code',
-  defaultTerminal: 'wt',
+  defaultTerminal: 'default',
   showDockerStats: true,
 };

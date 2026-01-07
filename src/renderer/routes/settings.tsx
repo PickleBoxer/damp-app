@@ -357,6 +357,7 @@ function SettingsPage() {
                     <SelectValue placeholder="Select terminal" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="default">{TERMINAL_LABELS.default}</SelectItem>
                     <SelectItem value="wt">{TERMINAL_LABELS.wt}</SelectItem>
                     <SelectItem value="powershell">{TERMINAL_LABELS.powershell}</SelectItem>
                     <SelectItem value="cmd">{TERMINAL_LABELS.cmd}</SelectItem>

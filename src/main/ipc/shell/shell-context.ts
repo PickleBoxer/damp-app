@@ -8,6 +8,16 @@ import {
   SHELL_OPEN_TINKER_CHANNEL,
 } from './shell-channels';
 
+export interface ShellSettings {
+  defaultEditor: string;
+  defaultTerminal: string;
+}
+
+export interface ShellOperationResult {
+  success: boolean;
+  error?: string;
+}
+
 export function exposeShellContext() {
   const shellApi: ShellContext = {
     openFolder: (projectId: string) => ipcRenderer.invoke(SHELL_OPEN_FOLDER_CHANNEL, projectId),

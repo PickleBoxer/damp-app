@@ -60,15 +60,16 @@ function getEditorCommand(settings?: ShellSettings): string {
  * Get terminal command based on settings
  */
 function getTerminalCommand(path: string, settings?: ShellSettings): string {
-  const terminal = settings?.defaultTerminal || 'wt';
+  const terminal = settings?.defaultTerminal || 'default';
 
   if (isWindows) {
     const terminalCommands: Record<string, string> = {
+      default: `start "" /D "${path}"`,
       wt: `wt.exe -d "${path}"`,
-      powershell: `powershell.exe -NoExit -Command "Set-Location '${path}'"`,
-      cmd: `cmd.exe /K "cd /d ${path}"`,
+      powershell: `start "" powershell.exe -NoExit -Command "Set-Location '${path}'"`,
+      cmd: `start "" cmd.exe /K "cd /d ${path}"`,
     };
-    return terminalCommands[terminal] || terminalCommands.wt;
+    return terminalCommands[terminal] || terminalCommands.default;
   }
 
   if (isMacOS) {
@@ -83,15 +84,16 @@ function getTerminalCommand(path: string, settings?: ShellSettings): string {
  * Get tinker command based on settings
  */
 function getTinkerCommand(path: string, settings?: ShellSettings): string {
-  const terminal = settings?.defaultTerminal || 'wt';
+  const terminal = settings?.defaultTerminal || 'default';
 
   if (isWindows) {
     const tinkerCommands: Record<string, string> = {
+      default: `start "" /D "${path}" cmd /K "php artisan tinker"`,
       wt: `wt.exe -d "${path}" pwsh -NoExit -Command "php artisan tinker"`,
-      powershell: `powershell.exe -NoExit -Command "Set-Location '${path}'; php artisan tinker"`,
-      cmd: `cmd.exe /K "cd /d ${path} && php artisan tinker"`,
+      powershell: `start "" powershell.exe -NoExit -Command "Set-Location '${path}'; php artisan tinker"`,
+      cmd: `start "" cmd.exe /K "cd /d ${path} && php artisan tinker"`,
     };
-    return tinkerCommands[terminal] || tinkerCommands.wt;
+    return tinkerCommands[terminal] || tinkerCommands.default;
   }
 
   if (isMacOS) {
