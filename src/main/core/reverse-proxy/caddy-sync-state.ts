@@ -4,7 +4,6 @@
  */
 
 import { createHash } from 'node:crypto';
-import type { Project } from '@shared/types/project';
 import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('CaddySyncState');
@@ -25,7 +24,9 @@ export function hashProjectContainers(projectContainerMap: Map<string, string>):
   );
 
   // Create string representation: "projectId1:containerId1|projectId2:containerId2|..."
-  const stateString = sortedEntries.map(([projectId, containerId]) => `${projectId}:${containerId}`).join('|');
+  const stateString = sortedEntries
+    .map(([projectId, containerId]) => `${projectId}:${containerId}`)
+    .join('|');
 
   // Hash for efficient comparison
   return createHash('sha256').update(stateString).digest('hex');
@@ -55,7 +56,7 @@ export function hasStateChanged(currentHash: string): boolean {
  */
 export function updateSyncedState(hash: string): void {
   lastSyncedHash = hash;
-  logger.debug('Updated synced state hash', { hash: hash.substring(0, 16) + '...' });
+  logger.debug('Updated synced state hash', { hash: `${hash.substring(0, 16)}...` });
 }
 
 /**

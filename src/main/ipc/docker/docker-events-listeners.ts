@@ -64,7 +64,7 @@ function triggerCaddySync() {
       if (result.success) {
         logger.debug('Caddy sync completed successfully');
       } else {
-        logger.warn('Caddy sync failed:', result.error);
+        logger.warn('Caddy sync failed:', { error: result.error });
       }
     } catch (error) {
       logger.error('Failed to trigger Caddy sync:', {
@@ -223,7 +223,9 @@ async function startEventMonitoring(
           containerEvent.projectId &&
           containerEvent.resourceType === RESOURCE_TYPES.PROJECT_CONTAINER
         ) {
-          logger.debug(`Project container started: ${containerEvent.projectId}, triggering Caddy sync`);
+          logger.debug(
+            `Project container started: ${containerEvent.projectId}, triggering Caddy sync`
+          );
           triggerCaddySync();
         }
 
