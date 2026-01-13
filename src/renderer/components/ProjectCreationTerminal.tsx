@@ -26,7 +26,6 @@ export function ProjectCreationTerminal({
   className,
 }: Readonly<ProjectCreationTerminalProps>) {
   const endRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
 
   // Create ANSI converter with custom color scheme
   const ansiConverter = useMemo(
@@ -63,7 +62,7 @@ export function ProjectCreationTerminal({
       </div>
 
       {/* Terminal Content with proper overflow handling */}
-      <ScrollArea className="h-[400px] p-2" ref={viewportRef}>
+      <ScrollArea className="h-[400px] p-2">
         {logs.length === 0 ? (
           <div className="text-gray-500">
             <span className="text-sm">Waiting to start...</span>
