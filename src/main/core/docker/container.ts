@@ -350,6 +350,44 @@ export async function getContainerStateByLabel(
 }
 
 /**
+ * Wait for container to reach running state
+ * Polls container state until it's running or reaches a fatal state
+ */
+export async function waitForContainerRunning(
+  containerIdOrName: string,
+  timeoutMs = 60000
+): Promise<boolean> {
+  const startTime = Date.now();
+  const pollInterval = 1000;
+
+  while (Date.now() - startTime < timeoutMs) {
+    const state = await getContainerState(containerIdOrName);
+
+    // Container doesn't exist
+    if (!state.exists) {
+      return false;
+    }
+
+    // Fatal states - container won't recover
+    if (state.state === 'exited' || state.state === 'dead') {
+      logger.error(`Container ${containerIdOrName} entered fatal state: ${state.state}`);
+      return false;
+    }
+
+    // Success - container is running
+    if (state.running && state.state === 'running') {
+      return true;
+    }
+
+    // Still initializing/restarting - wait and retry
+    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+  }
+
+  logger.error(`Timeout waiting for container ${containerIdOrName} to reach running state`);
+  return false;
+}
+
+/**
  * Check if a container is running
  */
 export async function isContainerRunning(containerId: string): Promise<boolean> {

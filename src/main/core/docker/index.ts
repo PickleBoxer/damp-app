@@ -23,6 +23,7 @@ export {
   findContainerByLabel,
   getContainerStateByLabel,
   isContainerRunning,
+  waitForContainerRunning,
   getContainerHostPort,
   getAllManagedContainers,
   execCommand,

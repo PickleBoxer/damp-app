@@ -47,10 +47,13 @@ export function ProjectCreationTerminal({
 
   return (
     <div
-      className={cn('relative w-full overflow-hidden border bg-black font-mono text-sm', className)}
+      className={cn(
+        'border-border relative w-full overflow-hidden rounded-lg border bg-black font-mono text-sm',
+        className
+      )}
     >
-      {/* Terminal Header */}
-      <div className="flex items-center gap-2 border-b bg-[#1e1e1e] px-3 py-2">
+      {/* Terminal Header - macOS style */}
+      <div className="border-border flex items-center gap-2 border-b bg-[#1e1e1e] px-3 py-2">
         <div className="flex gap-1.5">
           <div className="h-3 w-3 rounded-full bg-[#ff5f56]" />
           <div className="h-3 w-3 rounded-full bg-[#ffbd2e]" />
@@ -58,27 +61,26 @@ export function ProjectCreationTerminal({
         </div>
       </div>
 
-      {/* Terminal Content */}
-      <ScrollArea className="h-[400px]">
-        <div className="p-3">
-          {logs.length === 0 ? (
-            <div className="text-gray-500">
-              <span className="text-sm">Waiting to start...</span>
-            </div>
-          ) : (
-            logs.map(log => (
-              <div key={log.id} className="py-0.5">
-                <span
-                  className="text-sm"
-                  dangerouslySetInnerHTML={{
-                    __html: ansiConverter.toHtml(log.message),
-                  }}
-                />
-              </div>
-            ))
-          )}
-          <div ref={endRef} />
-        </div>
+      {/* Terminal Content with proper overflow handling */}
+      <ScrollArea className="h-[400px] p-2">
+        {logs.length === 0 ? (
+          <div className="text-gray-500">
+            <span className="text-sm">Waiting to start...</span>
+          </div>
+        ) : (
+          <>
+            {logs.map(log => (
+              <pre
+                key={log.id}
+                className="break-words whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: ansiConverter.toHtml(log.message),
+                }}
+              />
+            ))}
+            <div ref={endRef} />
+          </>
+        )}
       </ScrollArea>
     </div>
   );
