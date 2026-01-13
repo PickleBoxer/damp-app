@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Running the Application
+
 ```bash
 pnpm start          # Start in development mode with hot reload
 pnpm package        # Package for current platform (required before E2E tests)
@@ -16,6 +17,7 @@ pnpm make           # Create platform-specific distributable (.exe, .dmg, etc.)
 ```
 
 ### Testing
+
 ```bash
 pnpm test           # Run Vitest unit tests
 pnpm test:watch     # Run Vitest in watch mode
@@ -24,6 +26,7 @@ pnpm test:all       # Run both unit and E2E tests
 ```
 
 ### Code Quality
+
 ```bash
 pnpm lint           # ESLint with zero warnings policy (--max-warnings 0)
 pnpm format         # Check formatting with Prettier
@@ -31,6 +34,7 @@ pnpm format:write   # Auto-format with Prettier
 ```
 
 ### Installing shadcn/ui Components
+
 ```bash
 pnpm dlx shadcn@latest add <component-name>
 # Components are installed to src/renderer/components/ui/
@@ -51,6 +55,7 @@ This is a standard Electron multi-process architecture with strict security boun
 The main process follows a layered architecture:
 
 #### Core Infrastructure (`core/`)
+
 Low-level platform integrations and foundational services:
 
 - **`docker/`**: Docker operations via dockerode
@@ -73,6 +78,7 @@ Low-level platform integrations and foundational services:
 - **`hosts-manager/`**: System hosts file manipulation (requires sudo on macOS/Linux)
 
 #### Domain Logic (`domains/`)
+
 Business logic for the application's core entities:
 
 - **`projects/`**: Project lifecycle management
@@ -87,6 +93,7 @@ Business logic for the application's core entities:
   - `hooks/` - Post-installation hooks (e.g., caddy-hook.ts reinitializes Caddy after adding services)
 
 #### IPC Layer (`ipc/`)
+
 Organized by feature domain, each following the **3-layer pattern**:
 
 1. **Channels** (`*-channels.ts`): String constants for IPC channel names
@@ -94,15 +101,18 @@ Organized by feature domain, each following the **3-layer pattern**:
 3. **Listeners** (`*-listeners.ts`): `ipcMain.handle()` implementations
 
 **Critical files:**
+
 - `context-exposer.ts` - Aggregates all context exposure functions (called from preload.ts)
 - `listeners-register.ts` - Registers all IPC listeners at app startup
 
 **Existing IPC modules:** `app/`, `docker/`, `logs/`, `ngrok/`, `projects/`, `services/`, `shell/`, `storage/`, `sync/`, `theme/`, `updater/`, `window/`
 
 #### Platform Code (`electron/`)
+
 - `TrayMenu.ts` - System tray menu with app controls
 
 #### Services (`services/`)
+
 - `ngrok/` - Ngrok tunnel management (ngrok-manager.ts, ngrok-state-manager.ts)
 
 ### Renderer Process Structure (`src/renderer/`)
@@ -151,11 +161,13 @@ All IPC communication **must** follow this secure pattern:
 ### Adding New IPC Feature
 
 1. **Define channels** (`src/main/ipc/example/example-channels.ts`):
+
 ```typescript
 export const EXAMPLE_DO_SOMETHING = 'example:do-something';
 ```
 
 2. **Expose context** (`src/main/ipc/example/example-context.ts`):
+
 ```typescript
 import { contextBridge, ipcRenderer } from 'electron'; // ✅ ES6 import only
 
@@ -167,6 +179,7 @@ export function exposeExampleContext() {
 ```
 
 3. **Implement listener** (`src/main/ipc/example/example-listeners.ts`):
+
 ```typescript
 import { ipcMain } from 'electron';
 import { z } from 'zod';
@@ -184,10 +197,12 @@ export function addExampleListeners() {
 ```
 
 4. **Register in aggregators**:
+
 - Add `exposeExampleContext()` call to `src/main/ipc/context-exposer.ts`
 - Add `addExampleListeners()` call to `src/main/ipc/listeners-register.ts`
 
 5. **Type the window interface** (`src/shared/index.d.ts`):
+
 ```typescript
 declare interface Window {
   example: {
@@ -210,6 +225,7 @@ webPreferences: {
 ```
 
 **Never violate these rules:**
+
 - ❌ Never use `window.require()` in preload scripts (use ES6 `import`)
 - ❌ Never expose entire modules to renderer (only expose specific functions)
 - ❌ Never skip input validation in IPC listeners (use Zod schemas)
@@ -222,18 +238,22 @@ webPreferences: {
 All Docker resources (containers, volumes, networks) are labeled for identification:
 
 **Labels defined in `src/shared/constants/labels.ts`:**
-- `LABEL_KEYS.MANAGED_BY` = `'com.damp.managed-by'` (always set to `'damp'`)
-- `LABEL_KEYS.RESOURCE_TYPE` - `'service'` or `'project'`
-- `LABEL_KEYS.SERVICE_ID` - Service identifier (mysql, postgresql, redis, etc.)
-- `LABEL_KEYS.PROJECT_ID` - Project UUID
+
+- `LABEL_KEYS.MANAGED` = `'com.pickleboxer.damp.managed'` (always set to `'true'`)
+- `LABEL_KEYS.TYPE` = `'com.pickleboxer.damp.type'` - Resource type identifier
+- `LABEL_KEYS.SERVICE_ID` = `'com.pickleboxer.damp.service-id'` - Service identifier (mysql, postgresql, redis, etc.)
+- `LABEL_KEYS.PROJECT_ID` = `'com.pickleboxer.damp.project-id'` - Project UUID
+- `LABEL_KEYS.PROJECT_NAME` = `'com.pickleboxer.damp.project-name'` - Project name
 
 **Container state queries use labels:**
+
 ```typescript
 // Find container by service ID
-const state = await getContainerStateByLabel({
-  [LABEL_KEYS.RESOURCE_TYPE]: RESOURCE_TYPES.SERVICE,
-  [LABEL_KEYS.SERVICE_ID]: serviceId,
-});
+const state = await getContainerStateByLabel(
+  LABEL_KEYS.SERVICE_ID,
+  serviceId,
+  RESOURCE_TYPES.SERVICE_CONTAINER
+);
 ```
 
 ### State Manager Pattern
@@ -249,6 +269,7 @@ Both `project-state-manager.ts` and `service-state-manager.ts` follow this patte
 ### Project Lifecycle
 
 **Creation flow** (`project-state-manager.ts`):
+
 1. Validate inputs (PHP version requirements, port availability)
 2. Generate project config (UUID, domain, volume name)
 3. Create Docker volume (`damp_project_{name}`)
@@ -263,6 +284,7 @@ Both `project-state-manager.ts` and `service-state-manager.ts` follow this patte
 ### Service Lifecycle
 
 **Installation flow** (`service-state-manager.ts`):
+
 1. Load service definition from `service-definitions.ts`
 2. Pull Docker image with progress tracking
 3. Create volumes (data, config)
@@ -276,6 +298,7 @@ Both `project-state-manager.ts` and `service-state-manager.ts` follow this patte
 **Purpose:** Route `{project}.local` domains to project containers on forwarded ports
 
 **Flow:**
+
 1. `caddy-config.ts` generates Caddyfile from all projects
 2. `caddy-setup.ts` manages Caddy container lifecycle
 3. Any project creation/update triggers `syncProjectsToCaddy()` to regenerate config
@@ -294,6 +317,7 @@ Both `project-state-manager.ts` and `service-state-manager.ts` follow this patte
 Three modes: `dark`, `light`, `system` (syncs with OS)
 
 **Implementation:**
+
 - Main process reads `nativeTheme.shouldUseDarkColors`
 - Renderer updates `document.documentElement.classList` and localStorage
 - Theme persistence via localStorage, initialized in `App.tsx` on mount
@@ -305,11 +329,13 @@ Three modes: `dark`, `light`, `system` (syncs with OS)
 A PHP development project with devcontainer configuration:
 
 **Types:**
+
 - `basic-php` - Generic PHP project
 - `laravel` - Fresh Laravel installation
 - `existing` - Import existing project
 
 **Key properties:**
+
 - `volumeName` - Docker volume name (e.g., `damp_project_myapp`)
 - `domain` - Local domain (e.g., `myapp.local`)
 - `phpVersion` - `'7.4' | '8.1' | '8.2' | '8.3' | '8.4'`
@@ -319,6 +345,7 @@ A PHP development project with devcontainer configuration:
 - `volumeCopied` - Whether local files synced to volume
 
 **Lifecycle states tracked separately:**
+
 - Storage state: Project configuration in JSON (via `project-storage.ts`)
 - Docker state: Container runtime state queried on-demand (via `getContainerStateByLabel()`)
 
@@ -327,6 +354,7 @@ A PHP development project with devcontainer configuration:
 Auxiliary service container (MySQL, PostgreSQL, Redis, Mailpit, etc.):
 
 **Service definitions** in `service-definitions.ts`:
+
 - `id` - Service identifier enum (`ServiceId`)
 - `name` - Display name
 - `image` - Docker image (e.g., `mysql:8.0`)
@@ -336,9 +364,11 @@ Auxiliary service container (MySQL, PostgreSQL, Redis, Mailpit, etc.):
 - `healthCheck` - Docker health check configuration (optional)
 
 **Dynamic configuration:**
+
 - `custom_config` - User-provided environment variable overrides (stored in `service-storage.ts`)
 
 **Special services:**
+
 - **Caddy** - Auto-managed, not user-controllable, regenerated on project changes
 - **Ngrok** - Managed separately via `ngrok-manager.ts`, not a standard service
 
@@ -416,6 +446,7 @@ This project uses a PR-based workflow with the Commit Commands Plugin for stream
 Releases use semantic versioning with automated GitHub releases and Cloudflare R2 backup.
 
 **Steps:**
+
 1. Create PR with changes (use `/commit-push-pr`)
 2. Merge PR to main
 3. Bump version: `pnpm version patch|minor|major`
@@ -452,17 +483,20 @@ Releases use semantic versioning with automated GitHub releases and Cloudflare R
 ### Platform-Specific Behaviors
 
 **macOS:**
+
 - Title bar style: `hiddenInset` with traffic light controls
 - Hosts file location: `/etc/hosts` (requires sudo via `@vscode/sudo-prompt`)
 - App stays active when windows closed (standard macOS behavior)
 
 **Windows:**
+
 - Title bar style: `hidden` (fully custom title bar)
 - Hosts file location: `C:\Windows\System32\drivers\etc\hosts` (requires admin elevation)
 - App quits when all windows closed
 - Squirrel installer with auto-update support
 
 **Linux:**
+
 - Title bar style: `hidden`
 - Hosts file location: `/etc/hosts` (requires sudo)
 - Packaging: `.deb` and `.rpm` via Electron Forge makers

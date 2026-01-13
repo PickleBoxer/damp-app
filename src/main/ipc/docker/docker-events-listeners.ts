@@ -11,6 +11,7 @@ import {
   DOCKER_EVENT_CHANNEL,
   DOCKER_EVENTS_CONNECTION_STATUS_CHANNEL,
 } from './docker-events-channels';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('docker-events-ipc');
@@ -31,6 +32,47 @@ let healthCheckInterval: NodeJS.Timeout | null = null;
 
 // Reference to main window for sending events
 let mainWindowRef: BrowserWindow | null = null;
+
+// Debounce timer for Caddy sync
+let caddySyncDebounceTimer: NodeJS.Timeout | null = null;
+const CADDY_SYNC_DEBOUNCE_MS = 500;
+
+/**
+ * Debounced Caddy sync trigger
+ * Batches multiple project container start events to avoid redundant syncs
+ */
+function triggerCaddySync() {
+  // Clear existing timer
+  if (caddySyncDebounceTimer) {
+    clearTimeout(caddySyncDebounceTimer);
+  }
+
+  // Set new timer
+  caddySyncDebounceTimer = setTimeout(async () => {
+    caddySyncDebounceTimer = null;
+
+    try {
+      logger.debug('Triggering Caddy sync due to project container start event(s)');
+
+      // Lazy import to avoid circular dependencies
+      const { syncProjectsToCaddy } = await import('@main/core/reverse-proxy/caddy-config');
+      const { projectStorage } = await import('@main/core/storage/project-storage');
+
+      const projects = projectStorage.getAllProjects();
+      const result = await syncProjectsToCaddy(projects);
+
+      if (result.success) {
+        logger.debug('Caddy sync completed successfully');
+      } else {
+        logger.warn('Caddy sync failed:', result.error);
+      }
+    } catch (error) {
+      logger.error('Failed to trigger Caddy sync:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, CADDY_SYNC_DEBOUNCE_MS);
+}
 
 /**
  * Fixed 5 second retry delay for reconnection attempts
@@ -168,12 +210,22 @@ async function startEventMonitoring(
           action: event.Action || event.status,
           timestamp: event.time ? event.time * 1000 : Date.now(), // Convert to milliseconds
           // Include metadata from our label system
-          serviceId: labels['com.pickleboxer.damp.service-id'],
-          projectId: labels['com.pickleboxer.damp.project-id'],
-          resourceType: labels['com.pickleboxer.damp.type'],
+          serviceId: labels[LABEL_KEYS.SERVICE_ID],
+          projectId: labels[LABEL_KEYS.PROJECT_ID],
+          resourceType: labels[LABEL_KEYS.TYPE],
         };
 
         logger.debug('Docker event received', containerEvent);
+
+        // Trigger Caddy sync when a project container starts
+        if (
+          containerEvent.action === 'start' &&
+          containerEvent.projectId &&
+          containerEvent.resourceType === RESOURCE_TYPES.PROJECT_CONTAINER
+        ) {
+          logger.debug(`Project container started: ${containerEvent.projectId}, triggering Caddy sync`);
+          triggerCaddySync();
+        }
 
         // Send event to renderer
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -255,6 +307,12 @@ async function stopEventMonitoring(): Promise<{ success: boolean }> {
     if (healthCheckInterval) {
       clearInterval(healthCheckInterval);
       healthCheckInterval = null;
+    }
+
+    // Clear Caddy sync debounce timer
+    if (caddySyncDebounceTimer) {
+      clearTimeout(caddySyncDebounceTimer);
+      caddySyncDebounceTimer = null;
     }
 
     if (eventStream) {

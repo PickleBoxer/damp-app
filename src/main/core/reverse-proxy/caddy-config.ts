@@ -8,6 +8,11 @@ import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { ServiceId } from '@shared/types/service';
 import type { Project } from '@shared/types/project';
 import { createLogger } from '@main/utils/logger';
+import {
+  hashProjectContainers,
+  hasStateChanged,
+  updateSyncedState,
+} from './caddy-sync-state';
 
 const logger = createLogger('CaddyConfig');
 
@@ -102,6 +107,30 @@ export async function syncProjectsToCaddy(
 
     logger.info(`Found ${projects.length} project(s) to configure`);
 
+    // Build project-to-container mapping and check if state changed
+    const projectContainerMap = new Map<string, string>();
+    for (const project of projects) {
+      const projectContainer = await findContainerByLabel(
+        LABEL_KEYS.PROJECT_ID,
+        project.id,
+        RESOURCE_TYPES.PROJECT_CONTAINER
+      );
+
+      if (projectContainer) {
+        // Use first 12 chars of container ID (same as what goes in Caddyfile)
+        projectContainerMap.set(project.id, projectContainer.Id.substring(0, 12));
+      }
+    }
+
+    // Hash current state and check if changed
+    const currentHash = hashProjectContainers(projectContainerMap);
+    if (!hasStateChanged(currentHash)) {
+      logger.info('Project container state unchanged, skipping sync');
+      return { success: true };
+    }
+
+    logger.info('Project container state changed, proceeding with sync');
+
     // Generate Caddyfile content
     const caddyfileContent = await generateCaddyfile(projects);
 
@@ -127,6 +156,9 @@ export async function syncProjectsToCaddy(
     if (reloadResult.exitCode !== 0) {
       throw new Error(`Failed to reload Caddy: ${reloadResult.stderr}`);
     }
+
+    // Update synced state on success
+    updateSyncedState(currentHash);
 
     logger.info('Successfully synchronized projects to Caddy');
     return { success: true };

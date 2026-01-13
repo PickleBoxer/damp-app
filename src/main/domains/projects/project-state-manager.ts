@@ -876,6 +876,10 @@ class ProjectStateManager {
       // Remove from storage
       await projectStorage.deleteProject(projectId);
 
+      // Clear Caddy sync state to force re-sync, then sync to remove project
+      const { clearSyncedState } = await import('@main/core/reverse-proxy/caddy-sync-state');
+      clearSyncedState();
+
       // Sync Caddy to remove project (non-blocking)
       syncProjectsToCaddy(projectStorage.getAllProjects()).catch(error => {
         logger.warn('Failed to sync Caddy after project deletion:', error);

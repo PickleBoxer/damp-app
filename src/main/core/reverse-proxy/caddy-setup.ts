@@ -3,7 +3,12 @@
  * Handles automatic SSL certificate generation and system installation for Caddy
  */
 
-import { execCommand, getFileFromContainer, findContainerByLabel } from '@main/core/docker';
+import {
+  execCommand,
+  getFileFromContainer,
+  findContainerByLabel,
+  waitForContainerRunning,
+} from '@main/core/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { ServiceId } from '@shared/types/service';
 import { isWindows, isMacOS } from '@shared/utils/platform';
@@ -91,6 +96,17 @@ export async function setupCaddySSL(): Promise<CaddySSLSetupResult> {
     }
 
     const containerName = caddyContainer.Names[0]?.replace(/^\//, '') || caddyContainer.Id;
+
+    // Wait for container to be fully running before executing commands
+    logger.info('Waiting for Caddy container to be ready...');
+    const isReady = await waitForContainerRunning(caddyContainer.Id);
+    if (!isReady) {
+      return {
+        success: false,
+        certInstalled: false,
+        message: 'Caddy container failed to reach running state',
+      };
+    }
 
     // Step 1: Create Caddyfile
     logger.info('Creating default Caddyfile...');
