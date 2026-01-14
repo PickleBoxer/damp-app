@@ -1,19 +1,19 @@
-import { Search, Command } from 'lucide-react';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
   DialogDescription,
+  DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Kbd } from '@renderer/components/ui/kbd';
+import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { projectsQueryOptions } from '@renderer/projects';
 import { servicesQueryOptions } from '@renderer/services';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { isMacOS } from '@shared/utils/platform';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
+import { Command, Search } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -265,7 +265,7 @@ export function QuickSearch() {
       <button
         onClick={() => setOpen(true)}
         onMouseEnter={handlePrefetch}
-        className="bg-primary/5 border-border hover:bg-muted hover:border-ring/20 relative flex h-6.5 w-[320px] items-center justify-center gap-2 border px-3 font-mono text-sm transition-all duration-100"
+        className="bg-primary/5 border-border hover:bg-muted hover:border-ring/20 relative flex h-6.5 w-[320px] items-center justify-center gap-2 rounded border px-3 font-mono text-sm transition-all duration-100"
       >
         <Search className="text-muted-foreground h-4 w-4" />
         <span className="text-muted-foreground text-xs">DAMP</span>

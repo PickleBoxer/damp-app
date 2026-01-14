@@ -13,6 +13,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '@renderer/components/ui/empty';
+import { useCustomCss } from '@renderer/hooks/use-custom-css';
 import { useDockerEvents } from '@renderer/hooks/use-docker-events';
 import { useSyncProgress } from '@renderer/hooks/use-sync';
 import { useTheme } from '@renderer/hooks/use-theme';
@@ -25,6 +26,8 @@ function RootComponent() {
   // Register Docker container events listener once at app level (projects + services)
   useDockerEvents();
   const { resolvedTheme } = useTheme();
+  // Apply custom CSS from settings
+  useCustomCss();
 
   return (
     <div className="flex h-screen flex-col overflow-hidden select-none">

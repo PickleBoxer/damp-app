@@ -13,6 +13,8 @@ export interface AppSettings {
   ngrokRegion?: NgrokRegion;
   /** Show Docker stats (CPU/RAM) in footer */
   showDockerStats?: boolean;
+  /** Custom CSS to override app styles */
+  customCss?: string;
 }
 
 export type EditorChoice = 'code' | 'code-insiders' | 'cursor' | 'custom';

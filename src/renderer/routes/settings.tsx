@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import { Switch } from '@renderer/components/ui/switch';
+import { Textarea } from '@renderer/components/ui/textarea';
 import { useTheme } from '@renderer/hooks/use-theme';
 import { getSettings, updateSettings } from '@renderer/utils/settings';
 import type {
@@ -49,6 +50,134 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+// CSS Theme Presets from shadcn/ui
+const CSS_PRESETS = {
+  neutral: `:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}`,
+  zinc: `:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.21 0.006 285.885);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.705 0.015 286.067);
+}
+
+.dark {
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --primary: oklch(0.92 0.004 286.32);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.552 0.016 285.938);
+}`,
+  slate: `:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.129 0.042 264.695);
+  --primary: oklch(0.208 0.042 265.755);
+  --primary-foreground: oklch(0.984 0.003 247.858);
+  --secondary: oklch(0.968 0.007 247.896);
+  --secondary-foreground: oklch(0.208 0.042 265.755);
+  --muted: oklch(0.968 0.007 247.896);
+  --muted-foreground: oklch(0.554 0.046 257.417);
+  --accent: oklch(0.968 0.007 247.896);
+  --accent-foreground: oklch(0.208 0.042 265.755);
+  --border: oklch(0.929 0.013 255.508);
+  --input: oklch(0.929 0.013 255.508);
+  --ring: oklch(0.704 0.04 256.788);
+}
+
+.dark {
+  --background: oklch(0.129 0.042 264.695);
+  --foreground: oklch(0.984 0.003 247.858);
+  --primary: oklch(0.929 0.013 255.508);
+  --primary-foreground: oklch(0.208 0.042 265.755);
+  --secondary: oklch(0.279 0.041 260.031);
+  --secondary-foreground: oklch(0.984 0.003 247.858);
+  --muted: oklch(0.279 0.041 260.031);
+  --muted-foreground: oklch(0.704 0.04 256.788);
+  --accent: oklch(0.279 0.041 260.031);
+  --accent-foreground: oklch(0.984 0.003 247.858);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.551 0.027 264.364);
+}`,
+  stone: `:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.147 0.004 49.25);
+  --primary: oklch(0.216 0.006 56.043);
+  --primary-foreground: oklch(0.985 0.001 106.423);
+  --secondary: oklch(0.97 0.001 106.424);
+  --secondary-foreground: oklch(0.216 0.006 56.043);
+  --muted: oklch(0.97 0.001 106.424);
+  --muted-foreground: oklch(0.553 0.013 58.071);
+  --accent: oklch(0.97 0.001 106.424);
+  --accent-foreground: oklch(0.216 0.006 56.043);
+  --border: oklch(0.923 0.003 48.717);
+  --input: oklch(0.923 0.003 48.717);
+  --ring: oklch(0.709 0.01 56.259);
+}
+
+.dark {
+  --background: oklch(0.147 0.004 49.25);
+  --foreground: oklch(0.985 0.001 106.423);
+  --primary: oklch(0.923 0.003 48.717);
+  --primary-foreground: oklch(0.216 0.006 56.043);
+  --secondary: oklch(0.268 0.007 34.298);
+  --secondary-foreground: oklch(0.985 0.001 106.423);
+  --muted: oklch(0.268 0.007 34.298);
+  --muted-foreground: oklch(0.709 0.01 56.259);
+  --accent: oklch(0.268 0.007 34.298);
+  --accent-foreground: oklch(0.985 0.001 106.423);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.553 0.013 58.071);
+}`,
+} as const;
+
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,
 });
@@ -69,6 +198,7 @@ function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingToken, setIsSavingToken] = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [customCss, setCustomCss] = useState('');
 
   // Update state
   const [updateState, setUpdateState] = useState<UpdateState | null>(null);
@@ -88,6 +218,7 @@ function SettingsPage() {
         setNgrokTokenInput(token);
         lastSavedTokenRef.current = token;
         setNgrokTokenValid(token ? validateNgrokToken(token) : null);
+        setCustomCss(loadedSettings.customCss || '');
         setIsLoading(false);
       })
       .catch(error => {
@@ -262,6 +393,46 @@ function SettingsPage() {
     } catch (error) {
       console.error('Failed to save Docker stats setting:', error);
       toast.error('Failed to save Docker stats setting');
+    }
+  };
+
+  const handleCustomCssChange = (value: string) => {
+    setCustomCss(value);
+  };
+
+  const handleCustomCssBlur = async () => {
+    try {
+      const updated = await updateSettings({ customCss });
+      setSettings(updated);
+      toast.success('Custom CSS saved');
+    } catch (error) {
+      console.error('Failed to save custom CSS:', error);
+      toast.error('Failed to save custom CSS');
+    }
+  };
+
+  const handleResetCustomCss = async () => {
+    try {
+      setCustomCss('');
+      const updated = await updateSettings({ customCss: '' });
+      setSettings(updated);
+      toast.success('Custom CSS reset');
+    } catch (error) {
+      console.error('Failed to reset custom CSS:', error);
+      toast.error('Failed to reset custom CSS');
+    }
+  };
+
+  const handleApplyPreset = async (presetName: keyof typeof CSS_PRESETS) => {
+    try {
+      const presetCss = CSS_PRESETS[presetName];
+      setCustomCss(presetCss);
+      const updated = await updateSettings({ customCss: presetCss });
+      setSettings(updated);
+      toast.success(`${presetName.charAt(0).toUpperCase() + presetName.slice(1)} theme applied`);
+    } catch (error) {
+      console.error('Failed to apply preset:', error);
+      toast.error('Failed to apply preset');
     }
   };
 
@@ -624,6 +795,96 @@ function SettingsPage() {
                     Check for Updates
                   </Button>
                 )}
+              </Field>
+            </FieldSet>
+
+            <FieldSeparator />
+
+            {/* Custom CSS */}
+            <FieldSet>
+              <FieldLegend>Custom Styling</FieldLegend>
+              <FieldDescription>
+                Customize the theme using CSS variables in OKLCH color format. See{' '}
+                <Button
+                  variant="link"
+                  className="h-auto p-0 text-xs"
+                  onClick={() =>
+                    window.electronWindow.openExternal('https://ui.shadcn.com/docs/theming')
+                  }
+                  type="button"
+                >
+                  shadcn/ui theming docs
+                </Button>{' '}
+                for available variables and color examples.
+              </FieldDescription>
+
+              <Field orientation="vertical">
+                <div className="flex items-center justify-between">
+                  <FieldTitle>CSS Variables</FieldTitle>
+                  {customCss && (
+                    <Button variant="ghost" size="sm" onClick={handleResetCustomCss} type="button">
+                      Reset
+                    </Button>
+                  )}
+                </div>
+                <FieldDescription>
+                  Choose a preset theme or write your own custom CSS.
+                </FieldDescription>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApplyPreset('neutral')}
+                    type="button"
+                  >
+                    <div className="mr-2 h-3 w-3 rounded-full bg-zinc-400 dark:bg-zinc-600" />
+                    Neutral
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApplyPreset('zinc')}
+                    type="button"
+                  >
+                    <div className="mr-2 h-3 w-3 rounded-full bg-zinc-500 dark:bg-zinc-500" />
+                    Zinc
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApplyPreset('slate')}
+                    type="button"
+                  >
+                    <div className="mr-2 h-3 w-3 rounded-full bg-slate-500 dark:bg-slate-500" />
+                    Slate
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleApplyPreset('stone')}
+                    type="button"
+                  >
+                    <div className="mr-2 h-3 w-3 rounded-full bg-stone-500 dark:bg-stone-500" />
+                    Stone
+                  </Button>
+                </div>
+                <Textarea
+                  id="custom-css"
+                  placeholder={`/* Write your custom CSS here or click a preset above */
+:root {
+  --primary: oklch(0.56 0.18 250);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --primary: oklch(0.75 0.15 255);
+}`}
+                  value={customCss}
+                  onChange={e => handleCustomCssChange(e.target.value)}
+                  onBlur={handleCustomCssBlur}
+                  className="min-h-50 resize-y border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-zinc-700 dark:bg-zinc-900"
+                  spellCheck={false}
+                />
               </Field>
             </FieldSet>
           </FieldGroup>
