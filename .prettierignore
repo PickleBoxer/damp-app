@@ -6,3 +6,4 @@
 README.md
 /src/renderer/routeTree.gen.ts
 /src/renderer/components/ui
+pnpm-lock.yaml
