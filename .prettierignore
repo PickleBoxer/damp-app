@@ -4,5 +4,5 @@
 /.vite
 /out
 README.md
-/src/routeTree.gen.ts
+/src/renderer/routeTree.gen.ts
 /src/renderer/components/ui
