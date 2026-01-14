@@ -178,6 +178,17 @@ const CSS_PRESETS = {
 }`,
 } as const;
 
+// Placeholder example CSS
+const PLACEHOLDER_CSS = `/* Write your custom CSS here or click a preset above */
+:root {
+  --primary: oklch(0.56 0.18 250);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --primary: oklch(0.75 0.15 255);
+}`;
+
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,
 });
@@ -394,10 +405,6 @@ function SettingsPage() {
       console.error('Failed to save Docker stats setting:', error);
       toast.error('Failed to save Docker stats setting');
     }
-  };
-
-  const handleCustomCssChange = (value: string) => {
-    setCustomCss(value);
   };
 
   const handleCustomCssBlur = async () => {
@@ -870,19 +877,11 @@ function SettingsPage() {
                 </div>
                 <Textarea
                   id="custom-css"
-                  placeholder={`/* Write your custom CSS here or click a preset above */
-:root {
-  --primary: oklch(0.56 0.18 250);
-  --radius: 0.5rem;
-}
-
-.dark {
-  --primary: oklch(0.75 0.15 255);
-}`}
+                  placeholder={PLACEHOLDER_CSS}
                   value={customCss}
-                  onChange={e => handleCustomCssChange(e.target.value)}
+                  onChange={e => setCustomCss(e.target.value)}
                   onBlur={handleCustomCssBlur}
-                  className="min-h-50 resize-y border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-zinc-700 dark:bg-zinc-900"
+                  className="border-border bg-muted text-muted-foreground placeholder:text-muted-foreground/50 focus-visible:ring-ring min-h-50 resize-y font-mono text-xs"
                   spellCheck={false}
                 />
               </Field>

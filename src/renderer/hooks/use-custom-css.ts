@@ -24,10 +24,6 @@ export function useCustomCss() {
 
     // Update style content
     styleEl.textContent = settings?.customCss || '';
-
-    return () => {
-      // Don't remove on unmount - keep styles applied
-    };
   }, [settings?.customCss]);
 
   // Listen for settings-changed events to re-apply CSS
