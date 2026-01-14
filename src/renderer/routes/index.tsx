@@ -1,20 +1,21 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
+import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import { Button } from '@renderer/components/ui/button';
 import {
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
 } from '@renderer/components/ui/card';
 import {
   Carousel,
+  CarouselApi,
   CarouselContent,
   CarouselItem,
-  CarouselApi,
 } from '@renderer/components/ui/carousel';
-import { Empty, EmptyHeader, EmptyTitle, EmptyContent } from '@renderer/components/ui/empty';
+import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from '@renderer/components/ui/empty';
+import { Marquee3D } from '@renderer/components/ui/marquee-3d';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import {
   Tooltip,
@@ -22,26 +23,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { useQuery } from '@tanstack/react-query';
-import { Marquee3D } from '@renderer/components/ui/marquee-3d';
-import { ServiceIcon } from '@renderer/components/ServiceIcon';
-import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
-import { useDashboardData, type DashboardService } from '@renderer/hooks/use-dashboard-data';
 import { dockerStatusQueryOptions } from '@renderer/docker';
-import { useStartService, useStopService, useInstallService } from '@renderer/hooks/use-services';
-import { servicesQueryOptions } from '@renderer/services';
+import { useDashboardData, type DashboardService } from '@renderer/hooks/use-dashboard-data';
+import { useInstallService, useStartService, useStopService } from '@renderer/hooks/use-services';
 import { projectsQueryOptions } from '@renderer/projects';
+import { servicesQueryOptions } from '@renderer/services';
+import { useQuery } from '@tanstack/react-query';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import {
-  Play,
-  Square,
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
-  Settings,
-  AlertCircle,
   Download,
   Loader2,
+  Play,
+  Settings,
+  Square,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export const Route = createFileRoute('/')({
@@ -191,14 +191,14 @@ function DashboardPage() {
         <div className="flex gap-4">
           {/* Services Cards */}
           <div className="grid flex-1 grid-cols-2 gap-4">
-            <div className="flex flex-col items-center justify-center border p-4">
+            <div className="flex flex-col items-center justify-center rounded border p-4">
               <p className="text-center text-sm font-medium">Installed Services</p>
               <p className="text-2xl font-bold">
                 {isLoadingServices ? 0 : installedServices.length}
               </p>
             </div>
             <div className="group/services relative flex flex-col">
-              <div className="flex h-full flex-col items-center justify-center border p-4">
+              <div className="flex h-full flex-col items-center justify-center rounded border p-4">
                 <p className="text-center text-sm font-medium">Running Services</p>
                 <p className="text-2xl font-bold">{isLoadingServices ? 0 : runningCount}</p>
               </div>
@@ -280,7 +280,7 @@ function DashboardPage() {
           </div>
 
           {/* Projects Column */}
-          <div className="flex flex-1 items-center justify-between border p-4">
+          <div className="flex flex-1 items-center justify-between rounded border p-4">
             <div className="flex items-center space-x-3">
               <div>
                 <p className="text-sm font-medium">Projects Status</p>
@@ -292,13 +292,13 @@ function DashboardPage() {
                 <span className="text-2xl font-bold text-yellow-500">
                   {isLoadingProjects ? 0 : (allProjects?.length ?? 0)}
                 </span>
-                <span className="text-accent-foreground text-xs">Created</span>
+                <span className="text-xs">Created</span>
               </div>
               <div className="bg-card flex flex-col items-center justify-center gap-1 rounded-lg p-3">
                 <span className="text-2xl font-bold text-green-500">
                   {isLoadingProjects ? 0 : runningProjects.length}
                 </span>
-                <span className="text-accent-foreground text-xs">Running</span>
+                <span className="text-xs">Running</span>
               </div>
             </div>
           </div>
