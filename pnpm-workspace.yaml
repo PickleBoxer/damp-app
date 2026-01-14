@@ -1,8 +1,3 @@
 onlyBuiltDependencies:
-  - cpu-features
   - electron
   - electron-winstaller
-  - esbuild
-  - protobufjs
-  - ssh2
-  - msw
