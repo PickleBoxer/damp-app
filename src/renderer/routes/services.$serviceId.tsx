@@ -504,8 +504,8 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
                     <div className="bg-primary/5 space-y-1 p-3 text-xs">
                       <p className="text-muted-foreground">
                         If you experience any connection issues with HTTPS, you can manually
-                        download and install the root certificate to your system&apos;s trusted store
-                        using the button below.
+                        download and install the root certificate to your system&apos;s trusted
+                        store using the button below.
                       </p>
                     </div>
                   </div>

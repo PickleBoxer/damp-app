@@ -380,7 +380,7 @@ export async function waitForContainerRunning(
     }
 
     // Still initializing/restarting - wait and retry
-    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
   }
 
   logger.error(`Timeout waiting for container ${containerIdOrName} to reach running state`);
