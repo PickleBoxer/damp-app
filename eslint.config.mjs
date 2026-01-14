@@ -4,13 +4,14 @@ import tseslint from 'typescript-eslint';
 import pluginReact from 'eslint-plugin-react';
 import prettierConfig from 'eslint-config-prettier';
 import reactHooks from 'eslint-plugin-react-hooks';
-import importPlugin from 'eslint-plugin-import';
+import reactRefresh from 'eslint-plugin-react-refresh';
 import electronPlugin from 'eslint-plugin-electron';
+import pluginQuery from '@tanstack/eslint-plugin-query';
+import pluginRouter from '@tanstack/eslint-plugin-router';
 import path from 'node:path';
 import { includeIgnoreFile } from '@eslint/compat';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'eslint/config';
-import pluginQuery from '@tanstack/eslint-plugin-query';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,56 +21,21 @@ const prettierIgnorePath = path.resolve(__dirname, '.prettierignore');
 export default defineConfig([
   includeIgnoreFile(prettierIgnorePath),
 
-  // Base configuration for all files
-  {
-    files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
-  },
-  {
-    languageOptions: {
-      globals: globals.browser,
-    },
-  },
-
   // Base configs
   pluginJs.configs.recommended,
+  pluginReact.configs.flat.recommended,
   pluginReact.configs.flat['jsx-runtime'],
-  reactHooks.configs.flat.recommended,
   ...tseslint.configs.recommended,
+  ...tseslint.configs.stylistic,
   ...pluginQuery.configs['flat/recommended'],
+  ...pluginRouter.configs['flat/recommended'],
 
-  // Import plugin configuration
+  // Global settings
   {
-    plugins: {
-      import: importPlugin,
-    },
     settings: {
-      'import/resolver': {
-        typescript: {
-          alwaysTryTypes: true,
-          project: './tsconfig.json',
-        },
-        node: true,
+      react: {
+        version: 'detect',
       },
-      'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.tsx', '.mts'],
-      },
-    },
-    rules: {
-      // Critical errors
-      'import/no-unresolved': 'error',
-      'import/named': 'error',
-      'import/no-absolute-path': 'error',
-
-      // Code quality (warnings)
-      'import/no-duplicates': 'warn',
-      'import/first': 'warn',
-      'import/newline-after-import': 'warn',
-
-      // Disabled for performance/compatibility
-      'import/namespace': 'off',
-      'import/no-cycle': 'off',
-      'import/no-named-as-default': 'off',
-      'import/no-named-as-default-member': 'off',
     },
   },
 
@@ -83,19 +49,24 @@ export default defineConfig([
       globals: globals.node,
     },
     rules: {
-      'electron/no-deprecated-apis': 'error',
-      'electron/no-deprecated-arguments': 'error',
-      'electron/no-deprecated-props': 'error',
-      'electron/default-value-changed': 'warn',
+      ...electronPlugin.configs.recommended.rules,
     },
   },
 
-  // Renderer process adjustments
+  // Renderer process (React + Vite)
   {
     files: ['src/renderer/**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    languageOptions: {
+      globals: globals.browser,
+    },
     rules: {
-      // React Compiler handles optimization
-      'react-hooks/exhaustive-deps': 'warn',
+      ...reactHooks.configs.recommended.rules,
+      'react-hooks/exhaustive-deps': 'warn', // React Compiler handles optimization
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
 

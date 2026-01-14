@@ -2,5 +2,7 @@
 /dist
 /coverage
 /.vite
+/out
 README.md
 /src/routeTree.gen.ts
+/src/renderer/components/ui

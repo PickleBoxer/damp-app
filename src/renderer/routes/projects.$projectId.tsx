@@ -344,7 +344,7 @@ function ProjectDetailPage() {
           <div className="flex flex-col gap-4 px-2">
             {/* Tabs for Actions/Environment/Volume Sync */}
             <Tabs defaultValue="actions" className="flex w-full flex-col gap-4 px-2">
-              <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-[3px]">
+              <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-0.75">
                 <TabsTrigger value="actions">Actions</TabsTrigger>
                 <TabsTrigger value="environment">Environment</TabsTrigger>
                 <TabsTrigger value="volumes">Volume Sync</TabsTrigger>
@@ -514,7 +514,7 @@ function ProjectDetailPage() {
               {/* Volume Sync Tab */}
               <TabsContent value="volumes" className="flex flex-col gap-4">
                 <Tabs defaultValue="from-volume" className="flex w-full flex-col gap-4">
-                  <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-[3px]">
+                  <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-0.75">
                     <TabsTrigger value="from-volume">From Volume</TabsTrigger>
                     <TabsTrigger value="to-volume">To Volume</TabsTrigger>
                   </TabsList>
