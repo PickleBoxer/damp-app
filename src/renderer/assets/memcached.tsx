@@ -13,33 +13,15 @@ export default function MemcachedIcon({ className }: { className?: string }) {
           <stop stopColor="#574C4A" offset="0%" />
           <stop stopColor="#80716D" offset="100%" />
         </linearGradient>
-        <linearGradient
-          x1="88.778%"
-          y1="98.342%"
-          x2="30.149%"
-          y2="-8.68%"
-          id="b"
-        >
+        <linearGradient x1="88.778%" y1="98.342%" x2="30.149%" y2="-8.68%" id="b">
           <stop stopColor="#268D83" offset="0%" />
           <stop stopColor="#2EA19E" offset="100%" />
         </linearGradient>
-        <radialGradient
-          cx="41.406%"
-          cy="42.708%"
-          fx="41.406%"
-          fy="42.708%"
-          id="c"
-        >
+        <radialGradient cx="41.406%" cy="42.708%" fx="41.406%" fy="42.708%" id="c">
           <stop stopColor="#DB7C7C" offset="0%" />
           <stop stopColor="#C83737" offset="100%" />
         </radialGradient>
-        <radialGradient
-          cx="44.271%"
-          cy="42.708%"
-          fx="44.271%"
-          fy="42.708%"
-          id="d"
-        >
+        <radialGradient cx="44.271%" cy="42.708%" fx="44.271%" fy="42.708%" id="d">
           <stop stopColor="#DB7C7C" offset="0%" />
           <stop stopColor="#C83737" offset="100%" />
         </radialGradient>

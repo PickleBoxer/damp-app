@@ -1,4 +1,4 @@
-import { nativeTheme, BrowserWindow , ipcMain } from 'electron';
+import { nativeTheme, BrowserWindow, ipcMain } from 'electron';
 import {
   THEME_MODE_CURRENT_CHANNEL,
   THEME_MODE_DARK_CHANNEL,

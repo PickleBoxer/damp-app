@@ -5,8 +5,8 @@ function sum(a: number, b: number): number {
 }
 
 test('sum', () => {
-  const param1: number = 2;
-  const param2: number = 2;
+  const param1 = 2;
+  const param2 = 2;
 
   const result: number = sum(param1, param2);
 

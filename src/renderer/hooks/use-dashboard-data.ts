@@ -23,7 +23,7 @@ export interface DashboardService extends ServiceDefinition {
 
 export interface DashboardData {
   runningServices: DashboardService[];
-  runningProjects: Array<Project & { isRunning: boolean }>;
+  runningProjects: (Project & { isRunning: boolean })[];
   requiredServices: DashboardService[];
   allServices: DashboardService[];
   allProjects: Project[];

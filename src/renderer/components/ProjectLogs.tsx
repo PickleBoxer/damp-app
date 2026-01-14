@@ -2,10 +2,10 @@
  * Project logs viewer component with real-time streaming
  */
 
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@renderer/components/ui/alert';
+import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { AlertCircle } from 'lucide-react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 interface LogLine {
   line: string;
@@ -194,3 +194,5 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
     );
   }
 );
+
+ProjectLogs.displayName = 'ProjectLogs';

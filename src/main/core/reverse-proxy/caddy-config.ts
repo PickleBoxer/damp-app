@@ -8,11 +8,7 @@ import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { ServiceId } from '@shared/types/service';
 import type { Project } from '@shared/types/project';
 import { createLogger } from '@main/utils/logger';
-import {
-  hashProjectContainers,
-  hasStateChanged,
-  updateSyncedState,
-} from './caddy-sync-state';
+import { hashProjectContainers, hasStateChanged, updateSyncedState } from './caddy-sync-state';
 
 const logger = createLogger('CaddyConfig');
 

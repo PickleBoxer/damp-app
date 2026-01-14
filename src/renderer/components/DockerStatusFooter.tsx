@@ -1,31 +1,31 @@
-import { SiDocker } from 'react-icons/si';
-import {
-  dockerStatusQueryOptions,
-  dockerInfoQueryOptions,
-  dockerNetworkStatusQueryOptions,
-} from '@renderer/docker';
-import { projectKeys } from '@renderer/projects';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
-  Cpu,
-  MemoryStick,
-  RefreshCw,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Globe,
-  Network,
-} from 'lucide-react';
-import { useState, useRef, useEffect, useMemo } from 'react';
+  dockerInfoQueryOptions,
+  dockerNetworkStatusQueryOptions,
+  dockerStatusQueryOptions,
+} from '@renderer/docker';
+import { useSettings } from '@renderer/hooks/use-settings';
 import type { ActiveSync } from '@renderer/hooks/use-sync';
+import { projectKeys } from '@renderer/projects';
 import type { NgrokStatusData } from '@shared/types/ngrok';
 import { useNavigate } from '@tanstack/react-router';
-import { useSettings } from '@renderer/hooks/use-settings';
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Cpu,
+  Globe,
+  MemoryStick,
+  Network,
+  RefreshCw,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { SiDocker } from 'react-icons/si';
 
 /**
  * Format bytes to MB or GB depending on size
  */
-import { useQuery, useQueries } from '@tanstack/react-query';
 import type { Project } from '@shared/types/project';
+import { useQueries, useQuery } from '@tanstack/react-query';
 
 function formatMemory(bytes: number): string {
   const gb = bytes / 1024 / 1024 / 1024;
@@ -154,8 +154,8 @@ export default function DockerStatusFooter() {
   // Count active syncs by direction and get project info
   const syncInfo = useMemo(() => {
     const counts = { from: 0, to: 0 };
-    const fromProjects: Array<{ id: string; name: string }> = [];
-    const toProjects: Array<{ id: string; name: string }> = [];
+    const fromProjects: { id: string; name: string }[] = [];
+    const toProjects: { id: string; name: string }[] = [];
 
     if (projects) {
       projects.forEach((project, index) => {
@@ -180,6 +180,7 @@ export default function DockerStatusFooter() {
       toProjects,
       total: counts.from + counts.to,
     };
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
   }, [projects, syncQueries]);
 
   // Subscribe to ngrok status for all projects using useQueries (same pattern as sync)
@@ -194,7 +195,7 @@ export default function DockerStatusFooter() {
 
   // Count active ngrok tunnels and get project info
   const ngrokInfo = useMemo(() => {
-    const activeTunnels: Array<{ id: string; name: string; url?: string }> = [];
+    const activeTunnels: { id: string; name: string; url?: string }[] = [];
 
     if (projects) {
       projects.forEach((project, index) => {
@@ -213,6 +214,7 @@ export default function DockerStatusFooter() {
       activeTunnels,
       total: activeTunnels.length,
     };
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
   }, [projects, ngrokQueries]);
 
   return (

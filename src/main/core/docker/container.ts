@@ -3,18 +3,18 @@
  * Handles all container lifecycle and execution operations
  */
 
-import Docker from 'dockerode';
-import type { ContainerCreateOptions } from 'dockerode';
-import type { ServiceConfig, CustomConfig, PullProgress } from '@shared/types/service';
-import type { PortMapping, ContainerState } from '@shared/types/container';
-import { docker } from './docker';
-import { ensureNetworkExists } from './network';
-import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
+import { createLogger } from '@main/utils/logger';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
-import { getAvailablePorts } from './port-checker';
+import type { ContainerState, PortMapping } from '@shared/types/container';
+import type { CustomConfig, PullProgress, ServiceConfig } from '@shared/types/service';
+import type { ContainerCreateOptions } from 'dockerode';
+import Docker from 'dockerode';
 import * as tar from 'tar-stream';
-import { createLogger } from '@main/utils/logger';
+import { docker } from './docker';
+import { ensureNetworkExists } from './network';
+import { getAvailablePorts } from './port-checker';
+import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
 
 const logger = createLogger('Container');
 
@@ -46,7 +46,7 @@ export async function pullImage(
         // Track pull progress
         docker.modem.followProgress(
           stream,
-          (err, output) => {
+          err => {
             if (err) {
               reject(err);
             } else {
@@ -380,7 +380,7 @@ export async function waitForContainerRunning(
     }
 
     // Still initializing/restarting - wait and retry
-    await new Promise((resolve) => setTimeout(resolve, pollInterval));
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
   }
 
   logger.error(`Timeout waiting for container ${containerIdOrName} to reach running state`);
@@ -733,12 +733,12 @@ function buildExposedPorts(ports: PortMapping[]): Record<string, Record<string, 
  */
 function buildPortBindings(ports: PortMapping[]): Record<
   string,
-  Array<{
+  {
     HostIp: string;
     HostPort: string;
-  }>
+  }[]
 > {
-  const portBindings: Record<string, Array<{ HostIp: string; HostPort: string }>> = {};
+  const portBindings: Record<string, { HostIp: string; HostPort: string }[]> = {};
   for (const [external, internal] of ports) {
     portBindings[`${internal}/tcp`] = [
       {

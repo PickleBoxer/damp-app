@@ -45,7 +45,7 @@ export const Route = createFileRoute('/services')({
 });
 
 // Service type tabs to display (in order)
-const SERVICE_TYPE_TABS: Array<{ value: ServiceType | 'all'; label: string }> = [
+const SERVICE_TYPE_TABS: { value: ServiceType | 'all'; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'web', label: 'Web' },
   { value: 'database', label: 'Database' },

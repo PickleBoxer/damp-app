@@ -1,34 +1,34 @@
-import { useState } from 'react';
+import { HealthBadge } from '@renderer/components/HealthBadge';
+import ServiceActions from '@renderer/components/ServiceActions';
+import { ServiceIcon } from '@renderer/components/ServiceIcon';
+import { Badge } from '@renderer/components/ui/badge';
+import { Button } from '@renderer/components/ui/button';
+import { Card, CardContent } from '@renderer/components/ui/card';
+import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
+import { ScrollArea } from '@renderer/components/ui/scroll-area';
+import { Separator } from '@renderer/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { serviceContainerStateQueryOptions, serviceQueryOptions } from '@renderer/services';
+import { getServiceUIUrl, hasServiceUI } from '@renderer/utils/services/ui';
+import { ServiceId, ServiceInfo } from '@shared/types/service';
+import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
   ErrorComponent,
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { Button } from '@renderer/components/ui/button';
-import { useSuspenseQuery, useQueryErrorResetBoundary, useQuery } from '@tanstack/react-query';
-import { serviceQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
-import { ServiceId, ServiceInfo } from '@shared/types/service';
-import { HealthBadge } from '@renderer/components/HealthBadge';
-import ServiceActions from '@renderer/components/ServiceActions';
-import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import { ServiceIcon } from '@renderer/components/ServiceIcon';
-import { hasServiceUI, getServiceUIUrl } from '@renderer/utils/services/ui';
 import {
-  Download,
-  ShieldCheck,
-  Copy,
   Check,
-  MonitorSmartphone,
-  ExternalLink,
   Container,
+  Copy,
+  Download,
+  ExternalLink,
+  MonitorSmartphone,
+  ShieldCheck,
 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { Item, ItemContent, ItemTitle, ItemMedia, ItemActions } from '@renderer/components/ui/item';
-import { Badge } from '@renderer/components/ui/badge';
-import { Card, CardContent } from '@renderer/components/ui/card';
-import { Separator } from '@renderer/components/ui/separator';
 
 export const Route = createFileRoute('/services/$serviceId')({
   loader: ({ context: { queryClient }, params: { serviceId } }) =>
@@ -51,7 +51,7 @@ function getStatusText(isRunning?: boolean, exists?: boolean): string {
 }
 
 // Helper function to get the actual external port for a service
-function getServicePort(service: ServiceInfo, portIndex: number = 0): string {
+function getServicePort(service: ServiceInfo, portIndex = 0): string {
   // Try to get the actual mapped port from state config
   const actualPort = service.custom_config?.ports?.[portIndex]?.[0];
   // Fallback to default port from definition
@@ -290,7 +290,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
             <div className="bg-primary/5 space-y-1 p-3 text-xs">
               <p className="text-muted-foreground">
                 <strong className="text-foreground">Inside Devcontainer:</strong> Services
-                communicate via Docker's internal network using container names. This is the
+                communicate via Docker&apos;s internal network using container names. This is the
                 recommended way to connect from your application running in a devcontainer.
               </p>
             </div>
@@ -504,8 +504,8 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
                     <div className="bg-primary/5 space-y-1 p-3 text-xs">
                       <p className="text-muted-foreground">
                         If you experience any connection issues with HTTPS, you can manually
-                        download and install the root certificate to your system's trusted store
-                        using the button below.
+                        download and install the root certificate to your system&apos;s trusted
+                        store using the button below.
                       </p>
                     </div>
                   </div>

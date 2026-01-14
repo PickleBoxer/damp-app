@@ -551,7 +551,7 @@ export async function removeServiceVolumes(volumeNames: string[]): Promise<void>
  * Get all DAMP-managed volumes
  */
 export async function getAllManagedVolumes(): Promise<
-  Array<{ name: string; labels: Record<string, string> }>
+  { name: string; labels: Record<string, string> }[]
 > {
   try {
     const volumesResponse = await docker.listVolumes({

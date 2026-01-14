@@ -1,23 +1,23 @@
-import { Outlet, createRootRouteWithContext, Link } from '@tanstack/react-router';
+import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router';
 //import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
 //import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useSyncProgress } from '@renderer/hooks/use-sync';
-import { useDockerEvents } from '@renderer/hooks/use-docker-events';
+import CaddyStatusBanner from '@renderer/components/CaddyStatusBanner';
 import AppHeader from '@renderer/components/layout/AppHeader';
+import Footer from '@renderer/components/layout/Footer';
+import Sidebar from '@renderer/components/layout/Sidebar';
+import { Button } from '@renderer/components/ui/button';
 import {
   Empty,
+  EmptyContent,
+  EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-  EmptyDescription,
-  EmptyContent,
 } from '@renderer/components/ui/empty';
-import { Button } from '@renderer/components/ui/button';
-import Sidebar from '@renderer/components/layout/Sidebar';
-import Footer from '@renderer/components/layout/Footer';
-import CaddyStatusBanner from '@renderer/components/CaddyStatusBanner';
-import { Toaster } from 'sonner';
+import { useDockerEvents } from '@renderer/hooks/use-docker-events';
+import { useSyncProgress } from '@renderer/hooks/use-sync';
 import { useTheme } from '@renderer/hooks/use-theme';
 import type { QueryClient } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 
 function RootComponent() {
   // Register sync progress listener once at app level
@@ -70,7 +70,7 @@ export const Route = createRootRouteWithContext<{
     <Empty>
       <EmptyHeader>
         <EmptyTitle>Page Not Found</EmptyTitle>
-        <EmptyDescription>The page you're looking for doesn't exist.</EmptyDescription>
+        <EmptyDescription>The page you&apos;re looking for doesn&apos;t exist.</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Link to="/">
