@@ -102,7 +102,7 @@ interface CreateProjectWizardProps {
 
 type WizardStep = 'type' | 'laravel-starter' | 'laravel-config' | 'basic' | 'variant';
 
-const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: string }> = [
+const PROJECT_TYPES: { value: ProjectType; label: string; description: string }[] = [
   {
     value: ProjectType.BasicPhp,
     label: 'Custom',
@@ -123,7 +123,7 @@ const PROJECT_TYPES: Array<{ value: ProjectType; label: string; description: str
 const PHP_VERSIONS: PhpVersion[] = ['7.4', '8.1', '8.2', '8.3', '8.4'];
 const NODE_VERSIONS: NodeVersion[] = ['none', 'lts', 'latest', '20', '22', '24', '25'];
 
-const PHP_VARIANTS: Array<{ value: PhpVariant; label: string; description: string }> = [
+const PHP_VARIANTS: { value: PhpVariant; label: string; description: string }[] = [
   {
     value: 'fpm-apache',
     label: 'FPM-Apache',

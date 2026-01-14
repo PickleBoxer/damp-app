@@ -154,8 +154,8 @@ export default function DockerStatusFooter() {
   // Count active syncs by direction and get project info
   const syncInfo = useMemo(() => {
     const counts = { from: 0, to: 0 };
-    const fromProjects: Array<{ id: string; name: string }> = [];
-    const toProjects: Array<{ id: string; name: string }> = [];
+    const fromProjects: { id: string; name: string }[] = [];
+    const toProjects: { id: string; name: string }[] = [];
 
     if (projects) {
       projects.forEach((project, index) => {
@@ -194,7 +194,7 @@ export default function DockerStatusFooter() {
 
   // Count active ngrok tunnels and get project info
   const ngrokInfo = useMemo(() => {
-    const activeTunnels: Array<{ id: string; name: string; url?: string }> = [];
+    const activeTunnels: { id: string; name: string; url?: string }[] = [];
 
     if (projects) {
       projects.forEach((project, index) => {

@@ -16,10 +16,10 @@ import {
 } from 'react-icons/si';
 import { FaQuestionCircle } from 'react-icons/fa';
 
-type ServiceIconProps = {
+interface ServiceIconProps {
   serviceId: string;
   className?: string;
-};
+}
 
 const serviceColors: Record<string, string> = {
   caddy: '#0F7C8E',

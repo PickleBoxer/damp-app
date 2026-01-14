@@ -5,9 +5,7 @@
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-interface LogContext {
-  [key: string]: unknown;
-}
+type LogContext = Record<string, unknown>;
 
 /**
  * ANSI color codes for terminal output

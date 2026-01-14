@@ -733,12 +733,12 @@ function buildExposedPorts(ports: PortMapping[]): Record<string, Record<string, 
  */
 function buildPortBindings(ports: PortMapping[]): Record<
   string,
-  Array<{
+  {
     HostIp: string;
     HostPort: string;
-  }>
+  }[]
 > {
-  const portBindings: Record<string, Array<{ HostIp: string; HostPort: string }>> = {};
+  const portBindings: Record<string, { HostIp: string; HostPort: string }[]> = {};
   for (const [external, internal] of ports) {
     portBindings[`${internal}/tcp`] = [
       {

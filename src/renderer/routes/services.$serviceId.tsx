@@ -51,7 +51,7 @@ function getStatusText(isRunning?: boolean, exists?: boolean): string {
 }
 
 // Helper function to get the actual external port for a service
-function getServicePort(service: ServiceInfo, portIndex: number = 0): string {
+function getServicePort(service: ServiceInfo, portIndex = 0): string {
   // Try to get the actual mapped port from state config
   const actualPort = service.custom_config?.ports?.[portIndex]?.[0];
   // Fallback to default port from definition
