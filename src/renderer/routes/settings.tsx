@@ -152,7 +152,7 @@ function SettingsPage() {
       unsubscribeProgress();
       unsubscribeError();
     };
-  }, [updateState?.status]);
+  }, [updateState?.status, updateState?.info?.version]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -591,7 +591,7 @@ function SettingsPage() {
                 )}
 
                 {updateState?.status === 'not-available' && (
-                  <p className="text-muted-foreground text-xs">You're running the latest version</p>
+                  <p className="text-muted-foreground text-xs">You&apos;re running the latest version</p>
                 )}
 
                 {updateState?.status === 'error' && updateState.error && (

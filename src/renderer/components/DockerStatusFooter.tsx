@@ -180,6 +180,7 @@ export default function DockerStatusFooter() {
       toProjects,
       total: counts.from + counts.to,
     };
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
   }, [projects, syncQueries]);
 
   // Subscribe to ngrok status for all projects using useQueries (same pattern as sync)
@@ -213,6 +214,7 @@ export default function DockerStatusFooter() {
       activeTunnels,
       total: activeTunnels.length,
     };
+    // eslint-disable-next-line @tanstack/query/no-unstable-deps
   }, [projects, ngrokQueries]);
 
   return (

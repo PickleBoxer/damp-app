@@ -194,3 +194,5 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
     );
   }
 );
+
+ProjectLogs.displayName = 'ProjectLogs';

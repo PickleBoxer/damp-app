@@ -290,7 +290,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
             <div className="bg-primary/5 space-y-1 p-3 text-xs">
               <p className="text-muted-foreground">
                 <strong className="text-foreground">Inside Devcontainer:</strong> Services
-                communicate via Docker's internal network using container names. This is the
+                communicate via Docker&apos;s internal network using container names. This is the
                 recommended way to connect from your application running in a devcontainer.
               </p>
             </div>
@@ -504,7 +504,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
                     <div className="bg-primary/5 space-y-1 p-3 text-xs">
                       <p className="text-muted-foreground">
                         If you experience any connection issues with HTTPS, you can manually
-                        download and install the root certificate to your system's trusted store
+                        download and install the root certificate to your system&apos;s trusted store
                         using the button below.
                       </p>
                     </div>

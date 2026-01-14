@@ -46,7 +46,7 @@ export async function pullImage(
         // Track pull progress
         docker.modem.followProgress(
           stream,
-          (err, output) => {
+          err => {
             if (err) {
               reject(err);
             } else {

@@ -682,7 +682,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
                     <TbLock
                       className={`h-5 w-5 ${authentication === 'laravel' ? 'text-primary' : 'text-muted-foreground'}`}
                     />
-                    <span className="text-xs font-medium">Laravel's built-in</span>
+                    <span className="text-xs font-medium">Laravel&apos;s built-in</span>
                   </button>
                 </div>
               </div>

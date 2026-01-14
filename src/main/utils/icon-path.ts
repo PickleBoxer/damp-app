@@ -39,7 +39,7 @@ function getIconExtension(): string {
  * const appIconPath = getIconPath('app');
  * ```
  */
-export function getIconPath(_type: IconType): string {
+export function getIconPath(): string {
   const extension = getIconExtension();
   const iconFileName = `icon${extension}`;
 

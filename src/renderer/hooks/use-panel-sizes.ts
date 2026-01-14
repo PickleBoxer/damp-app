@@ -14,7 +14,7 @@ export function usePanelSizes(routeKey: string, defaultSizes: number[]) {
     } catch {
       return defaultSizes;
     }
-  }, [storageKey, defaultSizes, resetKey]);
+  }, [storageKey, defaultSizes]);
 
   const saveSizes = useCallback(
     (newSizes: number[]) => {

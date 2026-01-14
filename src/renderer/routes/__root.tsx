@@ -70,7 +70,7 @@ export const Route = createRootRouteWithContext<{
     <Empty>
       <EmptyHeader>
         <EmptyTitle>Page Not Found</EmptyTitle>
-        <EmptyDescription>The page you're looking for doesn't exist.</EmptyDescription>
+        <EmptyDescription>The page you&apos;re looking for doesn&apos;t exist.</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Link to="/">

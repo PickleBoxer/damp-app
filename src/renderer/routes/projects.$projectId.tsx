@@ -905,7 +905,7 @@ function ProjectDetailPage() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete project "{project.name}"?</AlertDialogTitle>
+            <AlertDialogTitle>Delete project &quot;{project.name}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. Choose what to delete:
             </AlertDialogDescription>
