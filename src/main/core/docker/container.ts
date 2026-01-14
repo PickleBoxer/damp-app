@@ -3,18 +3,18 @@
  * Handles all container lifecycle and execution operations
  */
 
-import Docker from 'dockerode';
-import type { ContainerCreateOptions } from 'dockerode';
-import type { ServiceConfig, CustomConfig, PullProgress } from '@shared/types/service';
-import type { PortMapping, ContainerState } from '@shared/types/container';
-import { docker } from './docker';
-import { ensureNetworkExists } from './network';
-import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
+import { createLogger } from '@main/utils/logger';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
-import { getAvailablePorts } from './port-checker';
+import type { ContainerState, PortMapping } from '@shared/types/container';
+import type { CustomConfig, PullProgress, ServiceConfig } from '@shared/types/service';
+import type { ContainerCreateOptions } from 'dockerode';
+import Docker from 'dockerode';
 import * as tar from 'tar-stream';
-import { createLogger } from '@main/utils/logger';
+import { docker } from './docker';
+import { ensureNetworkExists } from './network';
+import { getAvailablePorts } from './port-checker';
+import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
 
 const logger = createLogger('Container');
 

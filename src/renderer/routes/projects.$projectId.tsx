@@ -1,55 +1,13 @@
-import {
-  createFileRoute,
-  useNavigate,
-  ErrorComponent,
-  useRouter,
-  type ErrorComponentProps,
-} from '@tanstack/react-router';
-import { useQuery, useSuspenseQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import { Button } from '@renderer/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
-import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
-import { IoInformationCircle, IoWarning } from 'react-icons/io5';
-import { TbWorld } from 'react-icons/tb';
-import { projectQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
-import { useDeleteProject } from '@renderer/hooks/use-projects';
-import { dockerStatusQueryOptions } from '@renderer/docker';
-import {
-  useSyncFromVolume,
-  useSyncToVolume,
-  useProjectSyncStatus,
-  useCancelSync,
-} from '@renderer/hooks/use-sync';
-import { useNgrokStatus, useStartNgrokTunnel, useStopNgrokTunnel } from '@renderer/hooks/use-ngrok';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
-import { ProjectPreview } from '@renderer/components/ProjectPreview';
 import { ProjectLogs, type ProjectLogsRef } from '@renderer/components/ProjectLogs';
-import {
-  Globe,
-  FolderOpen,
-  Terminal,
-  Sparkles,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  Download,
-  Upload,
-  Loader2,
-  Copy,
-  ExternalLink,
-  X,
-} from 'lucide-react';
-import { VscDebugStop, VscDebugStart, VscTerminal, VscVscode } from 'react-icons/vsc';
+import { ProjectPreview } from '@renderer/components/ProjectPreview';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@renderer/components/ui/accordion';
-import { Badge } from '@renderer/components/ui/badge';
-import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,15 +18,57 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@renderer/components/ui/alert-dialog';
+import { Badge } from '@renderer/components/ui/badge';
+import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
-import { Label } from '@renderer/components/ui/label';
 import { Input } from '@renderer/components/ui/input';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@renderer/components/ui/tooltip';
-import { useState, useEffect, useRef } from 'react';
-import { getSettings } from '@renderer/utils/settings';
-import { useSettings } from '@renderer/hooks/use-settings';
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
+import { Label } from '@renderer/components/ui/label';
+import { ScrollArea } from '@renderer/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { dockerStatusQueryOptions } from '@renderer/docker';
+import { useNgrokStatus, useStartNgrokTunnel, useStopNgrokTunnel } from '@renderer/hooks/use-ngrok';
+import { useDeleteProject } from '@renderer/hooks/use-projects';
+import { useSettings } from '@renderer/hooks/use-settings';
+import {
+  useCancelSync,
+  useProjectSyncStatus,
+  useSyncFromVolume,
+  useSyncToVolume,
+} from '@renderer/hooks/use-sync';
+import { projectContainerStateQueryOptions, projectQueryOptions } from '@renderer/projects';
+import { getSettings } from '@renderer/utils/settings';
 import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
+import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  createFileRoute,
+  ErrorComponent,
+  useNavigate,
+  useRouter,
+  type ErrorComponentProps,
+} from '@tanstack/react-router';
+import {
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Download,
+  ExternalLink,
+  FolderOpen,
+  Globe,
+  Loader2,
+  Sparkles,
+  Terminal,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { IoInformationCircle, IoWarning } from 'react-icons/io5';
+import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
+import { TbWorld } from 'react-icons/tb';
+import { VscDebugStart, VscDebugStop, VscTerminal, VscVscode } from 'react-icons/vsc';
+import { toast } from 'sonner';
 
 export const Route = createFileRoute('/projects/$projectId')({
   loader: ({ context: { queryClient }, params: { projectId } }) =>

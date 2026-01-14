@@ -1,5 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
+import { Badge } from '@renderer/components/ui/badge';
+import { Button } from '@renderer/components/ui/button';
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSeparator,
+  FieldSet,
+  FieldTitle,
+} from '@renderer/components/ui/field';
+import { Input } from '@renderer/components/ui/input';
+import { Progress } from '@renderer/components/ui/progress';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import {
   Select,
@@ -8,46 +22,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import { Button } from '@renderer/components/ui/button';
 import { Switch } from '@renderer/components/ui/switch';
-import { getSettings, updateSettings } from '@renderer/utils/settings';
-import { EDITOR_LABELS, TERMINAL_LABELS, NGROK_REGION_LABELS } from '@shared/types/settings';
-import type {
-  EditorChoice,
-  TerminalChoice,
-  NgrokRegion,
-  AppSettings,
-} from '@shared/types/settings';
 import { useTheme } from '@renderer/hooks/use-theme';
+import { getSettings, updateSettings } from '@renderer/utils/settings';
+import type {
+  AppSettings,
+  EditorChoice,
+  NgrokRegion,
+  TerminalChoice,
+} from '@shared/types/settings';
+import { EDITOR_LABELS, NGROK_REGION_LABELS, TERMINAL_LABELS } from '@shared/types/settings';
 import type { ThemeMode } from '@shared/types/theme-mode';
-import { toast } from 'sonner';
+import type { UpdateState } from '@shared/types/updater';
+import { createFileRoute } from '@tanstack/react-router';
 import {
-  Monitor,
-  Sun,
-  Moon,
   CheckCircle,
-  XCircle,
+  Download,
   Eye,
   EyeOff,
-  Download,
+  Monitor,
+  Moon,
   RefreshCw,
+  Sun,
+  XCircle,
 } from 'lucide-react';
-import { Input } from '@renderer/components/ui/input';
-import {
-  FieldSet,
-  FieldLegend,
-  FieldGroup,
-  Field,
-  FieldContent,
-  FieldLabel,
-  FieldTitle,
-  FieldDescription,
-  FieldSeparator,
-} from '@renderer/components/ui/field';
-import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
-import { Badge } from '@renderer/components/ui/badge';
-import { Progress } from '@renderer/components/ui/progress';
-import type { UpdateState } from '@shared/types/updater';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 export const Route = createFileRoute('/settings')({
   component: SettingsPage,

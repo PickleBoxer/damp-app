@@ -1,34 +1,34 @@
-import { useState } from 'react';
+import { HealthBadge } from '@renderer/components/HealthBadge';
+import ServiceActions from '@renderer/components/ServiceActions';
+import { ServiceIcon } from '@renderer/components/ServiceIcon';
+import { Badge } from '@renderer/components/ui/badge';
+import { Button } from '@renderer/components/ui/button';
+import { Card, CardContent } from '@renderer/components/ui/card';
+import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
+import { ScrollArea } from '@renderer/components/ui/scroll-area';
+import { Separator } from '@renderer/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { serviceContainerStateQueryOptions, serviceQueryOptions } from '@renderer/services';
+import { getServiceUIUrl, hasServiceUI } from '@renderer/utils/services/ui';
+import { ServiceId, ServiceInfo } from '@shared/types/service';
+import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
   ErrorComponent,
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { Button } from '@renderer/components/ui/button';
-import { useSuspenseQuery, useQueryErrorResetBoundary, useQuery } from '@tanstack/react-query';
-import { serviceQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
-import { ServiceId, ServiceInfo } from '@shared/types/service';
-import { HealthBadge } from '@renderer/components/HealthBadge';
-import ServiceActions from '@renderer/components/ServiceActions';
-import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import { ServiceIcon } from '@renderer/components/ServiceIcon';
-import { hasServiceUI, getServiceUIUrl } from '@renderer/utils/services/ui';
 import {
-  Download,
-  ShieldCheck,
-  Copy,
   Check,
-  MonitorSmartphone,
-  ExternalLink,
   Container,
+  Copy,
+  Download,
+  ExternalLink,
+  MonitorSmartphone,
+  ShieldCheck,
 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { Item, ItemContent, ItemTitle, ItemMedia, ItemActions } from '@renderer/components/ui/item';
-import { Badge } from '@renderer/components/ui/badge';
-import { Card, CardContent } from '@renderer/components/ui/card';
-import { Separator } from '@renderer/components/ui/separator';
 
 export const Route = createFileRoute('/services/$serviceId')({
   loader: ({ context: { queryClient }, params: { serviceId } }) =>

@@ -1,31 +1,31 @@
-import { SiDocker } from 'react-icons/si';
-import {
-  dockerStatusQueryOptions,
-  dockerInfoQueryOptions,
-  dockerNetworkStatusQueryOptions,
-} from '@renderer/docker';
-import { projectKeys } from '@renderer/projects';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
-  Cpu,
-  MemoryStick,
-  RefreshCw,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Globe,
-  Network,
-} from 'lucide-react';
-import { useState, useRef, useEffect, useMemo } from 'react';
+  dockerInfoQueryOptions,
+  dockerNetworkStatusQueryOptions,
+  dockerStatusQueryOptions,
+} from '@renderer/docker';
+import { useSettings } from '@renderer/hooks/use-settings';
 import type { ActiveSync } from '@renderer/hooks/use-sync';
+import { projectKeys } from '@renderer/projects';
 import type { NgrokStatusData } from '@shared/types/ngrok';
 import { useNavigate } from '@tanstack/react-router';
-import { useSettings } from '@renderer/hooks/use-settings';
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Cpu,
+  Globe,
+  MemoryStick,
+  Network,
+  RefreshCw,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { SiDocker } from 'react-icons/si';
 
 /**
  * Format bytes to MB or GB depending on size
  */
-import { useQuery, useQueries } from '@tanstack/react-query';
 import type { Project } from '@shared/types/project';
+import { useQueries, useQuery } from '@tanstack/react-query';
 
 function formatMemory(bytes: number): string {
   const gb = bytes / 1024 / 1024 / 1024;
