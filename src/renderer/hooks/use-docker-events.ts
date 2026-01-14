@@ -43,9 +43,9 @@ export function useDockerEvents() {
         });
 
         // ✅ Granular: Invalidate ONLY this project's container state
+        // Remove refetchType to ensure immediate refetch on container state changes
         queryClient.invalidateQueries({
           queryKey: projectKeys.containerState(event.projectId),
-          refetchType: 'active',
         });
 
         // Handle ngrok tunnel container events (event-driven updates)
@@ -68,9 +68,9 @@ export function useDockerEvents() {
         });
 
         // ✅ Granular: Invalidate ONLY this service's container state
+        // Remove refetchType to ensure immediate refetch on container state changes
         queryClient.invalidateQueries({
           queryKey: servicesKeys.containerState(serviceId),
-          refetchType: 'active',
         });
       }
     });

@@ -6,27 +6,32 @@ import type { Project } from '@shared/types/project';
 interface ProjectPreviewProps {
   project: Project;
   isRunning?: boolean; // Passed from parent (detail view has batch status)
+  isReady?: boolean; // Container is healthy and web server is ready
 }
 
-export function ProjectPreview({ project, isRunning = false }: Readonly<ProjectPreviewProps>) {
+export function ProjectPreview({
+  project,
+  isRunning = false,
+  isReady = false,
+}: Readonly<ProjectPreviewProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-  const [shouldShow, setShouldShow] = useState(isRunning);
+  const [shouldShow, setShouldShow] = useState(isReady);
 
   // Use Caddy domain for preview
   const previewUrl = `https://${project.domain}`;
   const displayUrl = project.domain;
 
-  // Handle fade in when isRunning changes
+  // Handle fade in when isReady changes (container healthy + running)
   useEffect(() => {
-    if (isRunning) {
+    if (isReady) {
       // Small delay to ensure transition is visible
       const timer = setTimeout(() => setShouldShow(true), 50);
       return () => clearTimeout(timer);
     }
-    // When not running, reset immediately without state update in effect
+    // When not ready, reset immediately without state update in effect
     return () => setShouldShow(false);
-  }, [isRunning]);
+  }, [isReady]);
 
   // Handle scale updates
   useEffect(() => {
@@ -58,15 +63,17 @@ export function ProjectPreview({ project, isRunning = false }: Readonly<ProjectP
               {/* Placeholder - visible when not running */}
               <div
                 className={`text-muted-foreground absolute inset-0 flex flex-col items-center justify-center gap-2 transition-opacity duration-300 ${
-                  isRunning ? 'pointer-events-none opacity-0' : 'opacity-100'
+                  isReady ? 'pointer-events-none opacity-0' : 'opacity-100'
                 }`}
               >
                 <Globe className="h-8 w-8 opacity-50" />
-                <p className="text-xs">Project not running</p>
+                <p className="text-xs">
+                  {isRunning ? 'Starting web server...' : 'Project not running'}
+                </p>
               </div>
 
-              {/* Webview - fades in when running */}
-              {isRunning && (
+              {/* Webview - fades in when ready (container healthy) */}
+              {isReady && (
                 <div
                   className={`relative h-full w-full overflow-hidden transition-opacity duration-300 ${
                     shouldShow ? 'opacity-100' : 'opacity-0'

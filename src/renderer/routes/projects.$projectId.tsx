@@ -123,6 +123,9 @@ function ProjectDetailPage() {
   const ngrokPublicUrl = ngrokStatusData?.publicUrl;
   const containerState = projectState;
   const isRunning = containerState?.running || false;
+  const isHealthy =
+    containerState?.health_status === 'healthy' || containerState?.health_status === 'none';
+  const isReady = isRunning && isHealthy;
 
   const handleOpenVSCode = async () => {
     const settings = await getSettings();
@@ -283,7 +286,7 @@ function ProjectDetailPage() {
       >
         <div className="flex h-full flex-1 flex-col space-y-4 p-2">
           {/* Safari Preview with Hover Expansion */}
-          <ProjectPreview project={project} isRunning={isRunning} />
+          <ProjectPreview project={project} isRunning={isRunning} isReady={isReady} />
           {/* Compact Project Header */}
           <div className="z-10 -mt-7 mb-0 flex items-baseline justify-between px-2">
             <div className="bg-background z-10 flex items-center p-2">
