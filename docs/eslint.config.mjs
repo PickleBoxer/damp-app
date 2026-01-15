@@ -1,16 +1,51 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { FlatCompat } from '@eslint/eslintrc';
+import { includeIgnoreFile } from '@eslint/compat';
+import pluginJs from '@eslint/js';
+import nextPlugin from '@next/eslint-plugin-next';
+import prettierConfig from 'eslint-config-prettier';
+import pluginReact from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import tseslint from 'typescript-eslint';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
+const prettierIgnorePath = path.resolve(__dirname, '../.prettierignore');
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
+/** @type {import('eslint').Linter.Config[]} */
 const eslintConfig = [
-  ...compat.extends('next/core-web-vitals', 'next/typescript', 'next', 'prettier'),
+  includeIgnoreFile(prettierIgnorePath),
+
+  // Base configs
+  pluginJs.configs.recommended,
+  pluginReact.configs.flat.recommended,
+  pluginReact.configs.flat['jsx-runtime'],
+  ...tseslint.configs.recommended,
+
+  // Global settings
+  {
+    settings: {
+      react: {
+        version: 'detect',
+      },
+    },
+  },
+
+  // Next.js and React
+  {
+    files: ['**/*.{js,mjs,cjs,ts,jsx,tsx}'],
+    plugins: {
+      '@next/next': nextPlugin,
+      'react-hooks': reactHooks,
+    },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+      ...reactHooks.configs.recommended.rules,
+    },
+  },
+
+  // Ignore patterns
   {
     ignores: [
       'node_modules/**',
@@ -22,6 +57,9 @@ const eslintConfig = [
       '.open-next/**',
     ],
   },
+
+  // Prettier last (disables conflicting formatting rules)
+  prettierConfig,
 ];
 
 export default eslintConfig;
