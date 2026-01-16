@@ -22,24 +22,28 @@ When you create a new project named "myapp", DAMP automatically:
 **Generates Domain**
 
 Creates `myapp.local` domain for your project
+
 </Step>
 
 <Step>
 **Updates Hosts File**
 
 Adds entry to Windows hosts file pointing to `127.0.0.1`
+
 </Step>
 
 <Step>
 **Configures Caddy**
 
 Sets up reverse proxy from domain to your container
+
 </Step>
 
 <Step>
 **Ready to Use**
 
 Access your project at `https://myapp.local` immediately.
+
 </Step>
 
 </Steps>
@@ -66,15 +70,15 @@ Generated Domains:
   <Card title="Clean URLs" icon={<Link />}>
     Use memorable URLs like `blog.local` instead of `localhost:3000`
   </Card>
-  
-  <Card title="Multiple Projects" icon={<Layers />}>
-    Run many projects simultaneously, each with its own domain
-  </Card>
-  
-  <Card title="Production-Like" icon={<Server />}>
-    Test with real domain names, not ports and localhost
-  </Card>
-  
+
+<Card title="Multiple Projects" icon={<Layers />}>
+  Run many projects simultaneously, each with its own domain
+</Card>
+
+<Card title="Production-Like" icon={<Server />}>
+  Test with real domain names, not ports and localhost
+</Card>
+
   <Card title="Automatic Setup" icon={<Zap />}>
     No manual hosts file editing - DAMP handles everything
   </Card>
@@ -101,7 +105,8 @@ DAMP uses the `hostie` utility to manage your Windows hosts file:
 - Safe Operations - No manual editing or typos
 
 <Callout type="warning">
-  When creating or deleting sites, you'll see a UAC (User Account Control) prompt. This is normal - DAMP needs administrator permission to modify the hosts file.
+  When creating or deleting sites, you'll see a UAC (User Account Control) prompt. This is normal -
+  DAMP needs administrator permission to modify the hosts file.
 </Callout>
 
 ### Vite Dev Server Support
@@ -114,6 +119,7 @@ Vite Dev Server:  https://vite.myapp.local  → React/Vue Hot Reload
 ```
 
 This allows you to:
+
 - Access backend API at `myapp.local`
 - Access frontend at `vite.myapp.local`
 - Keep hot module reloading working
@@ -131,24 +137,28 @@ Want to use a different domain extension? You can configure it!
 **Open Settings**
 
 Navigate to Settings → General in DAMP
+
 </Step>
 
 <Step>
 **Set Custom Domain** *(Coming Soon)*
 
 Enter your preferred domain extension (e.g., `.dev`, `.test`, `.localhost`)
+
 </Step>
 
 <Step>
 **Apply to New Projects**
 
 New projects will use your custom domain extension
+
 </Step>
 
 </Steps>
 
 <Callout type="info">
-  Custom domain configuration is coming in a future update. Currently, all projects use `.local` by default.
+  Custom domain configuration is coming in a future update. Currently, all projects use `.local` by
+  default.
 </Callout>
 
 ## How Domains Resolve
@@ -195,6 +205,7 @@ Running Projects:
 ```
 
 Each project:
+
 - Has its own unique domain
 - Runs in isolation
 - Uses different PHP/database versions
@@ -210,25 +221,31 @@ When you delete a project, DAMP automatically:
 4. Stops and removes containers
 5. Cleans up Docker volumes (if requested)
 
-<Callout type="success">
-  DAMP handles all domain management automatically.
-</Callout>
+<Callout type="success">DAMP handles all domain management automatically.</Callout>
 
 ## Troubleshooting
 
 <Accordions type="single">
   <Accordion title="Domain Not Resolving">
-    <b>Problem:</b> Can't access <code>myapp.local</code> after creating project<br/><br/>
+    <b>Problem:</b> Can't access <code>myapp.local</code> after creating project
+    <br />
+    <br />
     <b>Solutions:</b>
     <ol>
       <li>Check that project is running in DAMP dashboard</li>
       <li>Verify Caddy service is running</li>
-      <li>Try flushing DNS cache: <code>ipconfig /flushdns</code></li>
-      <li>Check Windows hosts file for entry: <code>C:\Windows\System32\drivers\etc\hosts</code></li>
+      <li>
+        Try flushing DNS cache: <code>ipconfig /flushdns</code>
+      </li>
+      <li>
+        Check Windows hosts file for entry: <code>C:\Windows\System32\drivers\etc\hosts</code>
+      </li>
     </ol>
   </Accordion>
   <Accordion title="UAC Prompt Issues">
-    <b>Problem:</b> UAC prompt doesn't appear or fails<br/><br/>
+    <b>Problem:</b> UAC prompt doesn't appear or fails
+    <br />
+    <br />
     <b>Solutions:</b>
     <ol>
       <li>Run DAMP as administrator</li>
@@ -238,7 +255,9 @@ When you delete a project, DAMP automatically:
     </ol>
   </Accordion>
   <Accordion title="Chrome Not Loading Domain">
-    <b>Problem:</b> Chrome shows "This site can't be reached"<br/><br/>
+    <b>Problem:</b> Chrome shows "This site can't be reached"
+    <br />
+    <br />
     <b>Solutions:</b>
     <ol>
       <li>Clear browser cache and cookies</li>
@@ -252,5 +271,6 @@ When you delete a project, DAMP automatically:
 ---
 
 <Callout type="info">
-  If you're experiencing domain resolution issues, check the DAMP troubleshooting guide or open an issue on GitHub.
+  If you're experiencing domain resolution issues, check the DAMP troubleshooting guide or open an
+  issue on GitHub.
 </Callout>

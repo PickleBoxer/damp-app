@@ -4,7 +4,7 @@ import { Book } from 'lucide-react';
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   const options = baseOptions();
-  
+
   // Add Documentation link only on home layout
   const homeLinks = [
     {
@@ -15,5 +15,9 @@ export default function Layout({ children }: LayoutProps<'/'>) {
     ...(options.links || []),
   ];
 
-  return <HomeLayout {...options} links={homeLinks}>{children}</HomeLayout>;
+  return (
+    <HomeLayout {...options} links={homeLinks}>
+      {children}
+    </HomeLayout>
+  );
 }

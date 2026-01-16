@@ -7,7 +7,8 @@ icon: Server
 Required reverse proxy service that powers all DAMP sites with automatic HTTPS certificates.
 
 <Callout type="info">
-  Caddy is essential for routing traffic to your sites and provides automatic SSL certificate generation.
+  Caddy is essential for routing traffic to your sites and provides automatic SSL certificate
+  generation.
 </Callout>
 
 ## Docker Configuration
@@ -15,7 +16,7 @@ Required reverse proxy service that powers all DAMP sites with automatic HTTPS c
 ```yaml
 Image: caddy:latest
 Ports:
-  - 80:80   # HTTP
+  - 80:80 # HTTP
   - 443:443 # HTTPS
 Volumes:
   - damp_caddy_data:/data
@@ -29,6 +30,7 @@ Volumes:
 ### Port Configuration
 
 Default ports:
+
 - HTTP: `80` (host) → `80` (container)
 - HTTPS: `443` (host) → `443` (container)
 
@@ -46,11 +48,13 @@ If either port is occupied on the host machine, DAMP automatically uses the next
 ### From Host Machine (Windows)
 
 **HTTP:**
+
 ```
 http://localhost
 ```
 
 **HTTPS (with valid certificate for .local domains):**
+
 ```
 https://myproject.local
 ```
@@ -71,6 +75,7 @@ Replace `[container-name]` with the actual container name displayed in DAMP.
 Caddy automatically generates SSL certificates for all .local domains. View certificates in DAMP's Services page.
 
 DAMP displays:
+
 - Domain name
 - Expiration date
 - Certificate status

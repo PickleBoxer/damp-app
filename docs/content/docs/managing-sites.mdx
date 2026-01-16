@@ -3,7 +3,7 @@ title: Managing Projects
 description: Manage, delete, and sync your DAMP projects
 ---
 
-import { Steps, Step } from 'fumadocs-ui/components/steps';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
 
 View, manage, and delete your PHP projects from DAMP's dashboard.
 
@@ -39,9 +39,7 @@ Launch directly into VS Code:
 3. Reopen in Container when prompted
 4. Start coding
 
-<Callout type="tip">
-  This launches your project in VS Code without folder browsing.
-</Callout>
+<Callout type="tip">This launches your project in VS Code without folder browsing.</Callout>
 
 ### Open Folder
 
@@ -91,14 +89,17 @@ MAIL_PORT=1025
 Named volumes provide **fast performance** but files live in the container. Sync copies them to your local machine.
 
 **Quick Action:**
+
 - **Sync From Volume** - Copy container files to local folder
 
 **Options:**
+
 - Exclude `node_modules/` - Skip Node.js dependencies
 - Exclude `vendor/` - Skip PHP dependencies
 
 <Callout type="info">
-  See the complete [Volume Sync Guide](/docs/volume-sync) for details on performance, sync timing, and troubleshooting.
+  See the complete [Volume Sync Guide](/docs/volume-sync) for details on performance, sync timing,
+  and troubleshooting.
 </Callout>
 
 ## Laravel Tools
@@ -136,6 +137,7 @@ Share your local project publicly:
 **Open Tunnel Tab**
 
 Select a project → click "Tunnel" tab
+
 </Step>
 
 <Step>
@@ -143,12 +145,14 @@ Select a project → click "Tunnel" tab
 
 - Choose region (us, eu, ap, etc.)
 - Set custom subdomain (requires paid Ngrok plan)
+
 </Step>
 
 <Step>
 **Start Tunnel**
 
 Click "Start Tunnel" - public URL created in seconds
+
 </Step>
 
 </Steps>
@@ -189,24 +193,28 @@ When you delete a project, DAMP:
 **Select Project**
 
 Click the project you want to remove
+
 </Step>
 
 <Step>
 **Click Delete**
 
 Click "Delete Project" button
+
 </Step>
 
 <Step>
 **Confirm**
 
 Confirm deletion in dialog
+
 </Step>
 
 <Step>
 **Done**
 
 Project removed from DAMP - folder and volume remain on disk
+
 </Step>
 
 </Steps>
@@ -245,6 +253,7 @@ docker volume rm myproject_data
 ### Refresh All Projects
 
 Click **"Refresh"** button to:
+
 - Update all project statuses
 - Check DevContainer states
 - Refresh connection info
@@ -270,6 +279,7 @@ Use the search bar to filter projects by name or domain.
     2. Reopen in Container
     3. Wait for DevContainer to fully start
     4. Refresh DAMP
+
   </Accordion>
   <Accordion title="Project Not Accessible in Browser">
     **Problem:** `https://myproject.local` doesn't load
@@ -280,6 +290,7 @@ Use the search bar to filter projects by name or domain.
     - ✅ Trust SSL certificate in DAMP
     - ✅ Check Caddy service is running
     - ✅ Clear browser cache
+
   </Accordion>
   <Accordion title="Volume Sync Not Working">
     **Problem:** Sync fails or files don't update
@@ -289,6 +300,7 @@ Use the search bar to filter projects by name or domain.
     - ✅ Check Docker Desktop is running
     - ✅ Verify volume exists: `docker volume ls`
     - ✅ Try opposite sync direction
+
   </Accordion>
 </Accordions>
 
@@ -300,11 +312,11 @@ Use the search bar to filter projects by name or domain.
   <Card title="Development Tools" href="/docs/development-tools/xdebug-debugging">
     Debug with XDebug and use Tinker REPL
   </Card>
-  
-  <Card title="Ngrok Tunneling" href="/docs/development-tools/ngrok-tunneling">
-    Share projects publicly with tunnels
-  </Card>
-  
+
+<Card title="Ngrok Tunneling" href="/docs/development-tools/ngrok-tunneling">
+  Share projects publicly with tunnels
+</Card>
+
   <Card title="DevContainers" href="/docs/core-features/devcontainers">
     Understand DevContainer architecture
   </Card>

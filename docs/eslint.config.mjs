@@ -21,6 +21,7 @@ const eslintConfig = [
   pluginReact.configs.flat.recommended,
   pluginReact.configs.flat['jsx-runtime'],
   ...tseslint.configs.recommended,
+  ...tseslint.configs.stylistic,
 
   // Global settings
   {
@@ -42,6 +43,9 @@ const eslintConfig = [
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs['core-web-vitals'].rules,
       ...reactHooks.configs.recommended.rules,
+      // Relaxed rules for documentation components
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'react/prop-types': 'off',
     },
   },
 

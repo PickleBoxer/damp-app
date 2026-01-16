@@ -1,9 +1,4 @@
-import {
-  defineConfig,
-  defineDocs,
-  frontmatterSchema,
-  metaSchema,
-} from 'fumadocs-mdx/config';
+import { defineConfig, defineDocs, frontmatterSchema, metaSchema } from 'fumadocs-mdx/config';
 import { z } from 'zod';
 
 // Changelog schema with version, tags, and date

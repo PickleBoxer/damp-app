@@ -11,8 +11,8 @@ S3-compatible object storage server for local development using MinIO latest ver
 ```yaml
 Image: minio/minio:latest
 Ports:
-  - 9000:9000  # API
-  - 8900:8900  # Console
+  - 9000:9000 # API
+  - 8900:8900 # Console
 Volume: damp-minio:/data
 ```
 
@@ -23,6 +23,7 @@ Volume: damp-minio:/data
 ### Port Configuration
 
 Default ports:
+
 - API: `9000` (host) → `9000` (container)
 - Console: `8900` (host) → `8900` (container)
 
@@ -30,9 +31,9 @@ If either port is occupied on the host machine, DAMP automatically uses the next
 
 ### Environment Variables
 
-| Variable | Value | Description |
-|----------|-------|-------------|
-| `MINIO_ROOT_USER` | `root` | Admin username |
+| Variable              | Value      | Description    |
+| --------------------- | ---------- | -------------- |
+| `MINIO_ROOT_USER`     | `root`     | Admin username |
 | `MINIO_ROOT_PASSWORD` | `password` | Admin password |
 
 ## Connection Information
@@ -46,6 +47,7 @@ http://localhost:8900
 ```
 
 **Login:**
+
 - Username: `root`
 - Password: `password`
 
@@ -150,9 +152,7 @@ mc cp file.txt local/my-bucket/
 mc cp local/my-bucket/file.txt ./
 ```
 
-<Callout type="success">
-  Any S3 client or SDK works with MinIO.
-</Callout>
+<Callout type="success">Any S3 client or SDK works with MinIO.</Callout>
 
 ## Data Persistence
 

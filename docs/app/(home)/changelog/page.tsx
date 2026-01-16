@@ -15,7 +15,7 @@ interface ChangelogData {
 
 export default function ChangelogPage() {
   const allPages = changelogSource.getPages();
-  
+
   // Sort by date (newest first)
   const sortedChangelogs = [...allPages].sort((a, b) => {
     const dateA = new Date((a.data as ChangelogData).date).getTime();
@@ -24,20 +24,20 @@ export default function ChangelogPage() {
   });
 
   return (
-    <main className="min-h-screen bg-fd-background relative">
+    <main className="bg-fd-background relative min-h-screen">
       {/* Header */}
-      <div className="border-b border-fd-border/50">
-        <div className="max-w-5xl mx-auto relative">
-          <div className="p-6 flex items-center justify-between">
+      <div className="border-fd-border/50 border-b">
+        <div className="relative mx-auto max-w-5xl">
+          <div className="flex items-center justify-between p-6">
             <h1 className="text-3xl font-semibold tracking-tight">Changelog</h1>
           </div>
         </div>
       </div>
 
       {/* Timeline */}
-      <div className="max-w-5xl mx-auto px-6 lg:px-10 pt-10">
+      <div className="mx-auto max-w-5xl px-6 pt-10 lg:px-10">
         <div className="relative">
-          {sortedChangelogs.map((page) => {
+          {sortedChangelogs.map(page => {
             const MDXContent = page.data.body;
             const data = page.data as ChangelogData;
             const date = new Date(data.date);
@@ -47,16 +47,16 @@ export default function ChangelogPage() {
 
             return (
               <div key={page.url} className="relative">
-                <div className="flex flex-col md:flex-row gap-y-6">
+                <div className="flex flex-col gap-y-6 md:flex-row">
                   {/* Left side - Date and Version */}
-                  <div className="md:w-48 flex-shrink-0">
-                    <div className="md:sticky md:top-8 pb-10">
-                      <time className="text-sm font-medium text-fd-muted-foreground block mb-3">
+                  <div className="flex-shrink-0 md:w-48">
+                    <div className="pb-10 md:sticky md:top-8">
+                      <time className="text-fd-muted-foreground mb-3 block text-sm font-medium">
                         {formattedDate}
                       </time>
 
                       {version && (
-                        <div className="inline-flex relative z-10 items-center justify-center w-15 h-10 text-fd-foreground border border-fd-border rounded-lg text-sm font-bold">
+                        <div className="text-fd-foreground border-fd-border relative z-10 inline-flex h-10 w-15 items-center justify-center rounded-lg border text-sm font-bold">
                           {version}
                         </div>
                       )}
@@ -64,11 +64,11 @@ export default function ChangelogPage() {
                   </div>
 
                   {/* Right side - Content */}
-                  <div className="flex-1 md:pl-8 relative pb-10">
+                  <div className="relative flex-1 pb-10 md:pl-8">
                     {/* Vertical timeline line */}
-                    <div className="hidden md:block absolute top-2 left-0 w-px h-full bg-fd-border">
+                    <div className="bg-fd-border absolute top-2 left-0 hidden h-full w-px md:block">
                       {/* Timeline dot */}
-                      <div className="hidden md:block absolute -translate-x-1/2 size-3 bg-fd-primary rounded-full z-10" />
+                      <div className="bg-fd-primary absolute z-10 hidden size-3 -translate-x-1/2 rounded-full md:block" />
                     </div>
 
                     <div className="space-y-6">
@@ -83,7 +83,7 @@ export default function ChangelogPage() {
                             {tags.map((tag: string) => (
                               <span
                                 key={tag}
-                                className="h-6 w-fit px-2 text-xs font-medium bg-fd-muted text-fd-muted-foreground rounded-full border border-fd-border flex items-center justify-center"
+                                className="bg-fd-muted text-fd-muted-foreground border-fd-border flex h-6 w-fit items-center justify-center rounded-full border px-2 text-xs font-medium"
                               >
                                 {tag}
                               </span>
@@ -91,8 +91,8 @@ export default function ChangelogPage() {
                           </div>
                         )}
                       </div>
-                      
-                      <div className="prose dark:prose-invert max-w-none prose-headings:scroll-mt-8 prose-headings:font-semibold prose-a:no-underline prose-headings:tracking-tight prose-headings:text-balance prose-p:tracking-tight prose-p:text-balance">
+
+                      <div className="prose dark:prose-invert prose-headings:scroll-mt-8 prose-headings:font-semibold prose-a:no-underline prose-headings:tracking-tight prose-headings:text-balance prose-p:tracking-tight prose-p:text-balance max-w-none">
                         <MDXContent components={getMDXComponents()} />
                       </div>
                     </div>

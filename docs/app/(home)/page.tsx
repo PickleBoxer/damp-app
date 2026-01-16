@@ -527,7 +527,7 @@ function PreviewSection() {
           WebkitMaskImage: 'linear-gradient(to top, transparent, black 100px, black)',
         }}
       >
-        {tabs.map((tab) => {
+        {tabs.map(tab => {
           const Component = tab.component;
           return (
             <div
@@ -557,7 +557,7 @@ function PreviewSection() {
             transform: `translateX(${getTabPosition()})`,
           }}
         />
-        {tabs.map((tab) => (
+        {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}

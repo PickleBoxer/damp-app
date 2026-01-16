@@ -3,7 +3,7 @@ title: Migrate from Laravel Sail
 description: Switch from Sail to DAMP
 ---
 
-import { Steps, Step } from "fumadocs-ui/components/steps";
+import { Steps, Step } from 'fumadocs-ui/components/steps';
 
 ## Migration Steps
 
@@ -181,15 +181,15 @@ Run commands directly in DevContainer (no wrapper needed).
 
 <Accordions>
   <Accordion title="Port Already in Use">
-    Sail containers still running: ```bash ./vendor/bin/sail down --volumes
-    docker ps # Verify no containers running ```
+    Sail containers still running: ```bash ./vendor/bin/sail down --volumes docker ps # Verify no
+    containers running ```
   </Accordion>
   <Accordion title="Database Connection Failed">
-    Can't connect to MySQL: 1. Verify MySQL service is installed in DAMP 2.
-    Check `.env` has `DB_HOST=damp-mysql` 3. Restart DevContainer
+    Can't connect to MySQL: 1. Verify MySQL service is installed in DAMP 2. Check `.env` has
+    `DB_HOST=damp-mysql` 3. Restart DevContainer
   </Accordion>
   <Accordion title="Missing Data">
-    Database is empty: 1. Export data from Sail (see Step 4) 2. Import to DAMP
-    database 3. Or run migrations: `php artisan migrate:fresh --seed`
+    Database is empty: 1. Export data from Sail (see Step 4) 2. Import to DAMP database 3. Or run
+    migrations: `php artisan migrate:fresh --seed`
   </Accordion>
 </Accordions>

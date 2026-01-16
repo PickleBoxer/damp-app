@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 This is a Fumadocs-powered Next.js 15 documentation site for Damp, using:
+
 - **Fumadocs MDX** for content processing from MDX files
 - **Fumadocs UI** for pre-built documentation components
 - **Next.js 15** with App Router, React 19, and Turbopack
@@ -37,6 +38,7 @@ pnpm cf-typegen
 ### Content Pipeline
 
 The content system follows this flow:
+
 1. MDX files in `content/docs/*.mdx` and `content/changelog/*.mdx` are defined in `source.config.ts`
 2. Build step (`postinstall: fumadocs-mdx`) generates `.source/` with typed content exports
 3. `lib/source.ts` creates two loaders (`source` and `changelogSource`) using `loader()` API
@@ -47,6 +49,7 @@ The content system follows this flow:
 ### Dual Content Sources
 
 This project has TWO separate content sources:
+
 - **Documentation** (`source`): MDX files in `content/docs/` with standard frontmatter
 - **Changelog** (`changelogSource`): MDX files in `content/changelog/` with extended schema (date, version, tags)
 
@@ -64,11 +67,13 @@ Both use the same loader pattern but with different schemas defined in `source.c
 ### Layout System
 
 Shared layout configuration lives in `lib/layout.shared.tsx` via `baseOptions()`:
+
 - Nav title with logo (Box icon + "Damp")
 - Links: Changelog, Download, Discord
 - Both home and docs layouts import this for consistency
 
 TypeScript path aliases:
+
 - `@/*` - Root directory
 - `@/.source` - Generated content source (auto-generated, do not edit)
 
@@ -85,6 +90,7 @@ TypeScript path aliases:
 ### MDX Components
 
 MDX component resolution:
+
 1. Default components from `fumadocs-ui/mdx` (Cards, Callouts, Code Blocks, etc.)
 2. Custom components merged in `mdx-components.tsx` via `getMDXComponents()`
 3. Relative links enabled via `createRelativeLink(source, page)` as anchor component
@@ -93,6 +99,7 @@ MDX component resolution:
 ### Deployment
 
 Configured for Cloudflare Pages via OpenNext:
+
 - `wrangler.jsonc` defines worker entry point and assets
 - `open-next.config.ts` for OpenNext configuration
 - Images are unoptimized (`next.config.mjs`) for Cloudflare compatibility
@@ -122,11 +129,12 @@ Configured for Cloudflare Pages via OpenNext:
 ## Customizing Frontmatter
 
 Edit `source.config.ts` to extend schema with Zod:
+
 ```typescript
 import { z } from 'zod';
 schema: frontmatterSchema.extend({
-  author: z.string().optional()
-})
+  author: z.string().optional(),
+});
 ```
 
 The changelog source already has a custom schema with `date`, `version`, and `tags` fields.

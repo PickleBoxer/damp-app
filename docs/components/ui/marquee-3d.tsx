@@ -1,9 +1,9 @@
-import { ComponentPropsWithoutRef, Children } from "react";
+import { ComponentPropsWithoutRef, Children } from 'react';
 
-import { cn } from "@/lib/utils";
-import { Marquee } from "@/components/ui/marquee";
+import { cn } from '@/lib/utils';
+import { Marquee } from '@/components/ui/marquee';
 
-interface Marquee3DProps extends ComponentPropsWithoutRef<"div"> {
+interface Marquee3DProps extends ComponentPropsWithoutRef<'div'> {
   /**
    * Optional CSS class name to apply custom styles
    */
@@ -19,12 +19,7 @@ interface Marquee3DProps extends ComponentPropsWithoutRef<"div"> {
   children: React.ReactNode;
 }
 
-export function Marquee3D({
-  className,
-  pauseOnHover = false,
-  children,
-  ...props
-}: Marquee3DProps) {
+export function Marquee3D({ className, pauseOnHover = false, children, ...props }: Marquee3DProps) {
   // Split children into 3 columns using React.Children.toArray for proper ReactNode handling
   const childrenArray = Children.toArray(children);
   const columnCount = 3;
@@ -38,7 +33,7 @@ export function Marquee3D({
     <div
       {...props}
       className={cn(
-        "absolute inset-0 flex h-full w-full flex-row items-center justify-center gap-4 overflow-hidden perspective-near",
+        'absolute inset-0 flex h-full w-full flex-row items-center justify-center gap-4 overflow-hidden perspective-near',
         className
       )}
     >
@@ -46,7 +41,7 @@ export function Marquee3D({
         className="flex flex-row items-center gap-4"
         style={{
           transform:
-            "translateX(-100px) translateY(0px) translateZ(-100px) rotateX(20deg) rotateY(-10deg) rotateZ(20deg)",
+            'translateX(-100px) translateY(0px) translateZ(-100px) rotateX(20deg) rotateY(-10deg) rotateZ(20deg)',
         }}
       >
         {columns.map((columnItems, index) => (

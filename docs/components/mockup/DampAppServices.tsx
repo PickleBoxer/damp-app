@@ -194,7 +194,7 @@ export default function DampAppServices() {
         <nav className="bg-background flex h-full w-[35px] flex-col items-center border-r dark:bg-black">
           {/* Navigation Items */}
           <div className="flex flex-1 flex-col">
-            {navItems.map((item) => {
+            {navItems.map(item => {
               const Icon = item.icon;
 
               return (

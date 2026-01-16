@@ -1,7 +1,6 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 import { Box, Download, ScrollText } from 'lucide-react';
-import { FaDiscord } from "react-icons/fa6";
-
+import { FaDiscord } from 'react-icons/fa6';
 
 /**
  * Shared layout configurations

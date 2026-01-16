@@ -11,7 +11,7 @@ Reliable message broker for handling queues, background jobs, and distributed me
 ```yaml
 Image: rabbitmq:management-alpine
 Ports:
-  - 5672:5672   # AMQP
+  - 5672:5672 # AMQP
   - 15672:15672 # Management UI
 Volume: damp-rabbitmq:/var/lib/rabbitmq
 ```
@@ -23,6 +23,7 @@ Volume: damp-rabbitmq:/var/lib/rabbitmq
 ### Port Configuration
 
 Default ports:
+
 - AMQP: `5672` (host) → `5672` (container)
 - Management UI: `15672` (host) → `15672` (container)
 
@@ -30,8 +31,8 @@ If either port is occupied on the host machine, DAMP automatically uses the next
 
 ### Environment Variables
 
-| Variable | Value | Description |
-|----------|-------|-------------|
+| Variable                | Value      | Description    |
+| ----------------------- | ---------- | -------------- |
 | `RABBITMQ_DEFAULT_USER` | `rabbitmq` | Admin username |
 | `RABBITMQ_DEFAULT_PASS` | `rabbitmq` | Admin password |
 
@@ -46,6 +47,7 @@ http://localhost:15672
 ```
 
 **Login:**
+
 - Username: `rabbitmq`
 - Password: `rabbitmq`
 

@@ -21,13 +21,13 @@ DAMP uses [Caddy](https://caddyserver.com/) - a modern web server with automatic
     SSL certificates generated automatically when you create a new project
   </Card>
 
-  <Card title="Local Certificate Authority" icon={<Key />}>
-    Caddy creates its own CA for local development certificates
-  </Card>
+<Card title="Local Certificate Authority" icon={<Key />}>
+  Caddy creates its own CA for local development certificates
+</Card>
 
-  <Card title="Auto Renewal" icon={<RefreshCw />}>
-    Certificates automatically renewed before expiration
-  </Card>
+<Card title="Auto Renewal" icon={<RefreshCw />}>
+  Certificates automatically renewed before expiration
+</Card>
 
   <Card title="Browser Trust" icon={<Shield />}>
     One-time root certificate installation
@@ -71,26 +71,31 @@ Install Caddy's root certificate once:
 **Install Caddy Service**
 
 Start Caddy service from the Services page in DAMP. Caddy will automatically create its local certificate authority.
+
 </Step>
 
 <Step>
 **Install Root Certificate**
 
 DAMP will attempt to automatically install the root certificate. If automatic installation fails, you can:
+
 - Click "Install SSL Certificate" button in the Caddy management section
 - Or download the certificate and install it manually
+
 </Step>
 
 <Step>
 **Enjoy Secure Connections**
 
 Once installed, all your `.local` sites will work with HTTPS without browser warnings.
+
 </Step>
 
 </Steps>
 
 <Callout type="tip">
-  If automatic installation doesn't work, download the certificate from DAMP and install it as a "Trusted Root Certification Authority" in Windows.
+  If automatic installation doesn't work, download the certificate from DAMP and install it as a
+  "Trusted Root Certification Authority" in Windows.
 </Callout>
 
 ## Features
@@ -136,12 +141,8 @@ Modern web development requires HTTPS:
 - **Production Parity** - Match your production environment
 
 <Callout type="warning">
-  **Without HTTPS locally, you can't test:**
-  - Progressive Web Apps (PWAs)
-  - Web Push Notifications
-  - Geolocation APIs
-  - Camera/Microphone access
-  - And many other modern features
+  **Without HTTPS locally, you can't test:** - Progressive Web Apps (PWAs) - Web Push Notifications
+  - Geolocation APIs - Camera/Microphone access - And many other modern features
 </Callout>
 
 ## Benefits
@@ -197,7 +198,8 @@ Check your SSL certificate status anytime:
 </table>
 
 <Callout type="tip">
-  Navigate to Services → Caddy Management to see your SSL certificate status and manage certificates.
+  Navigate to Services → Caddy Management to see your SSL certificate status and manage
+  certificates.
 </Callout>
 
 ## What About Production?
@@ -210,7 +212,8 @@ While DAMP uses Caddy's local CA for development:
 - Best practice - Develop with HTTPS, deploy with HTTPS
 
 <Callout type="success">
-  By using HTTPS locally, you catch SSL-related issues before deployment, making your development workflow more professional and reliable.
+  By using HTTPS locally, you catch SSL-related issues before deployment, making your development
+  workflow more professional and reliable.
 </Callout>
 
 ## Troubleshooting
@@ -223,12 +226,14 @@ While DAMP uses Caddy's local CA for development:
     <b>Solution:</b> Ensure Caddy service is running and restart your project.
   </Accordion>
   <Accordion title="Mixed Content Warnings">
-    <b>Solution:</b> Update all <code>http://</code> URLs in your app to <code>https://</code> or use protocol-relative URLs (<code>//</code>).
+    <b>Solution:</b> Update all <code>http://</code> URLs in your app to <code>https://</code> or
+    use protocol-relative URLs (<code>//</code>).
   </Accordion>
 </Accordions>
 
 ---
 
 <Callout type="info">
-  For advanced Caddy configuration and certificate management, visit the [Caddy Documentation](https://caddyserver.com/docs/).
+  For advanced Caddy configuration and certificate management, visit the [Caddy
+  Documentation](https://caddyserver.com/docs/).
 </Callout>

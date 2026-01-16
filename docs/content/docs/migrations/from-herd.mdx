@@ -3,7 +3,7 @@ title: Migrate from Laravel Herd
 description: Switch from Herd to DAMP
 ---
 
-import { Steps, Step } from "fumadocs-ui/components/steps";
+import { Steps, Step } from 'fumadocs-ui/components/steps';
 
 ## Migration Steps
 
@@ -163,12 +163,11 @@ npm run dev
     Caddy can't start: 1. Right-click Herd tray icon → Quit Herd 2. Restart DAMP
   </Accordion>
   <Accordion title="Database Connection Failed">
-    Can't connect to MySQL: 1. Verify MySQL service is installed in DAMP 2.
-    Check `.env` has `DB_HOST=damp-mysql` 3. Restart DevContainer
+    Can't connect to MySQL: 1. Verify MySQL service is installed in DAMP 2. Check `.env` has
+    `DB_HOST=damp-mysql` 3. Restart DevContainer
   </Accordion>
   <Accordion title="Project Not Loading">
-    Site doesn't load at `https://project.local`: 1. Verify project status is
-    "Running" in DAMP 2. Check DevContainer is active in VS Code 3. Install SSL
-    certificate from DAMP
+    Site doesn't load at `https://project.local`: 1. Verify project status is "Running" in DAMP 2.
+    Check DevContainer is active in VS Code 3. Install SSL certificate from DAMP
   </Accordion>
 </Accordions>

@@ -22,18 +22,21 @@ Debug your PHP code in three simple steps:
 **Open Project in DevContainer**
 
 Open your project folder in VS Code and reopen in container.
+
 </Step>
 
 <Step>
 **Set Breakpoints**
 
 Click in the gutter next to any line number to add a breakpoint (red dot).
+
 </Step>
 
 <Step>
 **Press F5**
 
 Start debugging! VS Code will stop at your breakpoints automatically.
+
 </Step>
 
 </Steps>
@@ -44,15 +47,15 @@ Start debugging! VS Code will stop at your breakpoints automatically.
   <Card title="Pre-Configured" icon={<Check />}>
     XDebug installed and configured in every new project
   </Card>
-  
-  <Card title="VS Code Integration" icon={<Code />}>
-    Debug panel, breakpoints, and step controls built-in
-  </Card>
-  
-  <Card title="Variable Inspection" icon={<Eye />}>
-    View and modify variables during execution
-  </Card>
-  
+
+<Card title="VS Code Integration" icon={<Code />}>
+  Debug panel, breakpoints, and step controls built-in
+</Card>
+
+<Card title="Variable Inspection" icon={<Eye />}>
+  View and modify variables during execution
+</Card>
+
   <Card title="Call Stack" icon={<List />}>
     Navigate through function calls and trace execution
   </Card>
@@ -72,9 +75,8 @@ xdebug.client_port = 9003
 ```
 
 <Callout type="info">
-  - **develop,debug** - Full debugging capabilities enabled
-  - **trigger** - Debugging starts only when triggered (via browser extension or URL parameter)
-  - **9003** - Standard XDebug 3.x port
+  - **develop,debug** - Full debugging capabilities enabled - **trigger** - Debugging starts only
+  when triggered (via browser extension or URL parameter) - **9003** - Standard XDebug 3.x port
 </Callout>
 
 **Why Trigger Mode?**
@@ -109,7 +111,8 @@ Included in `.vscode/launch.json`:
    - Use debug toolbar to step through
 
 <Callout type="info">
-  XDebug is configured with `start_with_request = trigger`, which means debugging only starts when triggered - giving you full control over when to debug.
+  XDebug is configured with `start_with_request = trigger`, which means debugging only starts when
+  triggered - giving you full control over when to debug.
 </Callout>
 
 ### Using Browser Extension
@@ -117,17 +120,20 @@ Included in `.vscode/launch.json`:
 The easiest way to trigger XDebug is with a browser extension:
 
 **Chrome/Edge:**
+
 - Install [Xdebug Helper](https://chrome.google.com/webstore/detail/xdebug-helper/eadndfjplgieldjbigjakmdgkmoaaaoc)
 - Click the extension icon → Enable "Debug"
 - Green bug icon means debugging is active
 - Browse your site - breakpoints will trigger
 
 **Firefox:**
+
 - Install [Xdebug Helper](https://addons.mozilla.org/en-US/firefox/addon/xdebug-helper-for-firefox/)
 - Same workflow as Chrome version
 
 **Without Extension:**
 Add `?XDEBUG_TRIGGER=1` to any URL:
+
 ```
 https://myapp.local/?XDEBUG_TRIGGER=1
 ```
@@ -142,7 +148,8 @@ Set breakpoints that only trigger when conditions are met:
 4. Breakpoint only triggers when condition is true
 
 <Callout type="tip">
-  Instead of adding `echo` or `var_dump`, use logpoints. Right-click and select "Add Logpoint" to log messages without modifying code.
+  Instead of adding `echo` or `var_dump`, use logpoints. Right-click and select "Add Logpoint" to
+  log messages without modifying code.
 </Callout>
 
 ## Advanced Features
@@ -150,11 +157,13 @@ Set breakpoints that only trigger when conditions are met:
 ### Inspecting Variables
 
 **View Current State:**
+
 - Hover over variables in code
 - Expand in Variables panel
 - See type, value, and structure
 
 **Modify During Debug:**
+
 - Right-click variable in panel
 - Select "Set Value"
 - Change value and continue execution
@@ -291,6 +300,7 @@ After changes, rebuild with `Ctrl+Shift+P` → "Dev Containers: Rebuild Containe
 **Problem**: Debugger doesn't stop at breakpoints
 
 **Solutions:**
+
 1. Verify debug session is active (Debug toolbar visible)
 2. **Enable XDebug trigger** - Use browser extension or add `?XDEBUG_TRIGGER=1` to URL
 3. Check that XDebug is installed: `php -v` should show "with Xdebug"
@@ -330,5 +340,6 @@ Container path must match your workspace folder name.
 ---
 
 <Callout type="success">
-  XDebug is ready to use in every project - no setup required. Open in VS Code, press F5, and start debugging.
+  XDebug is ready to use in every project - no setup required. Open in VS Code, press F5, and start
+  debugging.
 </Callout>

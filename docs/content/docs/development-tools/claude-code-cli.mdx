@@ -9,7 +9,8 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
 Add **Claude Code CLI** to your project with a single click during creation. Get an AI coding assistant that understands your codebase and helps build faster.
 
 <Callout type="success">
-  Enable Claude Code CLI during project creation - it's automatically installed and configured in your devcontainer with zero manual setup.
+  Enable Claude Code CLI during project creation - it's automatically installed and configured in
+  your devcontainer with zero manual setup.
 </Callout>
 
 ## Quick Setup
@@ -22,18 +23,21 @@ Add Claude to your project in seconds:
 **Enable During Creation**
 
 When creating a new site, toggle "Add Claude Code CLI" in the project creation dialog.
+
 </Step>
 
 <Step>
 **Automatic Installation**
 
 DAMP adds Claude Code CLI feature to your devcontainer configuration automatically.
+
 </Step>
 
 <Step>
 **Start Coding**
 
 Open project in VS Code - Claude Code CLI is ready to use immediately.
+
 </Step>
 
 </Steps>
@@ -44,15 +48,15 @@ Open project in VS Code - Claude Code CLI is ready to use immediately.
   <Card title="One-Click Install" icon={<Zap />}>
     Enable with a single toggle during project creation
   </Card>
-  
-  <Card title="Codebase Aware" icon={<Brain />}>
-    Claude understands your entire project structure
-  </Card>
-  
-  <Card title="Terminal Integration" icon={<Terminal />}>
-    Use Claude directly from your devcontainer terminal
-  </Card>
-  
+
+<Card title="Codebase Aware" icon={<Brain />}>
+  Claude understands your entire project structure
+</Card>
+
+<Card title="Terminal Integration" icon={<Terminal />}>
+  Use Claude directly from your devcontainer terminal
+</Card>
+
   <Card title="Zero Config" icon={<Check />}>
     Pre-configured and ready to use instantly
   </Card>
@@ -71,7 +75,8 @@ When you enable Claude Code CLI, DAMP adds this to your `.devcontainer/devcontai
 ```
 
 <Callout type="info">
-  The feature is added during project creation and installed when the devcontainer builds. No manual configuration needed.
+  The feature is added during project creation and installed when the devcontainer builds. No manual
+  configuration needed.
 </Callout>
 
 ## Using Claude Code CLI
@@ -224,18 +229,21 @@ Add the Claude feature manually:
   }
 }
 ```
+
 </Step>
 
 <Step>
 **Rebuild Container**
 
 Press `Ctrl+Shift+P` → "Dev Containers: Rebuild Container"
+
 </Step>
 
 <Step>
 **Start Using**
 
 Claude Code CLI is now available in your terminal.
+
 </Step>
 
 </Steps>
@@ -243,30 +251,38 @@ Claude Code CLI is now available in your terminal.
 ## Privacy & Security
 
 <Callout type="warning">
-  - Claude Code CLI sends code to Anthropic's API for processing
-  - Code is analyzed to provide relevant suggestions
-  - Don't use with sensitive/proprietary code without reviewing terms
-  - Consider data handling policies for your use case
+  - Claude Code CLI sends code to Anthropic's API for processing - Code is analyzed to provide
+  relevant suggestions - Don't use with sensitive/proprietary code without reviewing terms -
+  Consider data handling policies for your use case
 </Callout>
 
 ## Troubleshooting
 
 <Accordions type="single">
   <Accordion title="Claude Command Not Found">
-    <b>Problem:</b> <code>claude: command not found</code><br/><br/>
-    <b>Solution:</b> Ensure feature is added to <code>devcontainer.json</code> and container is rebuilt.
+    <b>Problem:</b> <code>claude: command not found</code>
+    <br />
+    <br />
+    <b>Solution:</b> Ensure feature is added to <code>devcontainer.json</code> and container is
+    rebuilt.
   </Accordion>
   <Accordion title="Authentication Failed">
-    <b>Problem:</b> Can't authenticate with API key<br/><br/>
+    <b>Problem:</b> Can't authenticate with API key
+    <br />
+    <br />
     <b>Solutions:</b>
     <ol>
       <li>Verify API key is correct (check Anthropic dashboard)</li>
       <li>Check internet connectivity</li>
-      <li>Try re-authenticating: <code>claude --logout</code> then <code>claude</code></li>
+      <li>
+        Try re-authenticating: <code>claude --logout</code> then <code>claude</code>
+      </li>
     </ol>
   </Accordion>
   <Accordion title="Slow Responses">
-    <b>Problem:</b> Claude takes long to respond<br/><br/>
+    <b>Problem:</b> Claude takes long to respond
+    <br />
+    <br />
     <b>Solutions:</b>
     <ol>
       <li>Check internet connection speed</li>
@@ -277,7 +293,8 @@ Claude Code CLI is now available in your terminal.
 </Accordions>
 
 <Callout type="success">
-  Enable Claude Code CLI with one click and experience AI-assisted coding directly in your devcontainer.
+  Enable Claude Code CLI with one click and experience AI-assisted coding directly in your
+  devcontainer.
 </Callout>
 
 ## Learn More

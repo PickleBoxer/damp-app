@@ -9,7 +9,8 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
 Share your local development projects with anyone, anywhere using **ngrok** - integrated into DAMP with single-click tunnel setup.
 
 <Callout type="success">
-  Start a secure tunnel for any project with one click and get a public URL to share with clients, teammates, or for testing webhooks.
+  Start a secure tunnel for any project with one click and get a public URL to share with clients,
+  teammates, or for testing webhooks.
 </Callout>
 
 ## Quick Setup
@@ -22,12 +23,14 @@ Get started in two simple steps:
 **Add Authtoken in Settings**
 
 Navigate to Settings → Ngrok Tunneling and add your ngrok authtoken. Get yours free from [ngrok.com](https://dashboard.ngrok.com/get-started/your-authtoken).
+
 </Step>
 
 <Step>
 **Start Tunnel**
 
 Open any project and click the "Tunnel" tab - start your tunnel with a single click.
+
 </Step>
 
 </Steps>
@@ -38,15 +41,15 @@ Open any project and click the "Tunnel" tab - start your tunnel with a single cl
   <Card title="One-Click Start" icon={<Zap />}>
     Start and stop tunnels instantly from the project dashboard
   </Card>
-  
-  <Card title="Per-Project Config" icon={<Settings />}>
-    Configure custom domains, regions, and settings for each site
-  </Card>
-  
-  <Card title="Live Metrics" icon={<Activity />}>
-    Monitor connections and HTTP requests in real-time
-  </Card>
-  
+
+<Card title="Per-Project Config" icon={<Settings />}>
+  Configure custom domains, regions, and settings for each site
+</Card>
+
+<Card title="Live Metrics" icon={<Activity />}>
+  Monitor connections and HTTP requests in real-time
+</Card>
+
   <Card title="HTTPS by Default" icon={<Lock />}>
     All tunnels use secure HTTPS URLs automatically
   </Card>
@@ -66,10 +69,8 @@ Compression     → Optional - Enable response compression
 ```
 
 <Callout type="info">
-  **Free vs Paid Plans**
-  
-  - **Free**: 1 tunnel, ngrok subdomain, 40 connections/minute
-  - **Paid**: Custom domains, more tunnels, higher limits
+  **Free vs Paid Plans** - **Free**: 1 tunnel, ngrok subdomain, 40 connections/minute - **Paid**:
+  Custom domains, more tunnels, higher limits
 </Callout>
 
 ## Per-Site Configuration
@@ -114,7 +115,8 @@ HTTP Requests   → Total requests served
 ```
 
 <Callout type="warning">
-  Your project must be running in VS Code's devcontainer before starting a tunnel. The tunnel connects to your devcontainer's web server.
+  Your project must be running in VS Code's devcontainer before starting a tunnel. The tunnel
+  connects to your devcontainer's web server.
 </Callout>
 
 ## Use Cases
@@ -220,21 +222,21 @@ Each project gets its own isolated tunnel.
 ## Security Considerations
 
 <Callout type="warning">
-  - Tunnels expose your local environment to the internet
-  - Anyone with the URL can access your site
-  - Use .env protection for sensitive data
-  - Don't share tunnel URLs publicly unless intended
+  - Tunnels expose your local environment to the internet - Anyone with the URL can access your site
+  - Use .env protection for sensitive data - Don't share tunnel URLs publicly unless intended
 </Callout>
 
 ### Best Practices
 
 Do:
+
 - Use tunnels for temporary sharing
 - Add authentication to sensitive endpoints
 - Monitor tunnel traffic
 - Stop tunnels when not in use
 
 Don't:
+
 - Share tunnel URLs in public forums
 - Use production credentials in dev
 - Leave tunnels running indefinitely
@@ -244,24 +246,41 @@ Don't:
 
 <Accordions type="single">
   <Accordion title="Tunnel Won't Start">
-    <b>Problem:</b> "Devcontainer is not running"<br/><br/>
-    <b>Solution:</b> Open your project in VS Code and reopen in container first.<br/><br/>
-    <b>Problem:</b> "Authtoken not configured"<br/><br/>
-    <b>Solution:</b> Add your ngrok authtoken in Settings → Ngrok Tunneling.<br/><br/>
-    <b>Problem:</b> "Tunnel already running"<br/><br/>
+    <b>Problem:</b> "Devcontainer is not running"
+    <br />
+    <br />
+    <b>Solution:</b> Open your project in VS Code and reopen in container first.
+    <br />
+    <br />
+    <b>Problem:</b> "Authtoken not configured"
+    <br />
+    <br />
+    <b>Solution:</b> Add your ngrok authtoken in Settings → Ngrok Tunneling.
+    <br />
+    <br />
+    <b>Problem:</b> "Tunnel already running"
+    <br />
+    <br />
     <b>Solution:</b> Stop the existing tunnel before starting a new one.
   </Accordion>
   <Accordion title="Can't Access Tunnel URL">
-    <b>Problem:</b> Tunnel URL returns 502 Bad Gateway<br/><br/>
+    <b>Problem:</b> Tunnel URL returns 502 Bad Gateway
+    <br />
+    <br />
     <b>Solutions:</b>
     <ol>
       <li>Verify devcontainer is running and serving on port 8080</li>
-      <li>Check that your application is listening on <code>0.0.0.0</code> (not <code>localhost</code>)</li>
+      <li>
+        Check that your application is listening on <code>0.0.0.0</code> (not <code>localhost</code>
+        )
+      </li>
       <li>Restart the tunnel</li>
     </ol>
   </Accordion>
   <Accordion title="Slow Connection">
-    <b>Problem:</b> Tunnel feels slow<br/><br/>
+    <b>Problem:</b> Tunnel feels slow
+    <br />
+    <br />
     <b>Solutions:</b>
     <ol>
       <li>Choose a closer region in tunnel configuration</li>

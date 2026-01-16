@@ -26,13 +26,13 @@ DAMP provides **14 pre-configured services** for development.
     Relational database
   </Card>
 
-  <Card title="PostgreSQL" href="/docs/services/postgresql" icon={<Database />}>
-    Open-source database
-  </Card>
+<Card title="PostgreSQL" href="/docs/services/postgresql" icon={<Database />}>
+  Open-source database
+</Card>
 
-  <Card title="MariaDB" href="/docs/services/mariadb" icon={<Database />}>
-    MySQL-compatible database
-  </Card>
+<Card title="MariaDB" href="/docs/services/mariadb" icon={<Database />}>
+  MySQL-compatible database
+</Card>
 
   <Card title="MongoDB" href="/docs/services/mongodb" icon={<Database />}>
     NoSQL document database
@@ -46,9 +46,9 @@ DAMP provides **14 pre-configured services** for development.
     In-memory data store
   </Card>
 
-  <Card title="Valkey" href="/docs/services/valkey" icon={<Zap />}>
-    Redis-compatible cache
-  </Card>
+<Card title="Valkey" href="/docs/services/valkey" icon={<Zap />}>
+  Redis-compatible cache
+</Card>
 
   <Card title="Memcached" href="/docs/services/memcached" icon={<Zap />}>
     Distributed caching system
@@ -155,6 +155,7 @@ If the default port is occupied, DAMP uses the next available port automatically
 **Default ports** are attempted first. If occupied, DAMP finds the next available port.
 
 **Example:**
+
 - Service: MySQL (default port 3306)
 - If 3306 is occupied → DAMP uses 3307 (or next available)
 - Actual port is shown in DAMP interface
@@ -166,6 +167,7 @@ Check DAMP for the actual port assigned to each service.
 ### Install
 
 Click "Install Service" in DAMP to:
+
 1. Pull Docker image
 2. Create named volumes for data
 3. Create and start container
@@ -181,7 +183,8 @@ Click "Install Service" in DAMP to:
 Removes the container. Data volume is preserved.
 
 <Callout type="warning">
-  Removing a service does NOT delete its data volume. Data persists and is restored if you reinstall.
+  Removing a service does NOT delete its data volume. Data persists and is restored if you
+  reinstall.
 </Callout>
 
 ## Service Status
@@ -193,6 +196,7 @@ Removes the container. Data volume is preserved.
 ## Learn More
 
 Visit individual service pages for:
+
 - Docker configuration (image, ports, volumes)
 - Credentials and environment variables
 - Connection strings
