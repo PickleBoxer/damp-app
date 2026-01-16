@@ -1,5 +1,7 @@
 'use client';
 
+import { create } from '@orama/orama';
+import { useDocsSearch } from 'fumadocs-core/search/client';
 import {
   SearchDialog,
   SearchDialogClose,
@@ -11,10 +13,8 @@ import {
   SearchDialogOverlay,
   type SharedProps,
 } from 'fumadocs-ui/components/dialog/search';
-import { useDocsSearch } from 'fumadocs-core/search/client';
-import { create } from '@orama/orama';
 
-function initOrama(locale?: string) {
+function initOrama() {
   return create({
     schema: { _: 'string' },
     // https://docs.orama.com/docs/orama-js/supported-languages

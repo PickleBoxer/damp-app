@@ -410,7 +410,7 @@ export default function DampAppSites() {
                                             <a
                                               href="https://laravel.com/docs"
                                               target="_blank"
-                                              className="inline-flex items-center space-x-1 font-medium underline underline-offset-4 text-[#f53003] dark:text-[#FF4433] ml-1"
+                                              className="inline-flex items-center space-x-1 font-medium underline underline-offset-4 text-[#f53003] dark:text-[#FF4433] ml-1" rel="noreferrer"
                                             >
                                               <span>Documentation</span>
                                               <svg
@@ -441,7 +441,7 @@ export default function DampAppSites() {
                                             <a
                                               href="https://laracasts.com"
                                               target="_blank"
-                                              className="inline-flex items-center space-x-1 font-medium underline underline-offset-4 text-[#f53003] dark:text-[#FF4433] ml-1"
+                                              className="inline-flex items-center space-x-1 font-medium underline underline-offset-4 text-[#f53003] dark:text-[#FF4433] ml-1" rel="noreferrer"
                                             >
                                               <span>Laracasts</span>
                                               <svg
@@ -467,7 +467,7 @@ export default function DampAppSites() {
                                           <a
                                             href="https://cloud.laravel.com"
                                             target="_blank"
-                                            className="inline-block dark:bg-[#eeeeec] dark:border-[#eeeeec] dark:text-[#1C1C1A] dark:hover:bg-white dark:hover:border-white hover:bg-black hover:border-black px-5 py-1.5 bg-[#1b1b18] rounded-sm border border-black text-white text-sm leading-normal"
+                                            className="inline-block dark:bg-[#eeeeec] dark:border-[#eeeeec] dark:text-[#1C1C1A] dark:hover:bg-white dark:hover:border-white hover:bg-black hover:border-black px-5 py-1.5 bg-[#1b1b18] rounded-sm border border-black text-white text-sm leading-normal" rel="noreferrer"
                                           >
                                             Deploy now
                                           </a>
