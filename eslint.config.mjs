@@ -79,6 +79,11 @@ export default defineConfig([
     },
   },
 
+  // Ignore docs workspace (has its own ESLint config)
+  {
+    ignores: ['docs/**'],
+  },
+
   // Prettier last (disables conflicting formatting rules)
   prettierConfig,
 ]);
