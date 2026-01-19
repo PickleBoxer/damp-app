@@ -9,29 +9,6 @@ const config = {
   images: {
     unoptimized: true, // Required for static export
   },
-  // Add cache headers for static assets
-  async headers() {
-    return [
-      {
-        source: '/screenshots/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
-        source: '/:path*.(png|jpg|jpeg|gif|webp|svg|ico)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-    ];
-  },
 };
 
 export default withMDX(config);

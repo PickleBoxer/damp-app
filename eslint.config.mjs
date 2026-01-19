@@ -30,6 +30,17 @@ export default defineConfig([
   ...pluginQuery.configs['flat/recommended'],
   ...pluginRouter.configs['flat/recommended'],
 
+  // TypeScript project configuration for root workspace
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.mts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+
   // Global settings
   {
     settings: {

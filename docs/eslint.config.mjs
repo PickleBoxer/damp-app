@@ -23,6 +23,17 @@ const eslintConfig = [
   ...tseslint.configs.recommended,
   ...tseslint.configs.stylistic,
 
+  // TypeScript project configuration for docs workspace
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+
   // Global settings
   {
     settings: {
