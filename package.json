@@ -4,6 +4,7 @@
   "version": "0.2.0",
   "description": "Docker local development environment manager",
   "main": ".vite/build/index.js",
+  "license": "MIT",
   "private": true,
   "repository": {
     "type": "git",

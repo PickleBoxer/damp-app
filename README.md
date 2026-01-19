@@ -1,241 +1,198 @@
-# damp-app
+<div align="center">
+  <img src="resources/icons/icon.png" alt="DAMP Logo" width="120" height="120">
+  
+  # DAMP
+  
+  **Docker-powered PHP development without the CLI complexity**
+  
+  [![Latest Release](https://img.shields.io/github/v/release/PickleBoxer/damp-app)](https://github.com/PickleBoxer/damp-app/releases)
+  [![Downloads](https://img.shields.io/github/downloads/PickleBoxer/damp-app/total)](https://github.com/PickleBoxer/damp-app/releases)
+  
+  [Download](https://github.com/PickleBoxer/damp-app/releases) · [Documentation](https://getdamp.app/) · [Report Bug](https://github.com/PickleBoxer/damp-app/issues) · [Request Feature](https://github.com/PickleBoxer/damp-app/issues)
+</div>
 
-Electron in all its glory. Everything you will need to develop your beautiful desktop application.
+---
 
-## Libs and tools
+## 📖 About
 
-To develop a Electron app, you probably will need some UI, test, formatter, style or other kind of library or framework, so let me install and configure some of them to you.
+**DAMP** transforms Docker into a visual development environment for PHP developers. Create production-ready containerized projects, manage databases and services, and get automatic HTTPS domains—all without touching the terminal.
 
-### Core 🏍️
+### ✨ Key Features
 
-- [Electron 38](https://www.electronjs.org)
-- [Vite 7](https://vitejs.dev)
+- 🚀 **One-Click Project Creation** — Laravel or PHP projects with DevContainers, Xdebug, and docker-compose pre-configured
+- 🔒 **Automatic HTTPS** — Every project gets custom `.local` domains with SSL certificates via Caddy reverse proxy
+- 🎛️ **14 Pre-Configured Services** — MySQL, PostgreSQL, MongoDB, Redis, Valkey, MariaDB, Memcached, Meilisearch, Typesense, Mailpit, MinIO, RabbitMQ, and Caddy
+- 🌐 **Ngrok Integration** — Share localhost with clients or webhooks instantly using built-in tunnel management
+- 📦 **Zero System Impact** — Run PHP 7.4, 8.0, 8.1, 8.2, 8.3, and 8.4 simultaneously without version conflicts
+- 🔄 **Smart Volume Sync** — Bidirectional sync between Docker volumes and local filesystem with selective exclusions
+- 🎨 **Beautiful UI** — Modern desktop interface built with React 19 and shadcn/ui
+- 💻 **VS Code Ready** — Auto-generates DevContainers with IntelliSense and debugging configured
 
-### DX 🛠️
+### 🎯 Who Is This For?
 
-- [TypeScript 5.9](https://www.typescriptlang.org)
-- [Prettier](https://prettier.io)
-- [ESLint 9](https://eslint.org)
-- [Zod 4](https://zod.dev)
-- [React Query (TanStack)](https://react-query.tanstack.com)
+- PHP/Laravel developers tired of XAMPP version conflicts or Docker CLI complexity
+- Freelancers managing multiple client projects with different requirements
+- Teams needing reproducible development environments
+- Developers wanting Docker's production-parity without memorizing terminal commands
+- Anyone transitioning from Herd/Valet seeking containerization benefits
 
-### UI 🎨
+### 🆚 Why Choose DAMP?
 
-- [React 19](https://reactjs.org)
-- [Tailwind 4](https://tailwindcss.com)
-- [Shadcn UI](https://ui.shadcn.com)
-- [Geist](https://vercel.com/font) as default font
-- [TanStack Router](https://tanstack.com/router) (with file based routing)
-- [Lucide](https://lucide.dev)
+| vs | Advantage |
+|---|---|
+| **Laravel Herd** | True Docker containers (production-parity), works with any PHP framework |
+| **DDEV/Lando** | Beautiful GUI instead of CLI commands, visual configuration instead of YAML |
+| **XAMPP/MAMP** | Complete isolation, multiple PHP versions, clean uninstall, reproducible environments |
+| **Docker CLI** | Visual management, automatic reverse proxy, one-click setup, no command memorization |
 
-### Test 🧪
+---
 
-- [Vitest](https://vitest.dev)
-- [Playwright](https://playwright.dev)
-- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro)
+## 🚀 Quick Start
 
-### Packing and distribution 📦
+### Installation
 
-- [Electron Forge](https://www.electronforge.io)
+1. **Download** the latest release for Windows from [Releases](https://github.com/PickleBoxer/damp-app/releases)
+2. **Install** by running the `.exe` installer or extract the portable `.zip`
+3. **Launch** DAMP from your desktop or Start menu
 
-### CI/CD 🚀
+### Prerequisites
 
-- Pre-configured [GitHub Actions workflow](https://github.com/PickleBoxer/damp-app/blob/main/.github/workflows/playwright.yml), for test with Playwright
+- **Docker Desktop** (or Docker Engine) must be installed and running
+- **VS Code** with [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) — Required to open generated DevContainer projects
+- **Windows 10/11**
 
-### Project preferences 🎯
+### Creating Your First Project
 
-- Use Context isolation
-- [React Compiler](https://react.dev/learn/react-compiler) is enabled by default.
-- `titleBarStyle`: hidden (Using custom title bar)
-- Geist as default font
-- Some default styles was applied, check the [`styles`](https://github.com/PickleBoxer/damp-app/tree/main/src/styles) directory
-- React DevTools are installed by default
+1. Click **"New Project"** in the DAMP dashboard
+2. Choose **Laravel** or **Basic PHP** template
+3. Configure PHP version, domain name, and database
+4. Click **Create** — your project will be ready with HTTPS in seconds!
 
-## Directory structure
+Visit [Documentation](https://getdamp.app/) for detailed guides.
 
-```plaintext
-.
-└── ./src/
-    ├── ./src/assets/
-    │   └── ./src/assets/fonts/
-    ├── ./src/components/
-    │   ├── ./src/components/template
-    │   └── ./src/components/ui/
-    ├── ./src/helpers/
-    │   └── ./src/helpers/ipc/
-    ├── ./src/layout/
-    ├── ./src/lib/
-    ├── ./src/pages/
-    ├── ./src/style/
-    └── ./src/tests/
-```
+---
 
-- `src/`: Main directory
-  - `assets/`: Store assets like images, fonts, etc.
-  - `components/`: Store UI components
-    - `template/`: Store the all not important components used by the template. It doesn't include the `WindowRegion` or the theme toggler, if you want to start an empty project, you can safely delete this directory.
-    - `ui/`: Store Shadcn UI components (this is the default direcotry used by Shadcn UI)
-  - `helpers/`: Store IPC related functions to be called in the renderer process
-    - `ipc/`: Directory to store IPC context and listener functions
-      - Some implementations are already done, like `theme` and `window` for the custom title bar
-  - `layout/`: Directory to store layout components
-  - `lib/`: Store libraries and other utilities
-  - `pages/`: Store app's pages
-  - `style/`: Store global styles
-  - `tests/`: Store tests (from Vitest and Playwright)
+## 📸 Screenshots
 
-## Security Best Practices
+<div align="center">
+  <img src="docs/public/screenshots/dash.png" alt="DAMP Dashboard" width="800">
+  <p><i>Project Dashboard with real-time status monitoring</i></p>
+  
+  <img src="docs/public/screenshots/services.png" alt="Service Management" width="800">
+  <p><i>Visual service management with one-click installation</i></p>
+  
+  <img src="docs/public/screenshots/projects.png" alt="Site Configuration" width="800">
+  <p><i>Multi-site management with custom domains</i></p>
+</div>
 
-### Required Configuration
-```typescript
-// src/main.ts - webPreferences
-webPreferences: {
-  contextIsolation: true,        // ✅ REQUIRED - Isolate contexts
-  nodeIntegration: false,        // ✅ REQUIRED - No Node.js in renderer
-  nodeIntegrationInSubFrames: false, // ✅ REQUIRED
-  preload: preload,              // ✅ REQUIRED - Secure bridge
-  sandbox: true,                 // 🔒 RECOMMENDED - Extra isolation
-}
-```
+---
 
-### Security Architecture
+## 🛠️ Tech Stack
 
-```mermaid
-graph TB
-    subgraph "Main Process (Privileged)"
-        M[main.ts<br/>Node.js APIs<br/>File System<br/>OS Access]
-        L[IPC Listeners<br/>listeners-register.ts]
-    end
-    
-    subgraph "Preload Script (Bridge)"
-        P[preload.ts<br/>context-exposer.ts]
-        CB[contextBridge<br/>Secure API Gateway]
-    end
-    
-    subgraph "Renderer Process (Sandboxed)"
-        R[React App<br/>NO Node.js Access]
-        W[window.themeMode<br/>window.electronWindow]
-    end
-    
-    M -->|registers| L
-    P -->|import electron| CB
-    CB -->|exposeInMainWorld| W
-    R -->|calls| W
-    W -->|ipcRenderer.invoke| L
-    L -->|response| W
-    
-    style M fill:#ff6b6b
-    style P fill:#ffd93d
-    style R fill:#6bcf7f
-    style CB fill:#4d96ff
-```
+Built with modern technologies for performance, security, and developer experience:
 
-### IPC Architecture Pattern
+### Core Framework
+- **[Electron 38](https://www.electronjs.org)** — Cross-platform desktop framework with context isolation
+- **[Vite 7](https://vitejs.dev)** — Lightning-fast build tool and HMR
+- **[TypeScript 5.9](https://www.typescriptlang.org)** — Type-safe development
 
-All IPC follows this **secure 3-layer pattern** in `src/helpers/ipc/`:
+### User Interface
+- **[React 19](https://reactjs.org)** — UI library with React Compiler enabled
+- **[TanStack Router](https://tanstack.com/router)** — Type-safe file-based routing with memory history
+- **[shadcn/ui](https://ui.shadcn.com)** — Beautiful, accessible component system
+- **[Tailwind CSS 4](https://tailwindcss.com)** — Utility-first styling
+- **[Lucide Icons](https://lucide.dev)** — Modern icon library
+- **[Geist Font](https://vercel.com/font)** — Clean, readable typography
 
-1. **Channels** (`*-channels.ts`): Define channel name constants (e.g., `THEME_MODE_TOGGLE_CHANNEL`)
-2. **Context** (`*-context.ts`): Use `import { contextBridge, ipcRenderer } from 'electron'` to expose APIs
-3. **Listeners** (`*-listeners.ts`): `ipcMain.handle` to implement main process handlers
+### Backend Integration
+- **[Dockerode](https://github.com/apocas/dockerode)** — Docker Engine API client
+- **[TanStack Query](https://tanstack.com/query)** — Async state management
+- **[Zod 4](https://zod.dev)** — Runtime validation and type safety
 
-```mermaid
-sequenceDiagram
-    participant R as Renderer<br/>(React Component)
-    participant W as Window API<br/>(window.themeMode)
-    participant P as Preload<br/>(contextBridge)
-    participant I as IPC Channel<br/>(THEME_MODE_TOGGLE_CHANNEL)
-    participant M as Main Process<br/>(theme-listeners)
-    
-    R->>W: window.themeMode.toggle()
-    W->>P: ipcRenderer.invoke()
-    P->>I: Send on channel
-    I->>M: ipcMain.handle()
-    M->>M: Access nativeTheme
-    M-->>I: Return result
-    I-->>P: Response
-    P-->>W: Promise resolves
-    W-->>R: Update UI
-    
-    Note over R,M: Renderer has ZERO direct Node.js access
-```
+### DevOps & Infrastructure
+- **[Caddy](https://caddyserver.com)** — Automatic HTTPS reverse proxy
+- **[Ngrok](https://ngrok.com)** — Secure tunneling service
+- **Docker** — Containerization engine
 
-## NPM script
+### Quality Assurance
+- **[Vitest](https://vitest.dev)** — Unit testing framework
+- **[Playwright](https://playwright.dev)** — End-to-end testing
+- **[ESLint 9](https://eslint.org)** — Code linting
+- **[Prettier](https://prettier.io)** — Code formatting
 
-To run any of those scripts:
+### Distribution
+- **[Electron Forge](https://www.electronforge.io)** — Building, packaging, and publishing
+- **GitHub Actions** — Automated CI/CD pipeline with R2 backup
+
+---
+
+## 💻 Development
 
 ```bash
-npm run <script>
-```
-
-- `start`: Start the app in development mode
-- `package`: Package your application into a platform-specific executable bundle and put the result in a folder.
-- `make`: Generate platform-specific distributables (e.g. .exe, .dmg, etc) of your application for distribution.
-- `publish`: Electron Forge's way of taking the artifacts generated by the `make` command and sending them to a service somewhere for you to distribute or use as updates.
-- `lint`: Run ESLint to lint the code
-- `format`: Run Prettier to check the code (it doesn't change the code)
-- `format:write`: Run Prettier to format the code
-- `test`: Run the default unit-test script (Vitest)
-- `test:watch`: Run the default unit-test script in watch mode (Vitest)
-- `test:unit`: Run the Vitest tests
-- `test:e2e`: Run the Playwright tests
-- `test:all`: Run all tests (Vitest and Playwright)
-
-> The test scripts involving Playwright require the app be builded before running the tests. So, before run the tests, run the `package`, `make` or `publish` script.
-
-## How to use
-
-1. Clone this repository
-
-```bash
+# Clone and setup
 git clone https://github.com/PickleBoxer/damp-app.git
+cd damp-app
+pnpm install
+
+# Start development
+pnpm start          # Development mode with HMR
+pnpm test           # Run tests
+pnpm lint           # Check code quality
 ```
 
-Or use it as a template on GitHub
+See [Contributing Guide](CONTRIBUTING.md) for detailed development guidelines
 
-2. Install dependencies
+---
 
-```bash
-npm install
-```
+## 🤝 Contributing
 
-3. Run the app
+Contributions are welcome! Whether it's bug reports, feature requests, or code contributions.
 
-```bash
-npm run start
-```
+### How to Contribute
 
-## Releasing
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes using [Conventional Commits](https://www.conventionalcommits.org/)
+   - `feat:` — New features
+   - `fix:` — Bug fixes
+   - `docs:` — Documentation updates
+   - `refactor:` — Code refactoring
+   - `test:` — Test additions or updates
+4. **Push** to your branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
 
-This project uses semantic versioning and automated GitHub releases with Cloudflare R2 backup.
+### Development Guidelines
 
-### Release Process
+- Follow existing code style (enforced by ESLint/Prettier)
+- Write tests for new features
+- Update documentation as needed
+- Ensure all tests pass before submitting PR
+- Keep commits atomic and well-described
 
-1. **Update CHANGELOG.md** — Document changes in [Keep a Changelog](https://keepachangelog.com/) format
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-2. **Bump version**
-   ```bash
-   pnpm version patch   # 0.1.0 → 0.1.1 (bug fixes)
-   pnpm version minor   # 0.1.0 → 0.2.0 (new features)
-   pnpm version major   # 0.1.0 → 1.0.0 (breaking changes)
-   ```
+---
 
-3. **Push tags** — `git push && git push --tags` triggers automated build/publish
+## 📄 License
 
-4. **Review draft** — GitHub Actions creates draft release with auto-generated notes from commits/PRs
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) file for details.
 
-### Build Outputs
+---
 
-- **Installer** — `.exe` (Squirrel installer with auto-update support)
-- **Portable** — `.zip` (extract and run, no installation required)
+## 🙏 Acknowledgments
 
-Both uploaded to GitHub Releases and Cloudflare R2 automatically.
+- [Electron](https://www.electronjs.org) — Cross-platform desktop framework
+- [shadcn/ui](https://ui.shadcn.com) — Beautiful component library
+- [Caddy](https://caddyserver.com) — Automatic HTTPS reverse proxy
+- [Laravel Herd](https://herd.laravel.com) — Inspiration for simplifying local development
 
-### GitHub Secrets Required
+---
 
-Configure in repository Settings → Secrets:
-- `R2_ACCESS_KEY_ID` — Cloudflare R2 access key
-- `R2_SECRET_ACCESS_KEY` — Cloudflare R2 secret key
-- `R2_BUCKET` — R2 bucket name
-- `R2_ENDPOINT` — R2 endpoint URL (e.g., `https://<account-id>.r2.cloudflarestorage.com`)
-
-
+<div align="center">
+  <p>Made with ❤️ for the PHP community</p>
+  <p>
+    <a href="https://github.com/PickleBoxer/damp-app">⭐ Star on GitHub</a> •
+    <a href="https://github.com/PickleBoxer/damp-app/releases">📥 Download</a> •
+    <a href="https://getdamp.app/">📚 Docs</a>
+  </p>
+</div>
