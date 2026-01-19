@@ -59,8 +59,7 @@ jobs:
 
       - name: Build
         run: pnpm build
-        env:
-          PAGES_BASE_PATH: ${{ steps.setup_pages.outputs.base_path }}
+        # No PAGES_BASE_PATH needed for custom domain (getdamp.app)
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
