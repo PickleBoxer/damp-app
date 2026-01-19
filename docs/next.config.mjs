@@ -6,6 +6,10 @@ const withMDX = createMDX();
 const config = {
   output: 'export', // Enable static export for GitHub Pages
   reactStrictMode: true,
+  basePath: process.env.PAGES_BASE_PATH, // Set base path from environment variable
+  env: {
+    NEXT_PUBLIC_BASE_PATH: process.env.PAGES_BASE_PATH, // Expose base path for client-side use
+  },
   images: {
     unoptimized: true, // Required for static export
   },

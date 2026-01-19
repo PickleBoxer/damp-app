@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: '%s | DAMP',
   },
   description: 'Complete Docker-based development environment for PHP applications.',
-  manifest: '/manifest.json',
+  manifest: `${process.env.PAGES_BASE_PATH || ''}/manifest.json`,
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

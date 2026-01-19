@@ -4,6 +4,7 @@ import nextPlugin from '@next/eslint-plugin-next';
 import prettierConfig from 'eslint-config-prettier';
 import pluginReact from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import globals from 'globals';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
@@ -30,6 +31,16 @@ const eslintConfig = [
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+
+  // Node.js config files (Next.js config, etc.)
+  {
+    files: ['*.config.{js,mjs,ts}', '*.{js,mjs}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
       },
     },
   },

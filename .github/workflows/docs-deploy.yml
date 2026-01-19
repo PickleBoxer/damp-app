@@ -22,6 +22,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Pages
+        id: setup_pages
+        uses: actions/configure-pages@v5
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -29,6 +33,18 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          cache: 'pnpm'
+          cache-dir: docs
+
+      - name: Restore Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            docs/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('docs/pnpm-lock.yaml') }}-${{ hashFiles('docs/**/*.ts', 'docs/**/*.tsx', 'docs/**/*.js', 'docs/**/*.jsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('docs/pnpm-lock.yaml') }}-
 
       - name: Install dependencies
         run: pnpm install
@@ -41,6 +57,8 @@ jobs:
 
       - name: Build
         run: pnpm build
+        env:
+          PAGES_BASE_PATH: ${{ steps.setup_pages.outputs.base_path }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
