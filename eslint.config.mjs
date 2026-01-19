@@ -30,6 +30,17 @@ export default defineConfig([
   ...pluginQuery.configs['flat/recommended'],
   ...pluginRouter.configs['flat/recommended'],
 
+  // TypeScript project configuration for root workspace
+  {
+    files: ['**/*.ts', '**/*.tsx', '**/*.mts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+
   // Global settings
   {
     settings: {
@@ -77,6 +88,11 @@ export default defineConfig([
       '@typescript-eslint/no-explicit-any': 'off',
       'react-hooks/refs': 'off',
     },
+  },
+
+  // Ignore docs workspace (has its own ESLint config)
+  {
+    ignores: ['docs/**'],
   },
 
   // Prettier last (disables conflicting formatting rules)

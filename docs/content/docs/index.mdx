@@ -1,0 +1,165 @@
+---
+title: Quick Start
+description: Get your first DAMP project running in under 5 minutes
+icon: Album
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+## Introduction
+
+Get your first DAMP project running. This guide assumes you have DAMP already installed.
+
+<Callout title="Note">
+  New to DAMP? Start with our [installation guide](/docs/installation) first.
+</Callout>
+
+## Create Your First Project
+
+<Steps>
+
+1. **Open DAMP**
+
+   Launch DAMP from your applications menu or system tray.
+
+2. **Create a new project**
+
+   Click the **"Add Project"** button in the Projects page.
+
+3. **Choose project type**
+
+   Select your project template:
+   - **Laravel** - Full Laravel framework
+   - **Basic PHP** - Empty PHP project
+   - **Existing project** - Add DevContainer to existing code
+
+4. **Configure project**
+
+   Fill in the project details:
+   - **Project Name**: `my-first-app`
+   - **Local Domain**: `my-first-app.local` (auto-generated)
+   - **PHP Version**: `8.2` (for PHP projects)
+
+5. **Create project**
+
+   Click **"Create Project"** and wait for DAMP to:
+   - 🔄 Pull required Docker images
+   - 🔄 Generate SSL certificates
+   - 🔄 Configure local domains
+   - 🔄 Start development services
+
+   <Callout title="tip">
+     First-time setup takes longer as Docker images are downloaded. Subsequent projects are much
+     faster.
+   </Callout>
+
+</Steps>
+
+## Access Your Project
+
+Once creation is complete, your project is immediately available:
+
+### Web Browser
+
+- **HTTPS**: `https://my-first-app.local`
+
+## Open in VS Code
+
+Open your project in VS Code with DevContainer support:
+
+<Steps>
+
+1. **Click "Open in VS Code"**
+
+   In the DAMP project dashboard, click the **"Open in VS Code"** button.
+
+2. **Install DevContainer extension** (if prompted)
+
+   VS Code will prompt you to install the DevContainer extension if not already installed.
+
+3. **Reopen in container**
+
+   VS Code will ask to "Reopen in Container" - click **"Reopen in Container"**.
+
+   <Callout title="note">
+     This opens your project inside the Docker container with all development tools pre-configured.
+   </Callout>
+
+4. **Start coding**
+
+   You now have a fully configured development environment with:
+   - ✅ PHP/Node.js runtime
+   - ✅ Xdebug debugging
+   - ✅ Database access
+   - ✅ All dependencies installed
+
+</Steps>
+
+## Test Your Setup
+
+Let's verify everything is working correctly:
+
+### Laravel Project Test
+
+If you created a Laravel project:
+
+<Steps>
+
+1. **View the welcome page**
+
+   Navigate to `https://my-first-app.local` in your browser. You should see the Laravel welcome page.
+
+2. **Check the database**
+
+   Laravel should connect to MySQL automatically. Run a migration:
+
+   ```bash
+   php artisan migrate
+   ```
+
+</Steps>
+
+### Custom Project Test
+
+For other project types:
+
+<Steps>
+
+1. **Check web access**
+
+   Visit your project URL and verify the web server is responding.
+
+2. **Test file changes**
+
+   Edit a file and verify changes appear immediately (live reload enabled).
+
+3. **Database connection**
+
+   Test database connectivity using the provided credentials.
+
+</Steps>
+
+## Next Steps
+
+Your development environment is ready.
+
+<Card title="Essential Features" icon={<Star />}>
+
+- [**Creating Projects**](/docs/creating-sites) - Detailed project creation guide
+- [**Managing Projects**](/docs/managing-sites) - Project management and actions
+- [**Volume Sync**](/docs/volume-sync) - Sync files from containers
+
+</Card>
+
+## Troubleshooting
+
+If something isn't working:
+
+1. **Check Docker Desktop is running**
+2. **Verify project status** in DAMP dashboard
+3. **Open in VS Code** and reopen in container
+4. **Check DAMP console** for errors
+
+---
+
+**Congratulations!** You've successfully created your first DAMP project.

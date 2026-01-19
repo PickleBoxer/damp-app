@@ -1,0 +1,26 @@
+---
+title: 'Terminal Execution Fixes'
+description: 'Fixed terminal launch issues and improved OS compatibility'
+date: '2026-01-07'
+tags: ['Bug Fix', 'Improvement']
+version: '0.1.1'
+---
+
+This patch release fixes critical terminal execution issues and improves compatibility across operating systems.
+
+- **Terminal launch fixes** for PowerShell and CMD
+- **System Default terminal** option for better OS compatibility
+- **Improved reliability** with wrapped command execution
+
+<Accordions type="multiple">
+  <Accordion title="Fixed">
+    - **PowerShell and CMD terminals** failing to launch properly - **Terminal commands** now
+    wrapped with 'start' for reliable execution across Windows, macOS, and Linux
+  </Accordion>
+  <Accordion title="Added">
+    - **System Default terminal** option for better OS compatibility - Changed default terminal from
+    Windows Terminal to System Default for broader platform support
+  </Accordion>
+</Accordions>
+
+[0.1.1]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.1.1

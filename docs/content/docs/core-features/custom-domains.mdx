@@ -1,0 +1,276 @@
+---
+title: Custom Domains
+description: Local domains for every project with automatic hosts file management
+icon: Globe
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+DAMP gives every project its own **local domain** using the Windows hosts file. Access your projects with URLs like `myapp.local` instead of `localhost:8080`.
+
+<Callout type="success">
+  DAMP generates custom domains for each project and automatically manages your Windows hosts file.
+</Callout>
+
+## How It Works
+
+When you create a new project named "myapp", DAMP automatically:
+
+<Steps>
+
+<Step>
+**Generates Domain**
+
+Creates `myapp.local` domain for your project
+
+</Step>
+
+<Step>
+**Updates Hosts File**
+
+Adds entry to Windows hosts file pointing to `127.0.0.1`
+
+</Step>
+
+<Step>
+**Configures Caddy**
+
+Sets up reverse proxy from domain to your container
+
+</Step>
+
+<Step>
+**Ready to Use**
+
+Access your project at `https://myapp.local` immediately.
+
+</Step>
+
+</Steps>
+
+## Default `.local` Domain
+
+By default, DAMP uses the `.local` top-level domain:
+
+```
+Project Name: myapp
+          ↓
+Generated Domains:
+  • https://myapp.local       (main project)
+  • https://vite.myapp.local  (Vite dev server for React/Vue)
+```
+
+<Callout type="info">
+  The `.local` TLD is reserved for local networks and won't conflict with real internet domains.
+</Callout>
+
+## Benefits
+
+<Cards>
+  <Card title="Clean URLs" icon={<Link />}>
+    Use memorable URLs like `blog.local` instead of `localhost:3000`
+  </Card>
+
+<Card title="Multiple Projects" icon={<Layers />}>
+  Run many projects simultaneously, each with its own domain
+</Card>
+
+<Card title="Production-Like" icon={<Server />}>
+  Test with real domain names, not ports and localhost
+</Card>
+
+  <Card title="Automatic Setup" icon={<Zap />}>
+    No manual hosts file editing - DAMP handles everything
+  </Card>
+</Cards>
+
+## Domain Features
+
+### Automatic Hosts File Management
+
+DAMP uses the `hostie` utility to manage your Windows hosts file:
+
+```
+127.0.0.1   myapp.local
+127.0.0.1   vite.myapp.local
+127.0.0.1   blog.local
+127.0.0.1   vite.blog.local
+127.0.0.1   shop.local
+127.0.0.1   vite.shop.local
+```
+
+- Automatic Addition - Domains added when sites are created
+- Automatic Removal - Domains cleaned up when sites are deleted
+- Admin Privileges - Uses UAC elevation for secure modification
+- Safe Operations - No manual editing or typos
+
+<Callout type="warning">
+  When creating or deleting sites, you'll see a UAC (User Account Control) prompt. This is normal -
+  DAMP needs administrator permission to modify the hosts file.
+</Callout>
+
+### Vite Dev Server Support
+
+For React, Vue, and other Vite-based projects, DAMP creates an additional domain:
+
+```
+Main Site:        https://myapp.local       → PHP/Laravel
+Vite Dev Server:  https://vite.myapp.local  → React/Vue Hot Reload
+```
+
+This allows you to:
+
+- Access backend API at `myapp.local`
+- Access frontend at `vite.myapp.local`
+- Keep hot module reloading working
+- Maintain separate HTTPS certificates
+
+## Customizable Domain Extension
+
+Want to use a different domain extension? You can configure it!
+
+### Change Default Domain
+
+<Steps>
+
+<Step>
+**Open Settings**
+
+Navigate to Settings → General in DAMP
+
+</Step>
+
+<Step>
+**Set Custom Domain** *(Coming Soon)*
+
+Enter your preferred domain extension (e.g., `.dev`, `.test`, `.localhost`)
+
+</Step>
+
+<Step>
+**Apply to New Projects**
+
+New projects will use your custom domain extension
+
+</Step>
+
+</Steps>
+
+<Callout type="info">
+  Custom domain configuration is coming in a future update. Currently, all projects use `.local` by
+  default.
+</Callout>
+
+## How Domains Resolve
+
+Here's the complete flow when you access `myapp.local`:
+
+```
+1. Browser Request
+   └─> User types: https://myapp.local
+          │
+          ↓
+2. DNS Resolution
+   └─> Windows checks hosts file
+   └─> Finds: 127.0.0.1 myapp.local
+          │
+          ↓
+3. Local Connection
+   └─> Browser connects to localhost:443
+          │
+          ↓
+4. Caddy Reverse Proxy
+   └─> Caddy receives request
+   └─> Forwards to: myapp_devcontainer:8080
+          │
+          ↓
+5. Your Application
+   └─> PHP app responds
+          │
+          ↓
+6. Response
+   └─> Caddy returns response to browser ✅
+```
+
+## Multi-Site Benefits
+
+With custom domains, running multiple projects works smoothly:
+
+```
+Running Projects:
+  🌐 portfolio.local      (PHP 8.2 + MySQL)
+  🌐 blog.local           (PHP 8.1 + MySQL)
+  🌐 shop.local           (PHP 8.3 + PostgreSQL)
+  🌐 api.local            (PHP 8.2 + Redis)
+```
+
+Each project:
+
+- Has its own unique domain
+- Runs in isolation
+- Uses different PHP/database versions
+- Can be accessed simultaneously
+
+## Cleanup on Delete
+
+When you delete a project, DAMP automatically:
+
+1. Removes domain from hosts file
+2. Removes vite subdomain from hosts file
+3. Updates Caddy configuration
+4. Stops and removes containers
+5. Cleans up Docker volumes (if requested)
+
+<Callout type="success">DAMP handles all domain management automatically.</Callout>
+
+## Troubleshooting
+
+<Accordions type="single">
+  <Accordion title="Domain Not Resolving">
+    <b>Problem:</b> Can't access <code>myapp.local</code> after creating project
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>Check that project is running in DAMP dashboard</li>
+      <li>Verify Caddy service is running</li>
+      <li>
+        Try flushing DNS cache: <code>ipconfig /flushdns</code>
+      </li>
+      <li>
+        Check Windows hosts file for entry: <code>C:\Windows\System32\drivers\etc\hosts</code>
+      </li>
+    </ol>
+  </Accordion>
+  <Accordion title="UAC Prompt Issues">
+    <b>Problem:</b> UAC prompt doesn't appear or fails
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>Run DAMP as administrator</li>
+      <li>Check that UAC is enabled in Windows settings</li>
+      <li>Temporarily disable antivirus software</li>
+      <li>Manually add domain to hosts file</li>
+    </ol>
+  </Accordion>
+  <Accordion title="Chrome Not Loading Domain">
+    <b>Problem:</b> Chrome shows "This site can't be reached"
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>Clear browser cache and cookies</li>
+      <li>Try in incognito mode</li>
+      <li>Check if other browsers work (Firefox, Edge)</li>
+      <li>Disable Chrome extensions temporarily</li>
+    </ol>
+  </Accordion>
+</Accordions>
+
+---
+
+<Callout type="info">
+  If you're experiencing domain resolution issues, check the DAMP troubleshooting guide or open an
+  issue on GitHub.
+</Callout>

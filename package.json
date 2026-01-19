@@ -18,14 +18,21 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint . --max-warnings 0 --cache --cache-location .eslintcache",
+    "lint": "eslint",
+    "lint:all": "pnpm lint && pnpm docs:lint",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
+    "format:all": "pnpm format && pnpm docs:format",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:unit": "vitest",
     "test:e2e": "playwright test",
-    "test:all": "vitest run && playwright test"
+    "test:all": "vitest run && playwright test",
+    "docs:dev": "pnpm --filter damp-docs dev",
+    "docs:build": "pnpm --filter damp-docs build",
+    "docs:lint": "pnpm --filter damp-docs lint",
+    "docs:format": "pnpm --filter damp-docs format",
+    "docs:format:write": "pnpm --filter damp-docs format:write"
   },
   "author": "PickleBoxer",
   "build": {

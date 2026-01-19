@@ -1,0 +1,239 @@
+---
+title: Automatic SSL Certificates
+description: Secure HTTPS for every project
+icon: Lock
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+DAMP provides **automatic HTTPS** for all your local projects using Caddy's built-in certificate authority.
+
+<Callout type="success">
+  Caddy generates and manages SSL certificates for all your projects.
+</Callout>
+
+## Powered by Caddy
+
+DAMP uses [Caddy](https://caddyserver.com/) - a modern web server with automatic HTTPS built in.
+
+<Cards>
+  <Card title="Automatic Configuration" icon={<Zap />}>
+    SSL certificates generated automatically when you create a new project
+  </Card>
+
+<Card title="Local Certificate Authority" icon={<Key />}>
+  Caddy creates its own CA for local development certificates
+</Card>
+
+<Card title="Auto Renewal" icon={<RefreshCw />}>
+  Certificates automatically renewed before expiration
+</Card>
+
+  <Card title="Browser Trust" icon={<Shield />}>
+    One-time root certificate installation
+  </Card>
+</Cards>
+
+## How It Works
+
+When you create a new project in DAMP, here's what happens:
+
+```
+1. Project Creation
+   └─> DAMP creates project: myapp.local
+          │
+          ↓
+2. Caddy Configuration
+   └─> Caddy receives reverse proxy config
+          │
+          ↓
+3. SSL Generation
+   └─> Caddy generates SSL certificate
+          │
+          ↓
+4. Ready to Use
+   └─> Access https://myapp.local securely
+```
+
+<Callout type="info">
+  All SSL management happens automatically in the background - you don't need to configure anything.
+</Callout>
+
+## Certificate Installation
+
+Install Caddy's root certificate once:
+
+### One-Time Setup
+
+<Steps>
+
+<Step>
+**Install Caddy Service**
+
+Start Caddy service from the Services page in DAMP. Caddy will automatically create its local certificate authority.
+
+</Step>
+
+<Step>
+**Install Root Certificate**
+
+DAMP will attempt to automatically install the root certificate. If automatic installation fails, you can:
+
+- Click "Install SSL Certificate" button in the Caddy management section
+- Or download the certificate and install it manually
+
+</Step>
+
+<Step>
+**Enjoy Secure Connections**
+
+Once installed, all your `.local` sites will work with HTTPS without browser warnings.
+
+</Step>
+
+</Steps>
+
+<Callout type="tip">
+  If automatic installation doesn't work, download the certificate from DAMP and install it as a
+  "Trusted Root Certification Authority" in Windows.
+</Callout>
+
+## Features
+
+### Automatic Certificate Generation
+
+Every site you create automatically gets:
+
+- Valid SSL certificate for HTTPS
+- HTTP/2 support for improved performance
+- Automatic redirects from HTTP to HTTPS
+- Vite dev server HTTPS support (for React/Vue projects)
+
+### Certificate Management
+
+```
+┌─────────────────────────────────────┐
+│     Caddy Certificate Authority     │
+├─────────────────────────────────────┤
+│  📜 Root CA Certificate             │
+│     (Installed once on your system) │
+└─────────────────────────────────────┘
+                │
+                │ Signs certificates for:
+                ↓
+┌─────────────────────────────────────┐
+│       Your Project Certificates     │
+├─────────────────────────────────────┤
+│  🔒 myapp.local                     │
+│  🔒 blog.local                      │
+│  🔒 shop.local                      │
+│  🔒 api.local                       │
+└─────────────────────────────────────┘
+```
+
+### Why This Matters
+
+Modern web development requires HTTPS:
+
+- **Service Workers** - Only work on HTTPS connections
+- **Browser APIs** - Many APIs require secure context
+- **Mixed Content** - Avoid HTTP/HTTPS mixing issues
+- **Production Parity** - Match your production environment
+
+<Callout type="warning">
+  **Without HTTPS locally, you can't test:** - Progressive Web Apps (PWAs) - Web Push Notifications
+  - Geolocation APIs - Camera/Microphone access - And many other modern features
+</Callout>
+
+## Benefits
+
+### For Developers
+
+- Instant Setup - No certificate configuration needed
+- No Maintenance - Certificates auto-renew automatically
+- Clean URLs - Use `https://` just like production
+- Test Modern Features - PWAs, Service Workers, etc.
+
+### For Projects
+
+- Secure by Default - Every project gets HTTPS
+- Production-Like - Environment matches real deployments
+- HTTP/2 Support - Better performance with multiplexing
+- Security Testing - Test HTTPS-only features locally
+
+## Certificate Status
+
+Check your SSL certificate status anytime:
+
+<table>
+  <thead>
+    <tr>
+      <th>Status</th>
+      <th>Meaning</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Certificate Available</td>
+      <td>Caddy CA is active</td>
+      <td>None needed</td>
+    </tr>
+    <tr>
+      <td>Root Certificate Installed</td>
+      <td>Trusted by your browser</td>
+      <td>None needed</td>
+    </tr>
+    <tr>
+      <td>Root Certificate Not Installed</td>
+      <td>Browser will show warnings</td>
+      <td>Install root certificate</td>
+    </tr>
+    <tr>
+      <td>Certificate Not Available</td>
+      <td>Caddy not running</td>
+      <td>Start Caddy service</td>
+    </tr>
+  </tbody>
+</table>
+
+<Callout type="tip">
+  Navigate to Services → Caddy Management to see your SSL certificate status and manage
+  certificates.
+</Callout>
+
+## What About Production?
+
+While DAMP uses Caddy's local CA for development:
+
+- Different from production - Production uses real certificates (Let's Encrypt)
+- Same behavior - HTTPS works identically in both environments
+- Easy transition - Your app works the same when deployed
+- Best practice - Develop with HTTPS, deploy with HTTPS
+
+<Callout type="success">
+  By using HTTPS locally, you catch SSL-related issues before deployment, making your development
+  workflow more professional and reliable.
+</Callout>
+
+## Troubleshooting
+
+<Accordions>
+  <Accordion title="Browser Shows SSL Warning">
+    <b>Solution:</b> Install the Caddy root certificate from the Services page.
+  </Accordion>
+  <Accordion title="Certificate Not Generating">
+    <b>Solution:</b> Ensure Caddy service is running and restart your project.
+  </Accordion>
+  <Accordion title="Mixed Content Warnings">
+    <b>Solution:</b> Update all <code>http://</code> URLs in your app to <code>https://</code> or
+    use protocol-relative URLs (<code>//</code>).
+  </Accordion>
+</Accordions>
+
+---
+
+<Callout type="info">
+  For advanced Caddy configuration and certificate management, visit the [Caddy
+  Documentation](https://caddyserver.com/docs/).
+</Callout>

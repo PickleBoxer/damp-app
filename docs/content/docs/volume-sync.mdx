@@ -1,0 +1,156 @@
+---
+title: Volume Sync
+description: Bidirectional sync between Docker volumes and local filesystem
+icon: RefreshCw
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+Sync files **bidirectionally** between Docker named volumes and your local folder.
+
+## Why Named Volumes?
+
+DAMP uses Docker **named volumes** instead of bind mounts for performance on Windows.
+
+<Callout type="success">
+  Named volumes provide faster file I/O on Windows compared to bind mounts.
+</Callout>
+
+## How It Works
+
+```
+┌─────────────────────────────────────────┐
+│   Docker Named Volume                   │
+│   - Fast container access               │
+│   - Isolated from host filesystem       │
+└────────────┬────────────────────────────┘
+             │
+             │ Sync (Bidirectional)
+             │ ↕
+┌────────────▼────────────────────────────┐
+│   Local Folder                          │
+│   - Can exclude node_modules/           │
+│   - Can exclude vendor/                 │
+└─────────────────────────────────────────┘
+```
+
+<Callout type="info">
+  Volume sync is bidirectional - changes sync from local filesystem to named Docker volume and vice
+  versa.
+</Callout>
+
+## When to Sync
+
+Sync between volume and local when you need to:
+
+- ✅ **Backup** - Copy container files to host
+- ✅ **Git Operations** - Commit/push from local folder
+- ✅ **View Files** - Browse project files locally
+- ✅ **Edit Locally** - Make changes on local filesystem and sync to container
+
+<Callout type="tip">
+  Work in VS Code DevContainer for speed → Sync to local when you need to commit or backup → Sync to
+  volume when editing locally.
+</Callout>
+
+## Sync Process
+
+<Steps>
+
+<Step>
+**Select Site**
+
+Open DAMP and click on the site you want to sync.
+
+</Step>
+
+<Step>
+**Open Volume Sync Tab**
+
+Click the **"Volume Sync"** tab in site details.
+
+</Step>
+
+<Step>
+**Choose Exclusions (Optional)**
+
+Toggle folders to exclude from sync:
+
+- **node_modules/** - Node.js dependencies (can be large)
+- **vendor/** - PHP dependencies (can be large)
+
+By default, all project files sync. You can optionally exclude these dependency folders for faster syncing.
+
+<Callout type="tip">
+  Excluding `node_modules` and `vendor` makes sync much faster - regenerate with `npm install` and
+  `composer install`.
+</Callout>
+
+</Step>
+
+<Step>
+**Click "Sync Volume"**
+
+Click the sync button to start bidirectional synchronization. Files will sync between local filesystem and Docker volume.
+
+</Step>
+
+<Step>
+**Verify**
+
+Check your local project folder has the updated files.
+
+</Step>
+
+</Steps>
+
+## Automatic Sync
+
+DAMP automatically syncs in these situations:
+
+1. **After Project Creation** - Initial sync between volume and local
+2. **After Laravel Install** - Laravel files synced bidirectionally
+
+## Troubleshooting
+
+### Sync Takes Too Long
+
+**Solutions:**
+
+- Exclude `node_modules` and `vendor`
+- Initial sync may take longer (subsequent syncs are faster)
+
+### Files Not Appearing After Sync
+
+**Solutions:**
+
+1. Check exclusions - ensure you didn't exclude needed folders
+2. Try syncing again
+3. Check DAMP console for errors
+
+### "Volume Not Found" Error
+
+**Solutions:**
+
+1. Verify DevContainer was created
+2. Check volume exists:
+   ```powershell
+   docker volume ls | Select-String "mysite"
+   ```
+3. Check Docker Desktop is running
+
+## Learn More
+
+<Cards>
+  <Card title="DevContainers" href="/docs/core-features/devcontainers">
+    Learn about named volumes and DevContainer architecture
+  </Card>
+
+<Card title="Managing Sites" href="/docs/managing-sites">
+  Other site management operations
+</Card>
+
+  <Card title="Zero System Impact" href="/docs/core-features/zero-system-impact">
+    Why DAMP uses Docker volumes
+  </Card>
+</Cards>

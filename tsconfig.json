@@ -29,6 +29,9 @@
     "src/**/*",
     "./package.json",
     "./forge.config.ts",
+    "./forge.env.d.ts",
+    "./playwright.config.ts",
+    "./vitest.config.ts",
     "*.mts",
     "vite.renderer.config.mts"
   ]

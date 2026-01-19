@@ -1,0 +1,345 @@
+---
+title: XDebug Debugging
+description: Professional PHP debugging out of the box
+icon: Bug
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+Every DAMP project comes with **XDebug pre-configured** and ready to use. Set breakpoints, inspect variables, and step through your code from VS Code.
+
+<Callout type="success">
+  XDebug is installed and configured automatically in every project. Press F5 to start debugging.
+</Callout>
+
+## Quick Start
+
+Debug your PHP code in three simple steps:
+
+<Steps>
+
+<Step>
+**Open Project in DevContainer**
+
+Open your project folder in VS Code and reopen in container.
+
+</Step>
+
+<Step>
+**Set Breakpoints**
+
+Click in the gutter next to any line number to add a breakpoint (red dot).
+
+</Step>
+
+<Step>
+**Press F5**
+
+Start debugging! VS Code will stop at your breakpoints automatically.
+
+</Step>
+
+</Steps>
+
+## Features
+
+<Cards>
+  <Card title="Pre-Configured" icon={<Check />}>
+    XDebug installed and configured in every new project
+  </Card>
+
+<Card title="VS Code Integration" icon={<Code />}>
+  Debug panel, breakpoints, and step controls built-in
+</Card>
+
+<Card title="Variable Inspection" icon={<Eye />}>
+  View and modify variables during execution
+</Card>
+
+  <Card title="Call Stack" icon={<List />}>
+    Navigate through function calls and trace execution
+  </Card>
+</Cards>
+
+## Pre-Configured Setup
+
+### XDebug Configuration
+
+Every project includes `.devcontainer/xdebug.ini`:
+
+```ini
+[XDEBUG]
+xdebug.mode = develop,debug,trace,coverage,profile
+xdebug.start_with_request = trigger
+xdebug.client_port = 9003
+```
+
+<Callout type="info">
+  - **develop,debug** - Full debugging capabilities enabled - **trigger** - Debugging starts only
+  when triggered (via browser extension or URL parameter) - **9003** - Standard XDebug 3.x port
+</Callout>
+
+**Why Trigger Mode?**
+
+Trigger mode means XDebug only activates when you explicitly request it, preventing unnecessary overhead. Use a browser extension or add `?XDEBUG_TRIGGER=1` to URLs to start debugging.
+
+### VS Code Launch Configuration
+
+Included in `.vscode/launch.json`:
+
+```json
+{
+  "type": "php",
+  "request": "launch",
+  "name": "Listen for Xdebug",
+  "port": 9003,
+  "pathMappings": {
+    "/workspace/yourproject": "${workspaceFolder}"
+  }
+}
+```
+
+## Debugging Workflows
+
+### Basic Debugging
+
+1. **Set Breakpoint** - Click next to line number
+2. **Press F5** - Start debug session
+3. **Navigate Code**
+   - Access your site in browser
+   - XDebug triggers on breakpoint
+   - Use debug toolbar to step through
+
+<Callout type="info">
+  XDebug is configured with `start_with_request = trigger`, which means debugging only starts when
+  triggered - giving you full control over when to debug.
+</Callout>
+
+### Using Browser Extension
+
+The easiest way to trigger XDebug is with a browser extension:
+
+**Chrome/Edge:**
+
+- Install [Xdebug Helper](https://chrome.google.com/webstore/detail/xdebug-helper/eadndfjplgieldjbigjakmdgkmoaaaoc)
+- Click the extension icon → Enable "Debug"
+- Green bug icon means debugging is active
+- Browse your site - breakpoints will trigger
+
+**Firefox:**
+
+- Install [Xdebug Helper](https://addons.mozilla.org/en-US/firefox/addon/xdebug-helper-for-firefox/)
+- Same workflow as Chrome version
+
+**Without Extension:**
+Add `?XDEBUG_TRIGGER=1` to any URL:
+
+```
+https://myapp.local/?XDEBUG_TRIGGER=1
+```
+
+### Conditional Breakpoints
+
+Set breakpoints that only trigger when conditions are met:
+
+1. Right-click on breakpoint or gutter
+2. Select "Add Conditional Breakpoint"
+3. Enter condition (e.g., `$count > 10`)
+4. Breakpoint only triggers when condition is true
+
+<Callout type="tip">
+  Instead of adding `echo` or `var_dump`, use logpoints. Right-click and select "Add Logpoint" to
+  log messages without modifying code.
+</Callout>
+
+## Advanced Features
+
+### Inspecting Variables
+
+**View Current State:**
+
+- Hover over variables in code
+- Expand in Variables panel
+- See type, value, and structure
+
+**Modify During Debug:**
+
+- Right-click variable in panel
+- Select "Set Value"
+- Change value and continue execution
+
+### Watch Expressions
+
+Monitor complex expressions:
+
+```php
+// Watch these expressions:
+$user->name
+count($items)
+$total > 100
+```
+
+Add in Watch panel to track changes throughout execution.
+
+### Exception Breakpoints
+
+Break when exceptions are thrown:
+
+1. Open Breakpoints panel
+2. Click "+ Add Exception Breakpoint"
+3. Choose exception types
+4. Debugger stops on exceptions
+
+## Laravel Debugging
+
+### Artisan Commands
+
+Debug Laravel artisan commands:
+
+```json
+{
+  "name": "Debug Artisan Command",
+  "type": "php",
+  "request": "launch",
+  "program": "/workspace/yourproject/artisan",
+  "args": ["your:command"],
+  "cwd": "/workspace/yourproject"
+}
+```
+
+### Queue Workers
+
+Debug queue jobs:
+
+1. Set breakpoint in job `handle()` method
+2. Start debug session (F5)
+3. Dispatch job to queue
+4. Debugger stops at breakpoint
+
+### Testing
+
+Debug PHPUnit tests:
+
+1. Set breakpoint in test method
+2. Run test with coverage
+3. Debugger stops at breakpoint in test
+
+## Common Use Cases
+
+### 🐛 Hunting Bugs
+
+Find that elusive bug causing issues:
+
+```php
+// Set breakpoint here
+public function calculateTotal($items) {
+    $total = 0;
+    foreach ($items as $item) {
+        $total += $item->price; // Inspect $item here
+    }
+    return $total;
+}
+```
+
+### 📊 Understanding Flow
+
+Trace execution through complex code:
+
+```php
+// Set breakpoints at each step
+public function processOrder($order) {
+    $this->validate($order);     // Step 1
+    $this->charge($order);        // Step 2
+    $this->fulfill($order);       // Step 3
+    $this->notify($order);        // Step 4
+}
+```
+
+### 🔍 Inspecting Data
+
+See exact values during runtime:
+
+```php
+// What does $data actually contain?
+public function transform($data) {
+    // Set breakpoint - inspect $data structure
+    return $this->mapper->map($data);
+}
+```
+
+## Customization
+
+### Modify XDebug Settings
+
+Edit `.devcontainer/xdebug.ini` for custom configuration:
+
+```ini
+[XDEBUG]
+xdebug.mode = develop,debug,trace,coverage,profile
+xdebug.start_with_request = trigger
+xdebug.client_port = 9003
+
+; Add custom settings:
+xdebug.log = /tmp/xdebug.log
+xdebug.max_nesting_level = 512
+```
+
+**Rebuild Container:**
+After changes, rebuild with `Ctrl+Shift+P` → "Dev Containers: Rebuild Container"
+
+<Callout type="warning">
+  XDebug configuration changes require a container rebuild to take effect.
+</Callout>
+
+## Troubleshooting
+
+<Accordions>
+
+<Accordion title="Breakpoints Not Working">
+
+**Problem**: Debugger doesn't stop at breakpoints
+
+**Solutions:**
+
+1. Verify debug session is active (Debug toolbar visible)
+2. **Enable XDebug trigger** - Use browser extension or add `?XDEBUG_TRIGGER=1` to URL
+3. Check that XDebug is installed: `php -v` should show "with Xdebug"
+4. Ensure path mappings are correct in `launch.json`
+5. Try restarting debug session (Shift+F5, then F5)
+
+</Accordion>
+
+<Accordion title="Path Mapping Issues">
+
+**Problem**: "Breakpoint ignored - path not found"
+
+**Solution**: Update path mappings in `.vscode/launch.json`:
+
+```json
+{
+  "pathMappings": {
+    "/workspace/yourproject": "${workspaceFolder}"
+  }
+}
+```
+
+Container path must match your workspace folder name.
+
+</Accordion>
+
+<Accordion title="Port Conflicts">
+
+**Problem**: "Port 9003 already in use"
+
+**Solution**: Another debug session is active. Stop it first (Shift+F5) or change port in `xdebug.ini` and `launch.json`.
+
+</Accordion>
+
+</Accordions>
+
+---
+
+<Callout type="success">
+  XDebug is ready to use in every project - no setup required. Open in VS Code, press F5, and start
+  debugging.
+</Callout>

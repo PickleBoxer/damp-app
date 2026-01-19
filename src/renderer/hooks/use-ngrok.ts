@@ -94,7 +94,7 @@ export function useNgrokStatus(projectId: string, options?: { enabled?: boolean 
       if (!result.success) {
         throw new Error(result.error || 'Failed to get ngrok status');
       }
-      return result.data as NgrokStatusData | undefined;
+      return result.data ?? ({ status: 'stopped' } satisfies NgrokStatusData);
     },
     refetchInterval: query => {
       const data = query.state.data;
@@ -110,7 +110,7 @@ export function useNgrokStatus(projectId: string, options?: { enabled?: boolean 
     refetchOnMount: false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: false,
-    initialData: { status: 'stopped' }, // Placeholder data instead of null
+    initialData: { status: 'stopped' } satisfies NgrokStatusData,
     staleTime: 25000,
     // Default gcTime is 5 minutes - queries auto-cleanup after going inactive
     enabled: options?.enabled ?? true,

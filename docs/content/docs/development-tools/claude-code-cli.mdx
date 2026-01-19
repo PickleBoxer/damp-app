@@ -1,0 +1,304 @@
+---
+title: Claude Code CLI
+description: AI-powered coding assistant in your devcontainer
+icon: Sparkles
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+Add **Claude Code CLI** to your project with a single click during creation. Get an AI coding assistant that understands your codebase and helps build faster.
+
+<Callout type="success">
+  Enable Claude Code CLI during project creation - it's automatically installed and configured in
+  your devcontainer with zero manual setup.
+</Callout>
+
+## Quick Setup
+
+Add Claude to your project in seconds:
+
+<Steps>
+
+<Step>
+**Enable During Creation**
+
+When creating a new site, toggle "Add Claude Code CLI" in the project creation dialog.
+
+</Step>
+
+<Step>
+**Automatic Installation**
+
+DAMP adds Claude Code CLI feature to your devcontainer configuration automatically.
+
+</Step>
+
+<Step>
+**Start Coding**
+
+Open project in VS Code - Claude Code CLI is ready to use immediately.
+
+</Step>
+
+</Steps>
+
+## Features
+
+<Cards>
+  <Card title="One-Click Install" icon={<Zap />}>
+    Enable with a single toggle during project creation
+  </Card>
+
+<Card title="Codebase Aware" icon={<Brain />}>
+  Claude understands your entire project structure
+</Card>
+
+<Card title="Terminal Integration" icon={<Terminal />}>
+  Use Claude directly from your devcontainer terminal
+</Card>
+
+  <Card title="Zero Config" icon={<Check />}>
+    Pre-configured and ready to use instantly
+  </Card>
+</Cards>
+
+## How It Works
+
+When you enable Claude Code CLI, DAMP adds this to your `.devcontainer/devcontainer.json`:
+
+```json
+{
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  }
+}
+```
+
+<Callout type="info">
+  The feature is added during project creation and installed when the devcontainer builds. No manual
+  configuration needed.
+</Callout>
+
+## Using Claude Code CLI
+
+### In Terminal
+
+Once your devcontainer is running, use Claude from the terminal:
+
+```bash
+# Ask Claude for help
+claude "How do I add authentication to this Laravel app?"
+
+# Get code suggestions
+claude "Write a function to calculate shipping cost"
+
+# Debug issues
+claude "Why is this query slow?"
+
+# Learn patterns
+claude "Explain this middleware implementation"
+```
+
+### Common Commands
+
+```bash
+# General assistance
+claude "Explain this file"
+claude "How does this feature work?"
+
+# Code generation
+claude "Create a user registration controller"
+claude "Write tests for this service"
+
+# Refactoring help
+claude "How can I improve this code?"
+claude "Refactor this function to be more efficient"
+
+# Debugging
+claude "Find the bug in this code"
+claude "Why am I getting this error?"
+```
+
+## Integration Points
+
+### With Your Codebase
+
+Claude Code CLI has context about your project:
+
+- Reads all project files
+- Understands dependencies
+- Knows your framework (Laravel, etc.)
+- Sees your code structure
+
+This provides more relevant suggestions.
+
+### With DevContainer
+
+Claude runs inside your devcontainer:
+
+```
+┌──────────────────────────────────┐
+│   Your DevContainer              │
+├──────────────────────────────────┤
+│  • PHP 8.3                       │
+│  • Composer                      │
+│  • Node.js                       │
+│  • Claude Code CLI ✨            │
+│  • Your Project Code             │
+└──────────────────────────────────┘
+```
+
+Same environment, same context.
+
+## Use Cases
+
+### 🚀 Rapid Development
+
+Build features with AI assistance:
+
+```bash
+claude "Create a REST API endpoint for user management"
+# Get complete controller code with validation
+```
+
+### 📚 Learning
+
+Understand concepts and patterns:
+
+```bash
+claude "Explain Laravel service containers"
+# Get clear explanations with examples from your code
+```
+
+### 🐛 Debugging
+
+Find and fix issues:
+
+```bash
+claude "This query returns empty results, why?"
+# Get debugging suggestions based on your code
+```
+
+### ♻️ Refactoring
+
+Improve code quality:
+
+```bash
+claude "How can I make this controller more testable?"
+# Get refactoring suggestions specific to your code
+```
+
+## Requirements
+
+### API Access
+
+Claude Code CLI requires Claude API access:
+
+- Free tier available for testing
+- Usage-based pricing for production
+- Sign up at [anthropic.com](https://anthropic.com)
+
+### Authentication
+
+First time using Claude Code CLI:
+
+1. Run `claude` in terminal
+2. Follow authentication prompts
+3. Enter API key when requested
+4. Start using Claude!
+
+<Callout type="info">
+  Authentication is required only once per devcontainer. Your API key is stored securely.
+</Callout>
+
+## Adding to Existing Projects
+
+Want to add Claude to a project that's already created?
+
+<Steps>
+
+<Step>
+**Edit devcontainer.json**
+
+Add the Claude feature manually:
+
+```json
+{
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  }
+}
+```
+
+</Step>
+
+<Step>
+**Rebuild Container**
+
+Press `Ctrl+Shift+P` → "Dev Containers: Rebuild Container"
+
+</Step>
+
+<Step>
+**Start Using**
+
+Claude Code CLI is now available in your terminal.
+
+</Step>
+
+</Steps>
+
+## Privacy & Security
+
+<Callout type="warning">
+  - Claude Code CLI sends code to Anthropic's API for processing - Code is analyzed to provide
+  relevant suggestions - Don't use with sensitive/proprietary code without reviewing terms -
+  Consider data handling policies for your use case
+</Callout>
+
+## Troubleshooting
+
+<Accordions type="single">
+  <Accordion title="Claude Command Not Found">
+    <b>Problem:</b> <code>claude: command not found</code>
+    <br />
+    <br />
+    <b>Solution:</b> Ensure feature is added to <code>devcontainer.json</code> and container is
+    rebuilt.
+  </Accordion>
+  <Accordion title="Authentication Failed">
+    <b>Problem:</b> Can't authenticate with API key
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>Verify API key is correct (check Anthropic dashboard)</li>
+      <li>Check internet connectivity</li>
+      <li>
+        Try re-authenticating: <code>claude --logout</code> then <code>claude</code>
+      </li>
+    </ol>
+  </Accordion>
+  <Accordion title="Slow Responses">
+    <b>Problem:</b> Claude takes long to respond
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>Check internet connection speed</li>
+      <li>Try simpler/shorter questions</li>
+      <li>Check Anthropic API status page</li>
+    </ol>
+  </Accordion>
+</Accordions>
+
+<Callout type="success">
+  Enable Claude Code CLI with one click and experience AI-assisted coding directly in your
+  devcontainer.
+</Callout>
+
+## Learn More
+
+- [Claude Documentation](https://docs.anthropic.com)
+- [DevContainer Features](https://containers.dev/features)
+- [Anthropic API](https://anthropic.com/api)

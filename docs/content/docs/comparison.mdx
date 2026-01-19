@@ -1,0 +1,113 @@
+---
+title: DAMP vs. Alternatives
+description: Compare DAMP to other PHP development solutions
+icon: Scale
+---
+
+Compare DAMP to other PHP development environments.
+
+## Comparison Overview
+
+<Tabs items={['Laravel Herd', 'DDEV/Lando', 'XAMPP/MAMP']}>
+  <Tab value="Laravel Herd">
+    ### vs. Laravel Herd
+
+    | Feature | DAMP | Laravel Herd |
+    |---------|------|--------------|
+    | **Architecture** | Docker containers | Binary installation |
+    | **Learning** | Docker & containerization | Vendor-specific tool |
+    | **Production Parity** | Container-based | Different from production |
+    | **Service Flexibility** | Any Docker service | Bundled services |
+    | **Team Consistency** | Docker containers | OS-dependent |
+
+    <Callout type="info">
+      DAMP uses Docker containers, while Herd uses native binaries.
+    </Callout>
+
+  </Tab>
+
+  <Tab value="DDEV/Lando">
+    ### vs. DDEV/Lando
+
+    | Feature | DAMP | DDEV/Lando |
+    |---------|------|------------|
+    | **Interface** | Visual desktop app | CLI commands |
+    | **Configuration** | GUI-based | Configuration files |
+    | **Daily Usage** | GUI interactions | Terminal commands |
+    | **Error Handling** | Visual feedback | Terminal messages |
+    | **Setup** | Desktop application | CLI installation |
+
+    <Callout type="tip">
+      DAMP provides a GUI, while DDEV and Lando use command-line interfaces.
+    </Callout>
+
+  </Tab>
+
+  <Tab value="XAMPP/MAMP">
+    ### vs. XAMPP/MAMP
+
+    | Feature | DAMP | XAMPP/MAMP |
+    |---------|------|-------------|
+    | **Isolation** | Containerized | System-wide installation |
+    | **Version Management** | Multiple versions per project | One version system-wide |
+    | **System Impact** | Minimal (Docker only) | Modifies system configuration |
+    | **Conflicts** | Isolated containers | Port and version conflicts |
+    | **Architecture** | Docker-based | Native installation |
+
+    <Callout type="warning">
+      XAMPP/MAMP install directly on your system, while DAMP uses isolated containers.
+    </Callout>
+
+  </Tab>
+</Tabs>
+
+## DAMP Characteristics
+
+### Docker Containerization
+
+<Card icon={<Container />}>
+  **Container-Based Development**
+
+Uses Docker containers for isolated project environments.
+
+</Card>
+
+### Visual Management
+
+<Card icon={<Users />}>
+  **GUI Application**
+
+Desktop interface for container and service management.
+
+</Card>
+
+### DevContainer Integration
+
+<Card icon={<Code />}>
+  **VS Code DevContainers**
+
+Native VS Code DevContainer support for development.
+
+</Card>
+
+## Key Differences
+
+DAMP provides:
+
+- Visual interface for container management
+- Docker containerization
+- VS Code DevContainer integration
+
+<Callout type="success">[Download DAMP](/download) to try Docker-based PHP development.</Callout>
+
+## Questions?
+
+<Cards>
+  <Card title="Documentation" href="/docs">
+    View the complete documentation
+  </Card>
+
+  <Card title="GitHub" href="https://github.com/PickleBoxer/damp-docs">
+    Contribute or report issues
+  </Card>
+</Cards>

@@ -39,6 +39,12 @@ build/Release
 node_modules/
 jspm_packages/
 
+# Docs build outputs
+docs/.next/
+docs/out/
+docs/.source/
+docs/build/
+
 # TypeScript v1 declaration files
 typings/
 

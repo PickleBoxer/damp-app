@@ -1,0 +1,118 @@
+---
+title: Installation Guide
+description: Get started with DAMP on Windows
+icon: Download
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+Get DAMP up and running on Windows.
+
+## Prerequisites
+
+### 1. Docker Desktop
+
+<Steps>
+
+<Step>
+
+### Download Docker Desktop
+
+Visit [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) and download the installer.
+
+</Step>
+
+<Step>
+
+### Install Docker Desktop
+
+Run the installer and follow the setup wizard.
+
+</Step>
+
+<Step>
+
+### Verify Installation
+
+Open PowerShell and run:
+
+```powershell
+docker --version
+```
+
+</Step>
+
+</Steps>
+
+<Callout type="warning">Docker Desktop must be running for DAMP to work.</Callout>
+
+### 2. Visual Studio Code
+
+Download [VS Code](https://code.visualstudio.com/) for Dev Container support.
+
+**Required Extension:**
+
+<Card title="Dev Containers" icon={<Box />}>
+  **Required for container development**
+
+`ms-vscode-remote.remote-containers`
+
+[Install Extension](vscode:extension/ms-vscode-remote.remote-containers)
+
+</Card>
+
+## Installing DAMP
+
+<Steps>
+
+  <Step>
+
+### Download DAMP
+
+Download the latest Windows installer from our [download page](/download).
+
+</Step>
+
+<Step>
+
+### Run the Installer
+
+Double-click the installer and follow the installation wizard.
+
+</Step>
+
+<Step>
+
+### Launch DAMP
+
+Find DAMP in your Start Menu and launch the application.
+
+</Step>
+
+<Step>
+
+### Initial Setup
+
+On first launch, DAMP will:
+
+- ✓ Verify Docker Desktop is running
+- ✓ Check system requirements
+- ✓ Set up network configurations
+
+</Step>
+
+</Steps>
+
+<Callout type="success">DAMP is now installed. Create your first project to get started.</Callout>
+
+## Next Steps
+
+<Cards>
+  <Card title="Create Your First Project" href="/docs/creating-sites">
+    Create your first PHP project
+  </Card>
+
+  <Card title="Service Management" href="/docs/services">
+    Install and manage MySQL, Redis, and other services
+  </Card>
+</Cards>

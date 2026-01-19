@@ -1,0 +1,325 @@
+---
+title: Tinker
+description: Interactive PHP shell for projects
+icon: Terminal
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+Open an **interactive PHP shell** for any project with a single click. Test code, query your database, and interact with your application from the terminal.
+
+<Callout type="success">
+  Every project in DAMP has a "Open Tinker" button that launches a terminal with Tinker already
+  running.
+</Callout>
+
+## Quick Start
+
+Launch Tinker in three clicks:
+
+<Steps>
+
+<Step>
+**Ensure Devcontainer is Running**
+
+Open your Laravel project in VS Code and reopen in container.
+
+</Step>
+
+<Step>
+**Click "Open Tinker"**
+
+Find the Tinker button in your project dashboard in DAMP.
+
+</Step>
+
+<Step>
+**Start Experimenting**
+
+A terminal window opens with Tinker ready - start typing commands.
+
+</Step>
+
+</Steps>
+
+## Features
+
+<Cards>
+  <Card title="One-Click Launch" icon={<Zap />}>
+    No commands to remember - just click and start coding
+  </Card>
+
+<Card title="Full Laravel Access" icon={<Database />}>
+  Access models, facades, helpers, and your entire application
+</Card>
+
+<Card title="Database Queries" icon={<Search />}>
+  Query and manipulate data without writing SQL
+</Card>
+
+  <Card title="Live Testing" icon={<Code />}>
+    Test functions, classes, and logic in real-time
+  </Card>
+</Cards>
+
+## What is Tinker?
+
+Tinker is Laravel's REPL (Read-Eval-Print Loop) powered by PsySH. It provides an interactive console where you can:
+
+- Execute PHP code instantly
+- Interact with your Laravel application
+- Query the database using Eloquent
+- Test methods and functions
+- Debug and troubleshoot
+
+<Callout type="info">
+  Tinker runs inside your devcontainer with full access to your Laravel application, including
+  database connections, environment variables, and all your code.
+</Callout>
+
+## Common Use Cases
+
+### 🔍 Query Database
+
+Fetch and inspect data using Eloquent:
+
+```php
+>>> User::all();
+>>> User::where('email', 'john@example.com')->first();
+>>> User::count();
+```
+
+### ➕ Create Records
+
+Insert test data quickly:
+
+```php
+>>> $user = new User;
+>>> $user->name = 'Jane Doe';
+>>> $user->email = 'jane@example.com';
+>>> $user->save();
+```
+
+### 🧪 Test Functions
+
+Try out methods before implementing:
+
+```php
+>>> Str::slug('Hello World');
+=> "hello-world"
+
+>>> Hash::make('password123');
+=> "$2y$10$..."
+```
+
+### 🔧 Debug Issues
+
+Inspect objects and relationships:
+
+```php
+>>> $user = User::find(1);
+>>> $user->posts;
+>>> $user->posts()->count();
+```
+
+### 📧 Test Notifications
+
+Send test emails and notifications:
+
+```php
+>>> $user = User::first();
+>>> $user->notify(new WelcomeNotification);
+```
+
+### 🌐 Test API Calls
+
+Make HTTP requests:
+
+```php
+>>> Http::get('https://api.example.com/data');
+>>> Http::post('https://api.example.com/users', ['name' => 'John']);
+```
+
+## How It Works
+
+When you click "Open Tinker", DAMP:
+
+1. Checks that your devcontainer is running
+2. Opens a new terminal window
+3. Executes: `docker exec -it {project}_devcontainer php artisan tinker`
+4. You're in Tinker - ready to code
+
+```
+┌─────────────────────────────────────┐
+│   DAMP Dashboard                    │
+│   Click "Open Tinker" →             │
+└────────────┬────────────────────────┘
+             │
+             ↓
+┌─────────────────────────────────────┐
+│   New Terminal Window Opens         │
+├─────────────────────────────────────┤
+│ $ docker exec -it myapp_devcontainer│
+│   php artisan tinker                │
+│                                     │
+│ Psy Shell v0.12.0                   │
+│ >>> _                               │
+└─────────────────────────────────────┘
+```
+
+## Tips & Tricks
+
+### Show Available Commands
+
+```php
+>>> help
+```
+
+Lists all available Tinker commands and shortcuts.
+
+### Clear Screen
+
+```php
+>>> clear
+```
+
+Or press `Ctrl+L` to clear the terminal.
+
+### View Variables
+
+```php
+>>> show $user
+```
+
+Displays formatted output of any variable.
+
+### Multi-Line Code
+
+Press `Enter` without completing statement:
+
+```php
+>>> $users = User::where('active', true)
+...           ->orderBy('created_at', 'desc')
+...           ->take(10)
+...           ->get();
+```
+
+### History
+
+Use ↑ and ↓ arrow keys to navigate through command history.
+
+### Exit Tinker
+
+```php
+>>> exit
+```
+
+Or press `Ctrl+D` to quit Tinker.
+
+<Callout type="tip">
+  Tinker session state is not persistent. Save complex queries in a file for later use.
+</Callout>
+
+## Helpful Commands
+
+<table>
+  <thead>
+    <tr>
+      <th>Command</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`help`</td>
+      <td>Show available commands</td>
+    </tr>
+    <tr>
+      <td>`ls`</td>
+      <td>List variables in current scope</td>
+    </tr>
+    <tr>
+      <td>`show $var`</td>
+      <td>Display formatted variable</td>
+    </tr>
+    <tr>
+      <td>`doc ClassName`</td>
+      <td>Show class documentation</td>
+    </tr>
+    <tr>
+      <td>`clear`</td>
+      <td>Clear screen</td>
+    </tr>
+    <tr>
+      <td>`exit`</td>
+      <td>Quit Tinker</td>
+    </tr>
+  </tbody>
+</table>
+
+## Requirements
+
+### Devcontainer Must Be Running
+
+Before clicking "Open Tinker":
+
+1. Open your project in VS Code
+2. Run "Dev Containers: Reopen in Container"
+3. Wait for container to fully start
+4. Now click "Open Tinker" in DAMP
+
+## Troubleshooting
+
+<Accordions>
+
+<Accordion title="Tinker Button Not Available">
+
+**Problem**: Can't find "Open Tinker" button
+
+**Solutions:**
+
+- Ensure project is a Laravel project
+- Check that site type is set to "Laravel"
+- Verify Laravel installation in project directory
+
+</Accordion>
+
+<Accordion title="Devcontainer Not Running Error">
+
+**Problem**: "Devcontainer is not running"
+
+**Solutions:**
+
+1. Open project in VS Code
+2. Press `Ctrl+Shift+P`
+3. Run "Dev Containers: Reopen in Container"
+4. Wait for container to start fully
+5. Try opening Tinker again
+
+</Accordion>
+
+<Accordion title="Tinker Not Available">
+
+**Problem**: "Tinker is not available"
+
+**Solutions:**
+
+- Install Tinker: `composer require laravel/tinker`
+- Rebuild devcontainer after installation
+- Verify Laravel version compatibility
+
+</Accordion>
+
+</Accordions>
+
+---
+
+<Callout type="success">
+  Use Tinker to experiment, debug, and test your Laravel application in real-time - all with a
+  single click from DAMP.
+</Callout>
+
+## Learn More
+
+- [Laravel Tinker Documentation](https://laravel.com/docs/artisan#tinker)
+- [PsySH Documentation](https://psysh.org/)

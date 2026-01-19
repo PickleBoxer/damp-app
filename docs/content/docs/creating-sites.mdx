@@ -1,0 +1,270 @@
+---
+title: Creating Projects
+description: Create PHP projects with one-click DevContainers
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+Create **PHP projects** with automatic DevContainer setup. Choose from basic PHP, Laravel, or add DevContainer support to existing projects.
+
+## Project Types
+
+### Basic PHP
+
+Empty PHP project with minimal setup. Includes:
+
+- Custom frameworks
+- Small applications
+- Learning PHP
+- API projects
+
+**Includes:**
+
+- ✅ PHP (your chosen version)
+- ✅ Composer
+- ✅ XDebug pre-configured
+- ✅ `public/index.php` starter file
+- ✅ DevContainer files
+
+### Laravel
+
+New Laravel application with optional starter kits:
+
+<Cards>
+  <Card title="None" icon={<Code />}>
+    Clean Laravel installation
+  </Card>
+
+<Card title="React" icon={<Sparkles />}>
+  Laravel + Inertia + React + TypeScript
+</Card>
+
+<Card title="Vue" icon={<Sparkles />}>
+  Laravel + Inertia + Vue + TypeScript
+</Card>
+
+<Card title="Livewire" icon={<Zap />}>
+  Laravel + Livewire + Blade
+</Card>
+
+  <Card title="Custom" icon={<Terminal />}>
+    Your own starter repository URL
+  </Card>
+</Cards>
+
+**Laravel Includes:**
+
+- ✅ Latest Laravel via Composer
+- ✅ Node.js for asset compilation
+- ✅ Starter kit of your choice
+- ✅ Database-ready (`DB_HOST=damp-mysql`)
+- ✅ Tinker access button
+
+### Existing Project
+
+Add DevContainer support to your existing PHP codebase.
+
+**What DAMP Adds:**
+
+- ✅ `.devcontainer/` folder
+- ✅ `.vscode/` settings
+- ✅ Named volume for performance
+- ✅ HTTPS domain and certificate
+- ✅ Hosts file entry
+
+<Callout type="warning">
+  DAMP only adds DevContainer files - your existing code remains untouched.
+</Callout>
+
+## Creation Process
+
+<Steps>
+
+<Step>
+**Open Create Dialog**
+
+Click **"Add Project"** button in DAMP's Projects page.
+
+</Step>
+
+<Step>
+**Select Project Type**
+
+Choose Basic PHP, Laravel, or Existing Project.
+
+</Step>
+
+<Step>
+**Choose Starter Kit (Laravel Only)**
+
+If creating Laravel, select your preferred starter kit or none for clean install.
+
+</Step>
+
+<Step>
+**Configure Details**
+
+| Field           | Description                     | Example                                  |
+| --------------- | ------------------------------- | ---------------------------------------- |
+| **Name**        | Project identifier (no spaces)  | `myblog`                                 |
+| **Path**        | Where project folder is created | `C:\Users\Me\Projects`                   |
+| **PHP Version** | PHP runtime version             | `8.4`, `8.3`, `8.2`, `8.1`, `8.0`, `7.4` |
+
+<Callout type="info">
+  For Basic/Laravel: Project folder created at `{path}\{name}`
+
+For Existing: Select the existing project's root folder
+
+</Callout>
+
+</Step>
+
+<Step>
+**Optional Features**
+
+Toggle additional features:
+
+- **Claude Code CLI** - AI coding assistant in DevContainer
+- **Is Laravel Project** (Existing only) - Enable Laravel-specific features
+
+</Step>
+
+<Step>
+**Create Project**
+
+Click **"Create Project"** and watch progress in real-time:
+
+1. **Setup** (10%) - Preparing structure
+2. **Laravel Install** (30%) - Installing Laravel (if applicable)
+3. **Volume** (50%) - Creating named volume
+4. **DevEnv** (80%) - Configuring DevContainer
+5. **Finalizing** (90%) - Adding domain and SSL
+6. **Complete** (100%) - Ready
+
+</Step>
+
+</Steps>
+
+## Creation Output
+
+After creation, your project contains:
+
+```
+myproject/
+├── .devcontainer/
+│   └── devcontainer.json       # VS Code DevContainer config
+├── .vscode/
+│   └── launch.json             # Xdebug launch config
+├── Dockerfile                   # Multi-stage Docker build
+├── docker-compose.yml           # Standalone compose file
+├── .dockerignore                # Build context exclusions
+├── public/
+│   └── index.php                # Entry point
+└── [Laravel files if applicable]
+```
+
+## PHP Versions
+
+DAMP supports PHP 7.4, 8.0, 8.1, 8.2, 8.3, and 8.4. Each project can use a different PHP version.
+
+<Callout type="tip">Run PHP 7.4 and 8.4 simultaneously with different projects.</Callout>
+
+## DevContainer Features
+
+Every project includes:
+
+### Pre-installed Extensions
+
+- ctype, curl, dom, fileinfo, filter, hash, mbstring, openssl, pcre, session, tokenizer
+- xml, opcache, mysqli, pcntl, pdo_mysql, pdo_pgsql, redis, zip
+- xdebug (mode: develop,debug,trace,coverage,profile)
+
+### VS Code Integration
+
+- Xdebug debugging - Set breakpoints and press F5
+- IntelliSense - Auto-completion via PHP Intelephense
+- Code spell checker
+- Git integration
+
+### Networking
+
+- **damp-network** - Docker network for container communication
+- **Named Volume** - Fast file I/O on Windows
+- **Caddy Integration** - HTTPS routing via reverse proxy
+
+## Claude Code CLI
+
+Enable AI-powered coding assistance:
+
+```json
+// Added to devcontainer.json when enabled
+"features": {
+  "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+}
+```
+
+**Usage Inside Container:**
+
+```bash
+# Start interactive session
+claude
+
+# Get help with code
+claude "how do I make a PHP API endpoint?"
+```
+
+<Callout type="success">
+  Toggle the switch during creation - DAMP handles the DevContainer configuration.
+</Callout>
+
+## Troubleshooting
+
+<Accordions>
+  <Accordion title="Project Created But Not Accessible">
+    **Problem:** Can't access `https://myproject.local`
+
+    **Solution:**
+    1. Open project in VS Code
+    2. Press `Ctrl+Shift+P`
+    3. Run "Dev Containers: Reopen in Container"
+    4. Wait for container to start
+    5. Check project status in DAMP (showing "Running")
+
+  </Accordion>
+  <Accordion title="Port Already in Use">
+    **Problem:** Project creation fails with port conflict
+
+    **Solution:**
+    - Close other local servers (XAMPP, WAMP, etc.)
+    - Caddy requires ports 80 and 443
+
+  </Accordion>
+  <Accordion title="Slow Creation">
+    **Problem:** Project creation takes very long
+
+    **Solution:**
+    - Named volumes provide performance
+    - First Laravel install downloads packages (cached after)
+
+  </Accordion>
+</Accordions>
+
+---
+
+<Callout type="tip">Create a Basic PHP project to verify your setup before trying Laravel.</Callout>
+
+## Next Steps
+
+<Cards>
+  <Card title="Managing Projects" href="/docs/managing-sites">
+    Delete, sync, and manage your projects
+  </Card>
+
+<Card title="DevContainers Guide" href="/docs/core-features/devcontainers">
+  Learn about DevContainer architecture
+</Card>
+
+  <Card title="Development Tools" href="/docs/development-tools/xdebug-debugging">
+    Use debugging and development tools
+  </Card>
+</Cards>

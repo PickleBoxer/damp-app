@@ -1,0 +1,313 @@
+---
+title: DevContainers
+description: VS Code DevContainer integration for development
+icon: Code
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+import { FaDocker } from 'react-icons/fa6';
+import { VscJson } from 'react-icons/vsc';
+import { SiPhp } from 'react-icons/si';
+
+DAMP creates a VS Code DevContainer setup for every project. The development environment runs inside Docker containers.
+
+## Project Structure
+
+DAMP generates these files:
+
+<Files>
+  <Folder name="your-project" defaultOpen={true}>
+    <Folder name=".devcontainer" defaultOpen={true}>
+      <File name="devcontainer.json" icon={<VscJson />} />
+    </Folder>
+    <Folder name=".vscode" defaultOpen={true}>
+      <File name="launch.json" icon={<VscJson />} />
+    </Folder>
+    <File name="Dockerfile" icon={<FaDocker />} />
+    <File name="docker-compose.yml" icon={<FaDocker />} />
+    <File name=".dockerignore" icon={<FaDocker />} />
+    <File name="public/index.php" icon={<SiPhp />} />
+  </Folder>
+</Files>
+
+## DevContainer Configuration
+
+### devcontainer.json
+
+```json
+{
+  "name": "myproject",
+
+  "workspaceMount": "source=damp_project_myproject,target=/var/www/html,type=volume",
+  "workspaceFolder": "/var/www/html",
+
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "development",
+    "args": {
+      "USER_ID": "${localEnv:UID:1000}",
+      "GROUP_ID": "${localEnv:GID:1000}"
+    }
+  },
+
+  "remoteUser": "www-data",
+
+  "runArgs": [
+    "--network=damp-network",
+    "--label=com.pickleboxer.damp.managed=true",
+    "--label=com.pickleboxer.damp.type=project-container"
+  ],
+
+  "forwardPorts": [8443],
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "xdebug.php-debug",
+        "bmewburn.vscode-intelephense-client",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  },
+
+  "postCreateCommand": "[ -f composer.json ] && composer install || true; [ -f package.json ] && npm install && npm run build || true"
+}
+```
+
+**Key Settings:**
+
+- **Network**: `damp-network` (connects to Caddy reverse proxy and services)
+- **Volume**: Named Docker volume `damp_project_{name}`
+- **User**: Runs as `www-data` (UID/GID: 1000)
+- **Port**: Forwards port 8443 (HTTPS)
+- **Labels**: Docker labels for DAMP management
+
+## Docker Configuration
+
+### Dockerfile
+
+DAMP uses a multi-stage Dockerfile:
+
+**Base Image**: `serversideup/php:{version}-{variant}`
+
+**Stages**:
+
+1. **base** - Base PHP image with required extensions
+2. **development** - Adds Xdebug, git, zsh, Oh My Zsh
+3. **production** - Production-optimized build
+
+**PHP Variants**:
+
+- `fpm-apache` - Apache with PHP-FPM
+- `fpm-nginx` - Nginx with PHP-FPM
+- `frankenphp` - FrankenPHP server
+- `fpm` - PHP-FPM only
+
+**Development Tools**:
+
+- Git
+- Zsh with Oh My Zsh
+- Xdebug (mode: develop,debug,trace,coverage,profile)
+- Node.js (optional: versions 20, 22, 24, 25, lts, latest)
+
+### Xdebug Configuration
+
+```ini
+xdebug.mode = develop,debug,trace,coverage,profile
+xdebug.start_with_request = trigger
+xdebug.client_port = 9003
+```
+
+## Docker Volumes
+
+DAMP uses **named Docker volumes**:
+
+**Volume Pattern**: `damp_project_{projectName}`
+
+**Configuration**:
+
+```json
+{
+  "workspaceMount": "source=damp_project_myproject,target=/var/www/html,type=volume",
+  "workspaceFolder": "/var/www/html"
+}
+```
+
+**Volume Labels**:
+
+- `com.pickleboxer.damp.managed=true`
+- `com.pickleboxer.damp.type=project-volume`
+- `com.pickleboxer.damp.project-id={UUID}`
+
+Named volumes provide faster I/O on Windows compared to bind mounts.
+
+## PHP Extensions
+
+### Pre-installed Extensions
+
+**Always Included**:
+
+- ctype, curl, dom, fileinfo, filter, hash, mbstring, openssl, pcre, session, tokenizer
+- xml, opcache, mysqli, pcntl, pdo_mysql, pdo_pgsql, redis, zip
+- **xdebug**
+
+**User-Selectable Extensions**:
+
+- bcmath, gd, intl, memcached, imagick, soap, xsl, apcu, sodium, exif, ldap, pgsql
+
+Extensions are installed using `install-php-extensions` script.
+
+## Network Architecture
+
+```
+┌────────────────────────────────────────┐
+│    Docker Network: damp-network        │
+├────────────────────────────────────────┤
+│                                        │
+│  ┌──────────────────────┐              │
+│  │  Caddy Reverse Proxy │              │
+│  │  (damp-caddy)        │              │
+│  └──────────┬───────────┘              │
+│             │                          │
+│             │ Routes to containers     │
+│             ↓                          │
+│  ┌──────────────────────┐              │
+│  │ Project Container    │              │
+│  │ PHP + Apache/Nginx   │              │
+│  │ Port: 8443 (HTTPS)   │              │
+│  └──────────┬───────────┘              │
+│             │                          │
+│             │ Connects to services     │
+│             ↓                          │
+│  ┌──────────────────────┐              │
+│  │  MySQL / PostgreSQL  │              │
+│  │  (damp-mysql)        │              │
+│  └──────────────────────┘              │
+│                                        │
+└────────────────────────────────────────┘
+```
+
+**Container Discovery**: DAMP identifies containers using Docker labels, not container names.
+
+## VS Code Integration
+
+### Opening in DevContainer
+
+1. Open project folder in VS Code
+2. Click "Reopen in Container" notification
+3. VS Code builds and attaches to container
+4. Container runs as www-data user
+
+### Debugging
+
+Press `F5` to start debugging:
+
+```json
+{
+  "type": "php",
+  "request": "launch",
+  "name": "Listen for Xdebug",
+  "port": 9003,
+  "pathMappings": {
+    "/var/www/html": "${workspaceFolder}"
+  }
+}
+```
+
+Set breakpoints in VS Code - Xdebug connects automatically.
+
+## Post-Create Command
+
+Runs once after container creation:
+
+```bash
+[ -f composer.json ] && composer install || true;
+[ -f package.json ] && npm install && npm run build || true
+```
+
+**Behavior**:
+
+- Installs Composer dependencies if `composer.json` exists
+- Installs npm dependencies and runs build if `package.json` exists
+- Non-blocking - failures don't stop container creation
+
+## Customization
+
+### Add PHP Extensions
+
+Edit Dockerfile to add extensions via `install-php-extensions`.
+
+### Change PHP Version
+
+Edit Dockerfile `ARG PHP_VERSION` value (7.4, 8.1, 8.2, 8.3, 8.4).
+
+### Add VS Code Extensions
+
+Edit `devcontainer.json`:
+
+```json
+{
+  "customizations": {
+    "vscode": {
+      "extensions": ["bmewburn.vscode-intelephense-client", "xdebug.php-debug"]
+    }
+  }
+}
+```
+
+### Rebuild Container
+
+After configuration changes:
+
+1. Press `Ctrl+Shift+P` in VS Code
+2. Run "Dev Containers: Rebuild Container"
+
+## Troubleshooting
+
+<Accordions type="single">
+  <Accordion title="Container Won't Start">
+    <b>Problem:</b> DevContainer fails to build
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>Check Docker Desktop is running</li>
+      <li>
+        Verify syntax in <code>devcontainer.json</code>
+      </li>
+      <li>
+        Ensure <code>damp-network</code> network exists
+      </li>
+      <li>Check Docker logs for errors</li>
+    </ol>
+  </Accordion>
+  <Accordion title="Slow Performance">
+    <b>Problem:</b> File operations are slow
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>Verify using named volumes (not bind mounts)</li>
+      <li>Check Docker Desktop resource allocation</li>
+      <li>Disable antivirus scanning of Docker volumes</li>
+    </ol>
+  </Accordion>
+  <Accordion title="Can't Connect to Database">
+    <b>Problem:</b> Application can't reach MySQL
+    <br />
+    <br />
+    <b>Solutions:</b>
+    <ol>
+      <li>
+        Verify <code>--network=damp-network</code> in <code>runArgs</code>
+      </li>
+      <li>Check MySQL service is running in DAMP</li>
+      <li>
+        Use <code>damp-mysql</code> as hostname (not <code>localhost</code>)
+      </li>
+      <li>Rebuild container after network changes</li>
+    </ol>
+  </Accordion>
+</Accordions>

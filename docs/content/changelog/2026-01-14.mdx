@@ -1,0 +1,31 @@
+---
+title: 'Theme Customization & Auto-Refresh'
+description: 'Added custom CSS theme editor and improved project preview with auto-updates'
+date: '2026-01-14'
+tags: ['Feature', 'Bug Fix', 'Improvement']
+version: '0.2.0'
+---
+
+This release introduces theme customization capabilities and significantly improves the developer experience with automatic project preview updates.
+
+- **Custom CSS theme editor** with color presets for personalizing your workspace
+- **Auto-updating project previews** via Docker events
+- **Enhanced Caddy performance** with smart configuration sync
+- **Security and stability improvements** across dependencies
+
+<Accordions type="multiple">
+  <Accordion title="Added">
+    - **Custom CSS theme editor** in settings with color presets (Neutral, Zinc, Slate, Stone) for
+    personalizing the app appearance
+  </Accordion>
+  <Accordion title="Fixed">
+    - **Project preview** now auto-updates via Docker events when container becomes healthy - no
+    manual refresh needed
+  </Accordion>
+  <Accordion title="Changed">
+    - **Improved Caddy reverse proxy performance** with smart configuration sync - **Updated
+    dependencies** for improved security and stability
+  </Accordion>
+</Accordions>
+
+[0.2.0]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.2.0

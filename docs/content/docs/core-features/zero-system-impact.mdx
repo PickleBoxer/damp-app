@@ -1,0 +1,95 @@
+---
+title: System Isolation
+description: Docker isolation for clean system
+icon: Shield
+---
+
+DAMP runs everything in isolated Docker containers.
+
+<Callout type="success">
+  No global installations on your machine. Every project runs in isolated Docker containers.
+</Callout>
+
+## Container Isolation
+
+<Cards>
+  <Card title="No Global PHP" icon={<Package />}>
+    Each project uses its own PHP version in a container
+  </Card>
+
+<Card title="No Database Conflicts" icon={<Database />}>
+  MySQL, PostgreSQL, or Redis run in containers
+</Card>
+
+<Card title="Clean Uninstall" icon={<Trash />}>
+  Remove DAMP and all projects - minimal traces
+</Card>
+
+  <Card title="Multiple Versions" icon={<Layers />}>
+    Run PHP 7.4, 8.1, 8.2, and 8.3 simultaneously
+  </Card>
+</Cards>
+
+## How It Works
+
+```
+┌─────────────────────────────────────────┐
+│         Your Clean System               │
+├─────────────────────────────────────────┤
+│  ✅ No PHP installed globally           │
+│  ✅ No MySQL installed globally         │
+│  ✅ No Apache/Nginx installed globally  │
+└─────────────────────────────────────────┘
+              │
+              │ Docker isolation
+              ↓
+┌─────────────────────────────────────────┐
+│      Isolated Containers                │
+├─────────────────────────────────────────┤
+│  🐳 Project 1: PHP 8.2 + MySQL 8.0      │
+│  🐳 Project 2: PHP 7.4 + MySQL 5.7      │
+│  🐳 Project 3: PHP 8.3 + PostgreSQL     │
+└─────────────────────────────────────────┘
+```
+
+## Container Characteristics
+
+- **Isolation** - Run different PHP versions
+- **No Registry Changes** - Minimal registry entries
+- **Container Cleanup** - Remove via Docker container removal
+- **Reproducible** - Share environments with your team
+- **Portable** - Move projects between machines
+
+## What About Docker Desktop?
+
+DAMP requires Docker Desktop to be installed - it's the only requirement.
+
+<Callout type="warning">
+  Docker Desktop is the **only** system requirement. Once installed, DAMP handles everything else in
+  containers.
+</Callout>
+
+## Comparison
+
+<table>
+  <thead>
+    <tr>
+      <th>Traditional Stack</th>
+      <th>DAMP Approach</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>❌ Global PHP installation</td>
+      <td>✅ Containerized PHP</td>
+    </tr>
+    <tr>
+      <td>❌ Version conflicts</td>
+      <td>✅ Multiple versions coexist</td>
+    </tr>
+    <tr>
+      <td>❌ Hard to uninstall</td>
+      <td>✅ Clean removal</td>
+    </tr>
+  </tbody>
+</table>
