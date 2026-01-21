@@ -1,5 +1,3 @@
-import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
-import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import {
   Field,
@@ -13,7 +11,6 @@ import {
   FieldTitle,
 } from '@renderer/components/ui/field';
 import { Input } from '@renderer/components/ui/input';
-import { Progress } from '@renderer/components/ui/progress';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import {
   Select,
@@ -34,19 +31,8 @@ import type {
 } from '@shared/types/settings';
 import { EDITOR_LABELS, NGROK_REGION_LABELS, TERMINAL_LABELS } from '@shared/types/settings';
 import type { ThemeMode } from '@shared/types/theme-mode';
-import type { UpdateState } from '@shared/types/updater';
 import { createFileRoute } from '@tanstack/react-router';
-import {
-  CheckCircle,
-  Download,
-  Eye,
-  EyeOff,
-  Monitor,
-  Moon,
-  RefreshCw,
-  Sun,
-  XCircle,
-} from 'lucide-react';
+import { CheckCircle, Eye, EyeOff, Monitor, Moon, Sun, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -211,11 +197,6 @@ function SettingsPage() {
   const [showToken, setShowToken] = useState(false);
   const [customCss, setCustomCss] = useState('');
 
-  // Update state
-  const [updateState, setUpdateState] = useState<UpdateState | null>(null);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-
   // Refs for debounce and tracking last saved value
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedTokenRef = useRef<string>('');
@@ -238,63 +219,6 @@ function SettingsPage() {
         setIsLoading(false);
       });
   }, []);
-
-  // Load update status and set up listeners
-  useEffect(() => {
-    // Get initial status
-    window.updater
-      .getStatus()
-      .then(status => setUpdateState(status))
-      .catch((error: unknown) => console.error('Failed to get update status:', error));
-
-    // Listen for status changes
-    const unsubscribeStatus = window.updater.onStatusChange(state => {
-      setUpdateState(state);
-      setIsCheckingUpdate(false);
-    });
-
-    // Listen for download progress
-    const unsubscribeProgress = window.updater.onProgress(progress => {
-      setDownloadProgress(progress.percent);
-    });
-
-    // Listen for errors
-    const unsubscribeError = window.updater.onError(error => {
-      toast.error('Update error', {
-        description: error.message,
-        action: {
-          label: 'Retry',
-          onClick: () => {
-            void handleCheckForUpdates();
-          },
-        },
-      });
-      setIsCheckingUpdate(false);
-    });
-
-    // Show toast when update is downloaded
-    const checkForDownloadedUpdate = () => {
-      if (updateState?.status === 'downloaded' && updateState.info?.version) {
-        toast.success('Update ready to install', {
-          description: `Version ${updateState.info.version} • Restart to update`,
-          duration: Infinity,
-          action: {
-            label: 'Restart Now',
-            onClick: () => {
-              void handleInstallUpdate();
-            },
-          },
-        });
-      }
-    };
-    checkForDownloadedUpdate();
-
-    return () => {
-      unsubscribeStatus();
-      unsubscribeProgress();
-      unsubscribeError();
-    };
-  }, [updateState?.status, updateState?.info?.version]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -440,36 +364,6 @@ function SettingsPage() {
     } catch (error) {
       console.error('Failed to apply preset:', error);
       toast.error('Failed to apply preset');
-    }
-  };
-
-  const handleCheckForUpdates = async () => {
-    setIsCheckingUpdate(true);
-    try {
-      await window.updater.checkForUpdates();
-    } catch (error) {
-      console.error('Failed to check for updates:', error);
-      setIsCheckingUpdate(false);
-    }
-  };
-
-  const handleInstallUpdate = async () => {
-    try {
-      await window.updater.quitAndInstall();
-    } catch (error) {
-      console.error('Failed to install update:', error);
-      toast.error('Failed to install update');
-    }
-  };
-
-  const handleSkipVersion = async () => {
-    if (!updateState?.info?.version) return;
-    try {
-      await window.updater.skipVersion(updateState.info.version);
-      toast.success(`Version ${updateState.info.version} skipped`);
-    } catch (error) {
-      console.error('Failed to skip version:', error);
-      toast.error('Failed to skip version');
     }
   };
 
@@ -693,115 +587,6 @@ function SettingsPage() {
                     <SelectItem value="in">{NGROK_REGION_LABELS.in}</SelectItem>
                   </SelectContent>
                 </Select>
-              </Field>
-            </FieldSet>
-
-            <FieldSeparator />
-
-            {/* Application Updates */}
-            <FieldSet>
-              <FieldLegend>Application Updates</FieldLegend>
-              <FieldDescription>Manage app updates and version information</FieldDescription>
-
-              <Field orientation="vertical">
-                <FieldTitle>Update Status</FieldTitle>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    Current version: {updateState?.currentVersion || 'Unknown'}
-                  </span>
-                  {updateState?.status === 'available' && (
-                    <Badge variant="default">Update Available</Badge>
-                  )}
-                  {updateState?.status === 'downloaded' && (
-                    <Badge variant="default">Ready to Install</Badge>
-                  )}
-                  {updateState?.status === 'not-available' && (
-                    <Badge variant="outline">Up to date</Badge>
-                  )}
-                </div>
-
-                {updateState?.status === 'checking' && (
-                  <Alert>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <AlertTitle>Checking for updates...</AlertTitle>
-                    <AlertDescription>Please wait while we check for new versions</AlertDescription>
-                  </Alert>
-                )}
-
-                {updateState?.status === 'downloading' && (
-                  <Alert>
-                    <Download className="h-4 w-4" />
-                    <AlertTitle>Downloading update...</AlertTitle>
-                    <AlertDescription>
-                      {downloadProgress > 0 ? (
-                        <div className="mt-2 space-y-2">
-                          <Progress value={downloadProgress} className="h-2" />
-                          <span className="text-xs">{Math.round(downloadProgress)}% complete</span>
-                        </div>
-                      ) : (
-                        'Download started...'
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {updateState?.status === 'downloaded' && updateState.info && (
-                  <Alert>
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <AlertTitle>Update ready to install</AlertTitle>
-                    <AlertDescription>
-                      <div className="mt-2 space-y-3">
-                        <p>
-                          Version <strong>{updateState.info.version}</strong> has been downloaded
-                          and is ready to install.
-                        </p>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={handleInstallUpdate}>
-                            Restart & Install
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={handleSkipVersion}>
-                            Skip This Version
-                          </Button>
-                        </div>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {updateState?.status === 'not-available' && (
-                  <p className="text-muted-foreground text-xs">
-                    You&apos;re running the latest version
-                  </p>
-                )}
-
-                {updateState?.status === 'error' && updateState.error && (
-                  <Alert variant="destructive">
-                    <XCircle className="h-4 w-4" />
-                    <AlertTitle>Update error</AlertTitle>
-                    <AlertDescription>
-                      <div className="mt-2 space-y-2">
-                        <p>{updateState.error.message}</p>
-                        <Button size="sm" variant="outline" onClick={handleCheckForUpdates}>
-                          Retry
-                        </Button>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {(!updateState || updateState.status === 'idle') && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCheckForUpdates}
-                    disabled={isCheckingUpdate}
-                  >
-                    <RefreshCw
-                      className={`mr-2 h-4 w-4 ${isCheckingUpdate ? 'animate-spin' : ''}`}
-                    />
-                    Check for Updates
-                  </Button>
-                )}
               </Field>
             </FieldSet>
 
