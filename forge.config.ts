@@ -3,7 +3,7 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { VitePlugin } from '@electron-forge/plugin-vite';
-import { PublisherGithub } from '@electron-forge/publisher-github';
+import { PublisherS3 } from '@electron-forge/publisher-s3';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import type { Module } from 'flora-colossus';
@@ -100,13 +100,16 @@ const config: ForgeConfig = {
     },
   },
   publishers: [
-    new PublisherGithub({
-      repository: {
-        owner: 'PickleBoxer',
-        name: 'damp-app',
+    new PublisherS3({
+      endpoint: process.env.R2_ENDPOINT,
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      region: 'auto',
+      bucket: process.env.R2_BUCKET || '',
+      public: true,
+      keyResolver: (fileName, platform, arch) => {
+        return `${platform}/${arch}/${fileName}`;
       },
-      prerelease: false,
-      draft: true,
     }),
   ],
 };
