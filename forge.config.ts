@@ -1,15 +1,15 @@
-import type { ForgeConfig } from '@electron-forge/shared-types';
-import type { Module } from 'flora-colossus';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
-import { VitePlugin } from '@electron-forge/plugin-vite';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
+import { VitePlugin } from '@electron-forge/plugin-vite';
+import { PublisherGithub } from '@electron-forge/publisher-github';
+import type { ForgeConfig } from '@electron-forge/shared-types';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
-import { PublisherS3 } from '@electron-forge/publisher-s3';
-import { Walker, DepType } from 'flora-colossus';
-import path from 'node:path';
+import type { Module } from 'flora-colossus';
+import { DepType, Walker } from 'flora-colossus';
 import { cp, mkdir } from 'node:fs/promises';
+import path from 'node:path';
 
 type CopyClass<T> = {
   [P in keyof T]: T[P];
@@ -31,12 +31,7 @@ const config: ForgeConfig = {
     onlyModules: ['dockerode', '@vscode/sudo-prompt'],
     force: true,
   },
-  makers: [
-    new MakerSquirrel({
-      remoteReleases: 'https://releases.getdamp.app/win32/x64',
-    }),
-    new MakerZIP({}, ['win32']),
-  ],
+  makers: [new MakerSquirrel({}), new MakerZIP({}, ['win32'])],
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new VitePlugin({
@@ -105,16 +100,13 @@ const config: ForgeConfig = {
     },
   },
   publishers: [
-    new PublisherS3({
-      endpoint: process.env.R2_ENDPOINT,
-      accessKeyId: process.env.R2_ACCESS_KEY_ID,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-      region: 'auto',
-      bucket: process.env.R2_BUCKET || '',
-      public: true,
-      keyResolver: (fileName, platform, arch) => {
-        return `${platform}/${arch}/${fileName}`;
+    new PublisherGithub({
+      repository: {
+        owner: 'PickleBoxer',
+        name: 'damp-app',
       },
+      prerelease: false,
+      draft: true,
     }),
   ],
 };
