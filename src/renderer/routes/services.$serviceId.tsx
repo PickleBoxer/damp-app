@@ -8,6 +8,7 @@ import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Separator } from '@renderer/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { serviceContainerStateQueryOptions, serviceQueryOptions } from '@renderer/services';
 import { getServiceUIUrl, hasServiceUI } from '@renderer/utils/services/ui';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
@@ -78,20 +79,6 @@ function CopyButton({ text, label }: { readonly text: string; readonly label: st
     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
     </Button>
-  );
-}
-
-// Security warning banner component
-function SecurityWarningBanner() {
-  return (
-    <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2.5">
-      <div className="flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-        <span className="text-xs font-medium text-amber-900 dark:text-amber-100">
-          ⚠️ Local Development Only - These credentials are not secure for production use
-        </span>
-      </div>
-    </div>
   );
 }
 
@@ -206,6 +193,16 @@ function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) 
             <div className="flex items-center gap-2">
               <ShieldCheck className="text-primary h-4 w-4" />
               <h3 className="text-foreground text-sm font-semibold">Authentication Credentials</h3>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs">
+                    ⚠️ Local Development Only - These credentials are not secure for production use
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </div>
             {isExpanded ? (
               <ChevronDown className="text-muted-foreground h-4 w-4" />
@@ -670,13 +667,10 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
           </div>
         ) : (
           state?.exists && (
-            <>
-              <SecurityWarningBanner />
-              <div className="space-y-4 p-4">
-                <CredentialsSummaryCard service={service} />
-                {service.default_config.ports.length > 0 && <ConnectionInfo service={service} />}
-              </div>
-            </>
+            <div className="space-y-4 p-4">
+              <CredentialsSummaryCard service={service} />
+              {service.default_config.ports.length > 0 && <ConnectionInfo service={service} />}
+            </div>
           )
         )}
       </ScrollArea>

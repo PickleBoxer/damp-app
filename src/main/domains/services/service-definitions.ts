@@ -163,10 +163,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       image: 'mongodb/mongodb-atlas-local:latest',
       ports: [['27017', '27017']],
       volumes: [],
-      environment_vars: [
-        'MONGODB_INITDB_ROOT_USERNAME=root',
-        'MONGODB_INITDB_ROOT_PASSWORD=root',
-      ],
+      environment_vars: ['MONGODB_INITDB_ROOT_USERNAME=root', 'MONGODB_INITDB_ROOT_PASSWORD=root'],
       data_volume: 'damp-mongodb',
       volume_bindings: ['damp-mongodb:/data/db'],
       healthcheck: {
@@ -180,8 +177,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
         timeout: 5000000000, // 5 seconds
       },
     },
-    post_install_message:
-      "MongoDB installed successfully.\nRoot: 'root' | Password: 'root'",
+    post_install_message: "MongoDB installed successfully.\nRoot: 'root' | Password: 'root'",
   },
 
   // Redis service definition (OPTIONAL)
