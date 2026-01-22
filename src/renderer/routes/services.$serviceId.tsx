@@ -1,3 +1,4 @@
+import { DatabaseOperations } from '@renderer/components/DatabaseOperations';
 import { HealthBadge } from '@renderer/components/HealthBadge';
 import ServiceActions from '@renderer/components/ServiceActions';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
@@ -141,10 +142,10 @@ function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) 
         credentials.push({ label: 'Database', value: database, copyLabel: 'Database name' });
     } else if (service.name === 'mongodb') {
       const username = envVars
-        .find(v => v.startsWith('MONGODB_INITDB_ROOT_USERNAME='))
+        .find(v => v.startsWith('MONGO_INITDB_ROOT_USERNAME='))
         ?.split('=')[1];
       const password = envVars
-        .find(v => v.startsWith('MONGODB_INITDB_ROOT_PASSWORD='))
+        .find(v => v.startsWith('MONGO_INITDB_ROOT_PASSWORD='))
         ?.split('=')[1];
 
       if (username) credentials.push({ label: 'Username', value: username, copyLabel: 'Username' });
@@ -272,8 +273,8 @@ function formatAsLaravelEnv(service: ServiceInfo, host: string, port: string): s
       ].join('\n');
 
     case ServiceId.MongoDB: {
-      const username = envVars.MONGODB_INITDB_ROOT_USERNAME || 'root';
-      const password = envVars.MONGODB_INITDB_ROOT_PASSWORD || 'rootpassword';
+      const username = envVars.MONGO_INITDB_ROOT_USERNAME || 'root';
+      const password = envVars.MONGO_INITDB_ROOT_PASSWORD || 'root';
       return [
         `MONGODB_HOST=${host}`,
         `MONGODB_PORT=${port}`,
@@ -672,6 +673,17 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
               {service.default_config.ports.length > 0 && <ConnectionInfo service={service} />}
             </div>
           )
+        )}
+
+        {/* Database operations for database services */}
+        {service.databaseConfig && state?.exists && (
+          <div className="space-y-4 p-4 pt-0">
+            <DatabaseOperations
+              service={service}
+              isRunning={state.running}
+              healthStatus={state.health_status}
+            />
+          </div>
         )}
       </ScrollArea>
 

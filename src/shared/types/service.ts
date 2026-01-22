@@ -2,8 +2,8 @@
  * Service type definitions for Docker container management
  */
 
-import type { Result, StorageData } from './result';
 import type { PortMapping } from './container';
+import type { Result, StorageData } from './result';
 
 /**
  * Unique identifier for each service
@@ -81,6 +81,14 @@ export interface CustomConfig {
 }
 
 /**
+ * Database configuration for services that support database operations
+ */
+export interface DatabaseConfig {
+  /** Whether this service supports multiple databases */
+  supportsMultipleDatabases: boolean;
+}
+
+/**
  * Service definition from registry
  */
 export interface ServiceDefinition {
@@ -100,6 +108,8 @@ export interface ServiceDefinition {
   default_config: ServiceConfig;
   /** Message to show after successful installation */
   post_install_message: string | null;
+  /** Database configuration (only for database services) */
+  databaseConfig?: DatabaseConfig;
 }
 
 /**

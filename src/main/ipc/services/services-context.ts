@@ -3,9 +3,9 @@
  * Exposes service management APIs to the renderer process
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
 import type { ServicesContext } from '@shared/types/ipc';
-import type { ServiceId, CustomConfig, InstallOptions, PullProgress } from '@shared/types/service';
+import type { CustomConfig, InstallOptions, PullProgress, ServiceId } from '@shared/types/service';
+import { contextBridge, ipcRenderer } from 'electron';
 import * as CHANNELS from './services-channels';
 
 /**
@@ -37,6 +37,15 @@ export function exposeServicesContext(): void {
       ipcRenderer.invoke(CHANNELS.SERVICES_UPDATE_CONFIG, serviceId, customConfig),
 
     downloadCaddyCertificate: () => ipcRenderer.invoke(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT),
+
+    listDatabases: (serviceId: ServiceId) =>
+      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_LIST_DBS, serviceId),
+
+    dumpDatabase: (serviceId: ServiceId, databaseName: string) =>
+      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_DUMP, serviceId, databaseName),
+
+    restoreDatabase: (serviceId: ServiceId, databaseName: string) =>
+      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_RESTORE, serviceId, databaseName),
 
     onInstallProgress: callback => {
       const listener = (_event: unknown, serviceId: ServiceId, progress: PullProgress) => {

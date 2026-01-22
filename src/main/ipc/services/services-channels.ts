@@ -21,5 +21,10 @@ export const SERVICES_UPDATE_CONFIG = 'services:update-config';
 // Caddy-specific operations
 export const SERVICES_CADDY_DOWNLOAD_CERT = 'services:caddy-download-cert';
 
+// Database operations
+export const SERVICES_DATABASE_LIST_DBS = 'services:database-list-databases';
+export const SERVICES_DATABASE_DUMP = 'services:database-dump';
+export const SERVICES_DATABASE_RESTORE = 'services:database-restore';
+
 // Progress events (for image pull)
 export const SERVICES_INSTALL_PROGRESS = 'services:install-progress';

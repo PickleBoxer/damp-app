@@ -63,6 +63,9 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     },
     post_install_message:
       "MySQL installed successfully.\nRoot: 'root' | Database: 'development' | User: 'developer' | Password: 'developer'",
+    databaseConfig: {
+      supportsMultipleDatabases: true,
+    },
   },
 
   // Mailpit service definition (OPTIONAL)
@@ -119,6 +122,9 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     },
     post_install_message:
       "PostgreSQL installed successfully.\nRoot: 'postgres' | Database: 'postgres' | Password: 'postgres'",
+    databaseConfig: {
+      supportsMultipleDatabases: true,
+    },
   },
 
   // MariaDB service definition (OPTIONAL)
@@ -149,6 +155,9 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     },
     post_install_message:
       "MariaDB installed successfully.\nRoot: 'root' | Database: 'development' | User: 'developer' | Password: 'developer'",
+    databaseConfig: {
+      supportsMultipleDatabases: true,
+    },
   },
 
   // MongoDB service definition (OPTIONAL)
@@ -160,24 +169,28 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     service_type: 'database',
     required: false,
     default_config: {
-      image: 'mongodb/mongodb-atlas-local:latest',
+      image: 'mongo',
       ports: [['27017', '27017']],
       volumes: [],
-      environment_vars: ['MONGODB_INITDB_ROOT_USERNAME=root', 'MONGODB_INITDB_ROOT_PASSWORD=root'],
+      environment_vars: ['MONGO_INITDB_ROOT_USERNAME=root', 'MONGO_INITDB_ROOT_PASSWORD=root'],
       data_volume: 'damp-mongodb',
       volume_bindings: ['damp-mongodb:/data/db'],
       healthcheck: {
         test: [
           'CMD',
           'mongosh',
-          'mongodb://localhost:27017/admin',
-          '--eval=db.runCommand({ping:1})',
+          '--quiet',
+          '--eval',
+          'db.runCommand({ping:1}).ok',
         ],
         retries: 3,
         timeout: 5000000000, // 5 seconds
       },
     },
     post_install_message: "MongoDB installed successfully.\nRoot: 'root' | Password: 'root'",
+    databaseConfig: {
+      supportsMultipleDatabases: true,
+    },
   },
 
   // Redis service definition (OPTIONAL)

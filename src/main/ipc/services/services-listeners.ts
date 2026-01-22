@@ -3,11 +3,11 @@
  * Handles all service-related IPC calls from renderer process
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
-import type { ServiceId, InstallOptions, CustomConfig } from '@shared/types/service';
 import { serviceStateManager } from '@main/domains/services/service-state-manager';
-import * as CHANNELS from './services-channels';
 import { createLogger } from '@main/utils/logger';
+import type { CustomConfig, InstallOptions, ServiceId } from '@shared/types/service';
+import { BrowserWindow, ipcMain } from 'electron';
+import * as CHANNELS from './services-channels';
 
 const logger = createLogger('services-ipc');
 
@@ -196,6 +196,188 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
       throw error;
     }
   });
+
+  /**
+   * List databases for a service
+   */
+  ipcMain.handle(CHANNELS.SERVICES_DATABASE_LIST_DBS, async (_event, serviceId: ServiceId) => {
+    try {
+      await ensureInitialized();
+
+      // Verify service is a database type
+      const service = await serviceStateManager.getService(serviceId);
+      if (!service) {
+        throw new Error(`Service ${serviceId} not found`);
+      }
+      if (!service.databaseConfig) {
+        throw new Error(`Service ${serviceId} does not support database operations`);
+      }
+
+      // Check if container is running
+      const containerState = await serviceStateManager.getServiceContainerState(serviceId);
+      if (!containerState?.running) {
+        throw new Error('Container must be running to list databases');
+      }
+
+      // Check if container is healthy (for services with healthchecks)
+      if (
+        containerState.health_status !== 'none' &&
+        containerState.health_status !== 'healthy'
+      ) {
+        throw new Error(
+          `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
+        );
+      }
+
+      const { listDatabases } = await import('@main/domains/services/database-operations');
+      return await listDatabases(serviceId);
+    } catch (error) {
+      logger.error('Failed to list databases', { serviceId, error });
+      throw error;
+    }
+  });
+
+  /**
+   * Dump database to file
+   */
+  ipcMain.handle(
+    CHANNELS.SERVICES_DATABASE_DUMP,
+    async (_event, serviceId: ServiceId, databaseName: string) => {
+      try {
+        await ensureInitialized();
+
+        // Verify service is a database type
+        const service = await serviceStateManager.getService(serviceId);
+        if (!service) {
+          throw new Error(`Service ${serviceId} not found`);
+        }
+        if (!service.databaseConfig) {
+          throw new Error(`Service ${serviceId} does not support database operations`);
+        }
+
+        // Check if container is running
+        const containerState = await serviceStateManager.getServiceContainerState(serviceId);
+        if (!containerState?.running) {
+          throw new Error('Container must be running to dump database');
+        }
+
+        // Check if container is healthy (for services with healthchecks)
+        if (
+          containerState.health_status !== 'none' &&
+          containerState.health_status !== 'healthy'
+        ) {
+          throw new Error(
+            `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
+          );
+        }
+
+        const { dialog } = await import('electron');
+        const { writeFileSync } = await import('node:fs');
+        const {
+          dumpDatabase,
+          getDumpFileExtension,
+          getDumpFileFilter,
+        } = await import('@main/domains/services/database-operations');
+
+        // Create dump
+        const dumpBuffer = await dumpDatabase(serviceId, databaseName);
+
+        // Show save dialog
+        const timestamp = new Date().toISOString().replaceAll(/[:.]/g, '-').slice(0, -5);
+        const extension = getDumpFileExtension(serviceId);
+        const filter = getDumpFileFilter(serviceId);
+
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: 'Save Database Dump',
+          defaultPath: `${databaseName}-${timestamp}.${extension}`,
+          filters: [filter, { name: 'All Files', extensions: ['*'] }],
+        });
+
+        if (!result.canceled && result.filePath) {
+          writeFileSync(result.filePath, dumpBuffer);
+          return { success: true, path: result.filePath };
+        }
+
+        return { success: false, error: 'Dump canceled' };
+      } catch (error) {
+        logger.error('Failed to dump database', { serviceId, databaseName, error });
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    }
+  );
+
+  /**
+   * Restore database from file
+   */
+  ipcMain.handle(
+    CHANNELS.SERVICES_DATABASE_RESTORE,
+    async (_event, serviceId: ServiceId, databaseName: string) => {
+      try {
+        await ensureInitialized();
+
+        // Verify service is a database type
+        const service = await serviceStateManager.getService(serviceId);
+        if (!service) {
+          throw new Error(`Service ${serviceId} not found`);
+        }
+        if (!service.databaseConfig) {
+          throw new Error(`Service ${serviceId} does not support database operations`);
+        }
+
+        // Check if container is running
+        const containerState = await serviceStateManager.getServiceContainerState(serviceId);
+        if (!containerState?.running) {
+          throw new Error('Container must be running to restore database');
+        }
+
+        // Check if container is healthy (for services with healthchecks)
+        if (
+          containerState.health_status !== 'none' &&
+          containerState.health_status !== 'healthy'
+        ) {
+          throw new Error(
+            `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
+          );
+        }
+
+        const { dialog } = await import('electron');
+        const { readFileSync } = await import('node:fs');
+        const { getDumpFileFilter, restoreDatabase } = await import(
+          '@main/domains/services/database-operations'
+        );
+
+        const filter = getDumpFileFilter(serviceId);
+
+        // Show open dialog
+        const result = await dialog.showOpenDialog(mainWindow, {
+          title: 'Select Database Dump File',
+          filters: [filter, { name: 'All Files', extensions: ['*'] }],
+          properties: ['openFile'],
+        });
+
+        if (!result.canceled && result.filePaths.length > 0) {
+          const filePath = result.filePaths[0];
+          const dumpData = readFileSync(filePath);
+
+          // Restore database
+          await restoreDatabase(serviceId, databaseName, dumpData);
+
+          return { success: true };
+        }
+
+        return { success: false, error: 'Restore canceled' };
+      } catch (error) {
+        logger.error('Failed to restore database', { serviceId, databaseName, error });
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    }
+  );
 
   logger.info('Service IPC listeners registered');
 }
