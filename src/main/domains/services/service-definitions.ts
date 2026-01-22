@@ -56,7 +56,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       data_volume: 'damp_mysql_data',
       volume_bindings: ['damp_mysql_data:/var/lib/mysql'],
       healthcheck: {
-        test: ['CMD', 'mysqladmin', 'ping', '-p'],
+        test: ['CMD', 'mysqladmin', 'ping', '-proot'],
         retries: 3,
         timeout: 5000000000, // 5 seconds
       },
