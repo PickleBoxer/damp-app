@@ -19,7 +19,10 @@ import {
   type ErrorComponentProps,
 } from '@tanstack/react-router';
 import {
+  AlertTriangle,
   Check,
+  ChevronDown,
+  ChevronRight,
   Container,
   Copy,
   Download,
@@ -75,6 +78,156 @@ function CopyButton({ text, label }: { readonly text: string; readonly label: st
     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
     </Button>
+  );
+}
+
+// Security warning banner component
+function SecurityWarningBanner() {
+  return (
+    <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2.5">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+        <span className="text-xs font-medium text-amber-900 dark:text-amber-100">
+          ⚠️ Local Development Only - These credentials are not secure for production use
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// Credential row component for displaying individual credentials
+function CredentialRow({
+  label,
+  value,
+  copyLabel,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly copyLabel: string;
+}) {
+  return (
+    <div className="border-border/50 flex items-center justify-between border-b py-2 last:border-0">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-muted-foreground text-xs">{label}</span>
+        <code className="text-foreground font-mono text-sm">{value}</code>
+      </div>
+      <CopyButton text={value} label={copyLabel} />
+    </div>
+  );
+}
+
+// Credentials summary card component
+function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const envVars = getEnvironmentVars(service);
+  const credentials: { label: string; value: string; copyLabel: string }[] = [];
+
+  // Extract credentials based on service type
+  if (service.service_type === 'database') {
+    if (service.name === 'mysql' || service.name === 'mariadb') {
+      const prefix = service.name === 'mysql' ? 'MYSQL_' : 'MARIADB_';
+      const rootPassword = envVars.find(v => v.includes(`${prefix}ROOT_PASSWORD=`))?.split('=')[1];
+      const database = envVars.find(v => v.includes(`${prefix}DATABASE=`))?.split('=')[1];
+      const user = envVars.find(v => v.includes(`${prefix}USER=`))?.split('=')[1];
+      const password = envVars
+        .find(v => v.includes(`${prefix}PASSWORD=`) && !v.includes('ROOT'))
+        ?.split('=')[1];
+
+      if (rootPassword)
+        credentials.push({
+          label: 'Root Password',
+          value: rootPassword,
+          copyLabel: 'Root password',
+        });
+      if (database)
+        credentials.push({ label: 'Database', value: database, copyLabel: 'Database name' });
+      if (user) credentials.push({ label: 'Username', value: user, copyLabel: 'Username' });
+      if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
+    } else if (service.name === 'postgresql') {
+      const user = envVars.find(v => v.startsWith('POSTGRES_USER='))?.split('=')[1];
+      const password = envVars.find(v => v.startsWith('POSTGRES_PASSWORD='))?.split('=')[1];
+      const database = envVars.find(v => v.startsWith('POSTGRES_DB='))?.split('=')[1];
+
+      if (user) credentials.push({ label: 'Username', value: user, copyLabel: 'Username' });
+      if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
+      if (database)
+        credentials.push({ label: 'Database', value: database, copyLabel: 'Database name' });
+    } else if (service.name === 'mongodb') {
+      const username = envVars
+        .find(v => v.startsWith('MONGODB_INITDB_ROOT_USERNAME='))
+        ?.split('=')[1];
+      const password = envVars
+        .find(v => v.startsWith('MONGODB_INITDB_ROOT_PASSWORD='))
+        ?.split('=')[1];
+
+      if (username) credentials.push({ label: 'Username', value: username, copyLabel: 'Username' });
+      if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
+    }
+  } else if (service.name === 'rabbitmq') {
+    const user = envVars.find(v => v.startsWith('RABBITMQ_DEFAULT_USER='))?.split('=')[1];
+    const password = envVars.find(v => v.startsWith('RABBITMQ_DEFAULT_PASS='))?.split('=')[1];
+
+    if (user) credentials.push({ label: 'Username', value: user, copyLabel: 'Username' });
+    if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
+  } else if (service.name === 'minio') {
+    const user = envVars.find(v => v.startsWith('MINIO_ROOT_USER='))?.split('=')[1];
+    const password = envVars.find(v => v.startsWith('MINIO_ROOT_PASSWORD='))?.split('=')[1];
+
+    if (user) credentials.push({ label: 'Access Key', value: user, copyLabel: 'Access key' });
+    if (password)
+      credentials.push({ label: 'Secret Key', value: password, copyLabel: 'Secret key' });
+  } else if (service.name === 'rustfs') {
+    const accessKey = envVars.find(v => v.startsWith('RUSTFS_ACCESS_KEY='))?.split('=')[1];
+    const secretKey = envVars.find(v => v.startsWith('RUSTFS_SECRET_KEY='))?.split('=')[1];
+
+    if (accessKey)
+      credentials.push({ label: 'Access Key', value: accessKey, copyLabel: 'Access key' });
+    if (secretKey)
+      credentials.push({ label: 'Secret Key', value: secretKey, copyLabel: 'Secret key' });
+  } else if (service.name === 'meilisearch') {
+    const masterKey = envVars.find(v => v.startsWith('MEILI_MASTER_KEY='))?.split('=')[1];
+    if (masterKey)
+      credentials.push({ label: 'Master Key', value: masterKey, copyLabel: 'Master key' });
+  } else if (service.name === 'typesense') {
+    const apiKey = envVars.find(v => v.startsWith('TYPESENSE_API_KEY='))?.split('=')[1];
+    if (apiKey) credentials.push({ label: 'API Key', value: apiKey, copyLabel: 'API key' });
+  }
+
+  if (credentials.length === 0) return null;
+
+  return (
+    <Card size="sm" className="mx-auto w-full">
+      <CardContent>
+        <div className="space-y-3">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex w-full items-center justify-between gap-2 text-left transition-colors hover:opacity-80"
+          >
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="text-primary h-4 w-4" />
+              <h3 className="text-foreground text-sm font-semibold">Authentication Credentials</h3>
+            </div>
+            {isExpanded ? (
+              <ChevronDown className="text-muted-foreground h-4 w-4" />
+            ) : (
+              <ChevronRight className="text-muted-foreground h-4 w-4" />
+            )}
+          </button>
+          {isExpanded && (
+            <div className="space-y-0">
+              {credentials.map(cred => (
+                <CredentialRow
+                  key={`${cred.label}-${cred.value}`}
+                  label={cred.label}
+                  value={cred.value}
+                  copyLabel={cred.copyLabel}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -476,51 +629,56 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
       <ServiceInfoCard service={service} />
 
       <ScrollArea className="h-0 flex-1">
-        <div className="flex-1 space-y-4">
-          {isCaddy && state?.exists && (
-            <div className="p-4">
-              <Card size="sm" className="mx-auto w-full">
-                <CardContent>
-                  <div className="space-y-4">
-                    <Item variant="default" size="sm">
-                      <ItemMedia>
-                        <ShieldCheck className="text-primary size-5" />
-                      </ItemMedia>
-                      <ItemContent>
-                        <ItemTitle>SSL Certificate</ItemTitle>
-                        <p className="text-muted-foreground text-xs">
-                          Caddy automatically manages SSL certificates for your projects
+        {isCaddy ? (
+          <div className="flex-1 space-y-4">
+            {state?.exists && (
+              <div className="p-4">
+                <Card size="sm" className="mx-auto w-full">
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Item variant="default" size="sm">
+                        <ItemMedia>
+                          <ShieldCheck className="text-primary size-5" />
+                        </ItemMedia>
+                        <ItemContent>
+                          <ItemTitle>SSL Certificate</ItemTitle>
+                          <p className="text-muted-foreground text-xs">
+                            Caddy automatically manages SSL certificates for your projects
+                          </p>
+                        </ItemContent>
+                        <ItemActions>
+                          <Badge variant={certInstalled ? 'default' : 'secondary'}>
+                            {certInstalled ? 'Installed' : 'Not Installed'}
+                          </Badge>
+                        </ItemActions>
+                      </Item>
+
+                      <Separator />
+
+                      <div className="bg-primary/5 space-y-1 p-3 text-xs">
+                        <p className="text-muted-foreground">
+                          If you experience any connection issues with HTTPS, you can manually
+                          download and install the root certificate to your system&apos;s trusted
+                          store using the button below.
                         </p>
-                      </ItemContent>
-                      <ItemActions>
-                        <Badge variant={certInstalled ? 'default' : 'secondary'}>
-                          {certInstalled ? 'Installed' : 'Not Installed'}
-                        </Badge>
-                      </ItemActions>
-                    </Item>
-
-                    <Separator />
-
-                    <div className="bg-primary/5 space-y-1 p-3 text-xs">
-                      <p className="text-muted-foreground">
-                        If you experience any connection issues with HTTPS, you can manually
-                        download and install the root certificate to your system&apos;s trusted
-                        store using the button below.
-                      </p>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Connection Information */}
-          {!isCaddy && state?.exists && service.default_config.ports.length > 0 && (
-            <div className="p-4">
-              <ConnectionInfo service={service} />
-            </div>
-          )}
-        </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        ) : (
+          state?.exists && (
+            <>
+              <SecurityWarningBanner />
+              <div className="space-y-4 p-4">
+                <CredentialsSummaryCard service={service} />
+                {service.default_config.ports.length > 0 && <ConnectionInfo service={service} />}
+              </div>
+            </>
+          )
+        )}
       </ScrollArea>
 
       {/* Action Buttons */}

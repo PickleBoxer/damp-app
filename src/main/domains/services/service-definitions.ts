@@ -48,21 +48,21 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       ports: [['3306', '3306']],
       volumes: [],
       environment_vars: [
-        'MYSQL_ROOT_PASSWORD=rootpassword',
+        'MYSQL_ROOT_PASSWORD=root',
         'MYSQL_DATABASE=development',
         'MYSQL_USER=developer',
-        'MYSQL_PASSWORD=devpassword',
+        'MYSQL_PASSWORD=developer',
       ],
       data_volume: 'damp_mysql_data',
       volume_bindings: ['damp_mysql_data:/var/lib/mysql'],
       healthcheck: {
-        test: ['CMD', 'mysqladmin', 'ping', '-prootpassword'],
+        test: ['CMD', 'mysqladmin', 'ping', '-p'],
         retries: 3,
         timeout: 5000000000, // 5 seconds
       },
     },
     post_install_message:
-      "MySQL server installed and started successfully. Root password: 'rootpassword', Database: 'development', User: 'developer', Password: 'devpassword'",
+      "MySQL installed successfully.\nRoot: 'root' | Database: 'development' | User: 'developer' | Password: 'developer'",
   },
 
   // Mailpit service definition (OPTIONAL)
@@ -106,19 +106,19 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       volumes: [],
       environment_vars: [
         'POSTGRES_PASSWORD=postgres',
-        'POSTGRES_DB=development',
+        'POSTGRES_DB=postgres',
         'POSTGRES_USER=postgres',
       ],
       data_volume: 'damp_pgsql_data',
       volume_bindings: ['damp_pgsql_data:/var/lib/postgresql/data'],
       healthcheck: {
-        test: ['CMD', 'pg_isready', '-q', '-d', 'development', '-U', 'postgres'],
+        test: ['CMD', 'pg_isready', '-q', '-d', 'postgres', '-U', 'postgres'],
         retries: 3,
         timeout: 5000000000, // 5 seconds
       },
     },
     post_install_message:
-      "PostgreSQL server installed and started successfully. Database: 'development', User: 'postgres', Password: 'postgres'",
+      "PostgreSQL installed successfully.\nRoot: 'postgres' | Database: 'postgres' | Password: 'postgres'",
   },
 
   // MariaDB service definition (OPTIONAL)
@@ -134,10 +134,10 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       ports: [['3306', '3306']],
       volumes: [],
       environment_vars: [
-        'MYSQL_ROOT_PASSWORD=rootpassword',
-        'MYSQL_DATABASE=development',
-        'MYSQL_USER=developer',
-        'MYSQL_PASSWORD=devpassword',
+        'MARIADB_ROOT_PASSWORD=root',
+        'MARIADB_DATABASE=development',
+        'MARIADB_USER=developer',
+        'MARIADB_PASSWORD=developer',
       ],
       data_volume: 'damp-mariadb',
       volume_bindings: ['damp-mariadb:/var/lib/mysql'],
@@ -148,7 +148,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       },
     },
     post_install_message:
-      "MariaDB server installed and started successfully. Root password: 'rootpassword', Database: 'development', User: 'developer', Password: 'devpassword'",
+      "MariaDB installed successfully.\nRoot: 'root' | Database: 'development' | User: 'developer' | Password: 'developer'",
   },
 
   // MongoDB service definition (OPTIONAL)
@@ -165,7 +165,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       volumes: [],
       environment_vars: [
         'MONGODB_INITDB_ROOT_USERNAME=root',
-        'MONGODB_INITDB_ROOT_PASSWORD=rootpassword',
+        'MONGODB_INITDB_ROOT_PASSWORD=root',
       ],
       data_volume: 'damp-mongodb',
       volume_bindings: ['damp-mongodb:/data/db'],
@@ -181,7 +181,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       },
     },
     post_install_message:
-      "MongoDB server installed and started successfully. Username: 'root', Password: 'rootpassword'",
+      "MongoDB installed successfully.\nRoot: 'root' | Password: 'root'",
   },
 
   // Redis service definition (OPTIONAL)
