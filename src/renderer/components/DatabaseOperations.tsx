@@ -10,7 +10,7 @@ import {
 import type { ContainerState } from '@shared/types/container';
 import { ServiceInfo } from '@shared/types/service';
 import { Download, RefreshCw, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface DatabaseOperationsProps {
@@ -19,12 +19,30 @@ interface DatabaseOperationsProps {
   readonly healthStatus: ContainerState['health_status'];
 }
 
+function getDisabledMessage(
+  isRunning: boolean,
+  healthStatus: ContainerState['health_status']
+): string {
+  if (!isRunning) {
+    return 'Start the service to use database operations.';
+  }
+  return `Service is ${healthStatus}. Wait for healthy status.`;
+}
+
 export function DatabaseOperations({ service, isRunning, healthStatus }: DatabaseOperationsProps) {
   const [databases, setDatabases] = useState<string[]>([]);
   const [selectedDatabase, setSelectedDatabase] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDumping, setIsDumping] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  useEffect(() => {
+    setDatabases([]);
+    setSelectedDatabase('');
+    setIsLoading(false);
+    setIsDumping(false);
+    setIsRestoring(false);
+  }, [service.id]);
 
   if (!service.databaseConfig) return null;
 
@@ -105,9 +123,7 @@ export function DatabaseOperations({ service, isRunning, healthStatus }: Databas
           </div>
           {isDisabled ? (
             <p className="text-muted-foreground text-xs">
-              {isRunning
-                ? `Service is ${healthStatus}. Wait for healthy status.`
-                : 'Start the service to use database operations.'}
+              {getDisabledMessage(isRunning, healthStatus)}
             </p>
           ) : (
             <>
