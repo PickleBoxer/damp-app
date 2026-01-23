@@ -8,6 +8,9 @@ import { ServiceId } from '@shared/types/service';
 const TEMP_RESTORE_FILE_PATH = '/tmp/damp_restore.dump';
 
 function sanitizeDatabaseName(dbName: string): string {
+  if (!dbName || dbName.trim().length === 0) {
+    throw new Error('Database name cannot be empty');
+  }
   const sanitized = dbName.replaceAll(/[^a-zA-Z0-9_-]/g, '');
   if (sanitized !== dbName) {
     throw new Error(
@@ -59,14 +62,14 @@ function getListDatabasesCommand(serviceId: ServiceId): string[] {
       return [
         'sh',
         '-c',
-        'psql -U postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false"',
+        'psql -U "$POSTGRES_USER" -t -c "SELECT datname FROM pg_database WHERE datistemplate = false"',
       ];
 
     case ServiceId.MongoDB:
       return [
         'sh',
         '-c',
-        String.raw`mongosh --username root --password root --authenticationDatabase admin --quiet --eval "db.adminCommand({ listDatabases: 1 }).databases.map(d => d.name).filter(n => !['admin', 'config', 'local'].includes(n)).join('\n')"`,
+        String.raw`mongosh --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --quiet --eval "db.adminCommand({ listDatabases: 1 }).databases.map(d => d.name).filter(n => !['admin', 'config', 'local'].includes(n)).join('\n')"`,
       ];
 
     default:
@@ -104,13 +107,13 @@ function getDumpCommand(serviceId: ServiceId, sanitizedDbName: string): string[]
       ];
 
     case ServiceId.PostgreSQL:
-      return ['sh', '-c', `pg_dump -U postgres -Fc ${sanitizedDbName}`];
+      return ['sh', '-c', `pg_dump -U "$POSTGRES_USER" -Fc ${sanitizedDbName}`];
 
     case ServiceId.MongoDB:
       return [
         'sh',
         '-c',
-        `mongodump --username root --password root --authenticationDatabase admin --db ${sanitizedDbName} --archive --gzip`,
+        `mongodump --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db ${sanitizedDbName} --archive --gzip`,
       ];
 
     default:
@@ -142,28 +145,28 @@ function getRestoreCommand(
       return [
         'sh',
         '-c',
-        `exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`" && exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
+        `exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e 'CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`' && exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
       ];
 
     case ServiceId.MariaDB:
       return [
         'sh',
         '-c',
-        `exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`" && exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
+        `exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e 'CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`' && exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
       ];
 
     case ServiceId.PostgreSQL:
       return [
         'sh',
         '-c',
-        `pg_restore -U postgres -d ${sanitizedDbName} --clean --if-exists ${tempFile}`,
+        `(psql -U "$POSTGRES_USER" -c "CREATE DATABASE ${sanitizedDbName}" 2>/dev/null || true) && pg_restore -U "$POSTGRES_USER" -d ${sanitizedDbName} --clean --if-exists ${tempFile}`,
       ];
 
     case ServiceId.MongoDB:
       return [
         'sh',
         '-c',
-        `mongorestore --username root --password root --authenticationDatabase admin --db ${sanitizedDbName} --archive=${tempFile} --gzip --drop`,
+        `mongorestore --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db ${sanitizedDbName} --archive=${tempFile} --gzip --drop`,
       ];
 
     default:
