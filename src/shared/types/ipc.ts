@@ -4,27 +4,27 @@
  * These must match the actual implementations in src/main/ipc/*\/\*-context.ts
  */
 
-import type { ThemeMode } from './theme-mode';
+import type { ContainerState } from './container';
 import type {
-  Project,
   CreateProjectInput,
-  UpdateProjectInput,
   FolderSelectionResult,
+  Project,
+  UpdateProjectInput,
   VolumeCopyProgress,
 } from './project';
+import type { Result } from './result';
 import type {
-  ServiceId,
-  ServiceInfo,
-  ServiceDefinition,
   CustomConfig,
   InstallOptions,
   PullProgress,
+  ServiceDefinition,
+  ServiceId,
+  ServiceInfo,
 } from './service';
-import type { Result } from './result';
-import type { ContainerState } from './container';
+import type { ThemeMode } from './theme-mode';
 
 import type { NgrokStatusData } from './ngrok';
-import type { UpdateState, DownloadProgress } from './updater';
+import type { DownloadProgress, UpdateState } from './updater';
 
 /**
  * Theme mode management context
@@ -121,6 +121,15 @@ export interface ServicesContext {
     customConfig: CustomConfig
   ) => Promise<Result<{ message: string }>>;
   downloadCaddyCertificate: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  listDatabases: (serviceId: ServiceId) => Promise<string[]>;
+  dumpDatabase: (
+    serviceId: ServiceId,
+    databaseName: string
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  restoreDatabase: (
+    serviceId: ServiceId,
+    databaseName: string
+  ) => Promise<{ success: boolean; error?: string }>;
   onInstallProgress: (
     callback: (serviceId: ServiceId, progress: PullProgress) => void
   ) => () => void;
