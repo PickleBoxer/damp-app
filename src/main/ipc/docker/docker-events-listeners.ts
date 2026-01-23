@@ -2,17 +2,17 @@
  * IPC listeners for Docker container events
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { createLogger } from '@main/utils/logger';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import Docker from 'dockerode';
+import { BrowserWindow, ipcMain } from 'electron';
 import type { Readable } from 'node:stream';
 import {
-  DOCKER_EVENTS_START_CHANNEL,
-  DOCKER_EVENTS_STOP_CHANNEL,
   DOCKER_EVENT_CHANNEL,
   DOCKER_EVENTS_CONNECTION_STATUS_CHANNEL,
+  DOCKER_EVENTS_START_CHANNEL,
+  DOCKER_EVENTS_STOP_CHANNEL,
 } from './docker-events-channels';
-import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
-import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('docker-events-ipc');
 
@@ -171,7 +171,17 @@ async function startEventMonitoring(
     eventStream = (await docker.getEvents({
       filters: {
         type: ['container'],
-        event: ['start', 'stop', 'die', 'health_status', 'kill', 'pause', 'unpause', 'restart'],
+        event: [
+          'start',
+          'stop',
+          'die',
+          'health_status',
+          'kill',
+          'pause',
+          'unpause',
+          'restart',
+          'destroy',
+        ],
       },
     })) as Readable;
 
@@ -227,6 +237,38 @@ async function startEventMonitoring(
             `Project container started: ${containerEvent.projectId}, triggering Caddy sync`
           );
           triggerCaddySync();
+        }
+
+        // Handle service container deletion - clear state to mark as not installed
+        if (
+          containerEvent.action === 'destroy' &&
+          containerEvent.serviceId &&
+          containerEvent.resourceType === RESOURCE_TYPES.SERVICE_CONTAINER
+        ) {
+          logger.info(
+            `Service container destroyed: ${containerEvent.serviceId}, clearing service state`
+          );
+
+          // Clear service state asynchronously (mark as not installed)
+          import('@main/core/storage/service-storage')
+            .then(({ serviceStorage }) => {
+              serviceStorage
+                .setServiceState(containerEvent.serviceId, {
+                  id: containerEvent.serviceId,
+                  custom_config: null,
+                })
+                .catch(error => {
+                  logger.error('Failed to clear service state after container destruction', {
+                    serviceId: containerEvent.serviceId,
+                    error: error instanceof Error ? error.message : String(error),
+                  });
+                });
+            })
+            .catch(error => {
+              logger.error('Failed to import service storage', {
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
         }
 
         // Send event to renderer
