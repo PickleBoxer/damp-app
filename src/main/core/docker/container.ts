@@ -19,6 +19,32 @@ import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
 const logger = createLogger('Container');
 
 /**
+ * Ensure Docker image exists locally, pull if missing (silent, no progress)
+ */
+export async function ensureImage(imageName: string): Promise<void> {
+  try {
+    const images = await docker.listImages({
+      filters: { reference: [imageName] },
+    });
+
+    if (images.length > 0) {
+      return;
+    }
+
+    logger.debug(`Pulling image ${imageName}...`);
+    await new Promise<void>((resolve, reject) => {
+      docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
+        if (err) return reject(err);
+        docker.modem.followProgress(stream, err => (err ? reject(err) : resolve()));
+      });
+    });
+    logger.debug(`Image ${imageName} pulled successfully`);
+  } catch (error) {
+    throw new Error(`Failed to ensure image ${imageName}: ${error}`);
+  }
+}
+
+/**
  * Pull Docker image with progress callback
  */
 export async function pullImage(

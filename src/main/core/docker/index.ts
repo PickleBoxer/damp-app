@@ -4,7 +4,7 @@
  */
 
 // Core Docker client and system operations
-export { DOCKER_TIMEOUTS, docker, getManagedContainersStats, isDockerAvailable } from './docker';
+export { docker, DOCKER_TIMEOUTS, getManagedContainersStats, isDockerAvailable } from './docker';
 
 // Network operations
 export { checkNetworkExists, ensureNetworkExists } from './network';
@@ -12,6 +12,7 @@ export { checkNetworkExists, ensureNetworkExists } from './network';
 // Container operations
 export {
   createContainer,
+  ensureImage,
   execCommand,
   findContainerByLabel,
   getAllManagedContainers,

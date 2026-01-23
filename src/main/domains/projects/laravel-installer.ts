@@ -3,10 +3,11 @@
  * Installs Laravel projects to Docker volumes using pickleboxer/laravel-installer
  */
 
-import Docker from 'dockerode';
-import type { LaravelInstallerOptions, VolumeCopyProgress } from '@shared/types/project';
-import { buildHelperContainerLabels, HELPER_OPERATIONS } from '@shared/constants/labels';
+import { ensureImage } from '@main/core/docker';
 import { createLogger } from '@main/utils/logger';
+import { buildHelperContainerLabels, HELPER_OPERATIONS } from '@shared/constants/labels';
+import type { LaravelInstallerOptions, VolumeCopyProgress } from '@shared/types/project';
+import Docker from 'dockerode';
 
 const docker = new Docker();
 const logger = createLogger('LaravelInstaller');
@@ -81,6 +82,9 @@ async function flattenVolumeStructure(
       });
     }
 
+    // Ensure alpine image exists
+    await ensureImage('alpine:latest');
+
     // Create Alpine container to move files from /app/projectName to /app/
     const labels = buildHelperContainerLabels(
       HELPER_OPERATIONS.LARAVEL_FLATTEN,
@@ -148,15 +152,7 @@ export async function installLaravelToVolume(
       });
     }
 
-    await new Promise<void>((resolve, reject) => {
-      docker.pull(INSTALLER_IMAGE, (err: Error | null, stream: NodeJS.ReadableStream) => {
-        if (err) return reject(err);
-        docker.modem.followProgress(stream, (err: Error | null) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-    });
+    await ensureImage(INSTALLER_IMAGE);
 
     // Step 2: Run Laravel installer
     logger.info(`Installing Laravel project: ${projectName}`);

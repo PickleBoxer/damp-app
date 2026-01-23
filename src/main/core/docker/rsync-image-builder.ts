@@ -3,9 +3,10 @@
  * Eliminates 2-5 second overhead of installing rsync on every sync
  */
 
-import Docker from 'dockerode';
 import { createLogger } from '@main/utils/logger';
+import Docker from 'dockerode';
 import tar from 'tar-stream';
+import { ensureImage } from './container';
 
 const docker = new Docker();
 const logger = createLogger('RsyncImageBuilder');
@@ -29,6 +30,9 @@ export async function ensureRsyncImage(): Promise<void> {
     }
 
     logger.info('Building rsync image (one-time setup)...');
+
+    // Ensure base alpine image exists before building
+    await ensureImage('alpine:latest');
 
     // Create inline Dockerfile content
     const dockerfileContent = `FROM alpine:latest

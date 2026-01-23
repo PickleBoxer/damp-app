@@ -3,17 +3,18 @@
  * Handles volume creation, deletion, and file copying/syncing
  */
 
-import { Writable } from 'node:stream';
-import type { VolumeCopyProgress } from '@shared/types/project';
+import { createLogger } from '@main/utils/logger';
 import {
-  buildProjectVolumeLabels,
   buildHelperContainerLabels,
+  buildProjectVolumeLabels,
   HELPER_OPERATIONS,
   LABEL_KEYS,
 } from '@shared/constants/labels';
-import { createLogger } from '@main/utils/logger';
-import { ensureRsyncImage, RSYNC_IMAGE_NAME } from './rsync-image-builder';
+import type { VolumeCopyProgress } from '@shared/types/project';
+import { Writable } from 'node:stream';
+import { ensureImage } from './container';
 import { docker } from './docker';
+import { ensureRsyncImage, RSYNC_IMAGE_NAME } from './rsync-image-builder';
 
 const logger = createLogger('Volume');
 
@@ -174,6 +175,9 @@ export async function copyToVolume(
         percentage: COPY_STAGES.STARTING.percentage,
       });
     }
+
+    // Ensure alpine image exists
+    await ensureImage('alpine:latest');
 
     // Create Alpine container with both source folder and volume mounted
     const labels = buildHelperContainerLabels(HELPER_OPERATIONS.VOLUME_COPY, volumeName, projectId);
