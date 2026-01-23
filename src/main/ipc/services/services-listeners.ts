@@ -262,11 +262,8 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
 
         const { dialog } = await import('electron');
         const { writeFileSync } = await import('node:fs');
-        const {
-          dumpDatabase,
-          getDumpFileExtension,
-          getDumpFileFilter,
-        } = await import('@main/domains/services/database-operations');
+        const { dumpDatabase, getDumpFileExtension, getDumpFileFilter } =
+          await import('@main/domains/services/database-operations');
 
         // Create dump
         const dumpBuffer = await dumpDatabase(serviceId, databaseName);
@@ -313,9 +310,8 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
 
         const { dialog } = await import('electron');
         const { readFileSync } = await import('node:fs');
-        const { getDumpFileFilter, restoreDatabase } = await import(
-          '@main/domains/services/database-operations'
-        );
+        const { getDumpFileFilter, restoreDatabase } =
+          await import('@main/domains/services/database-operations');
 
         const filter = getDumpFileFilter(serviceId);
 

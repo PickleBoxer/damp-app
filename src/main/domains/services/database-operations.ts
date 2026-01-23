@@ -35,8 +35,8 @@ function parseDatabaseList(stdout: string): string[] {
   return stdout
     .trim()
     .split('\n')
-    .map((db) => db.trim())
-    .filter((db) => db.length > 0);
+    .map(db => db.trim())
+    .filter(db => db.length > 0);
 }
 
 function getListDatabasesCommand(serviceId: ServiceId): string[] {
@@ -118,10 +118,7 @@ function getDumpCommand(serviceId: ServiceId, sanitizedDbName: string): string[]
   }
 }
 
-export async function dumpDatabase(
-  serviceId: ServiceId,
-  databaseName: string
-): Promise<Buffer> {
+export async function dumpDatabase(serviceId: ServiceId, databaseName: string): Promise<Buffer> {
   const sanitizedDbName = sanitizeDatabaseName(databaseName);
   const containerId = await getContainerIdOrName(serviceId);
   const cmd = getDumpCommand(serviceId, sanitizedDbName);
@@ -135,7 +132,11 @@ export async function dumpDatabase(
   return Buffer.from(result.stdout, 'binary');
 }
 
-function getRestoreCommand(serviceId: ServiceId, sanitizedDbName: string, tempFile: string): string[] {
+function getRestoreCommand(
+  serviceId: ServiceId,
+  sanitizedDbName: string,
+  tempFile: string
+): string[] {
   switch (serviceId) {
     case ServiceId.MySQL:
       return [

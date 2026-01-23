@@ -176,13 +176,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       data_volume: 'damp-mongodb',
       volume_bindings: ['damp-mongodb:/data/db'],
       healthcheck: {
-        test: [
-          'CMD',
-          'mongosh',
-          '--quiet',
-          '--eval',
-          'db.runCommand({ping:1}).ok',
-        ],
+        test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.runCommand({ping:1}).ok'],
         retries: 3,
         timeout: 5000000000, // 5 seconds
       },
