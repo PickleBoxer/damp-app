@@ -7,12 +7,46 @@ import { serviceStateManager } from '@main/domains/services/service-state-manage
 import { createLogger } from '@main/utils/logger';
 import type { CustomConfig, InstallOptions, ServiceId } from '@shared/types/service';
 import { BrowserWindow, ipcMain } from 'electron';
+import { z } from 'zod';
 import * as CHANNELS from './services-channels';
 
 const logger = createLogger('services-ipc');
 
+// Validation schemas
+const databaseNameSchema = z.string().min(1, 'Database name cannot be empty');
+
 // Prevent duplicate listener registration
 let listenersAdded = false;
+
+/**
+ * Validates that a service supports database operations and is ready to perform them
+ * @throws Error if validation fails
+ */
+async function validateDatabaseOperation(serviceId: ServiceId) {
+  // Verify service exists and is a database type
+  const service = await serviceStateManager.getService(serviceId);
+  if (!service) {
+    throw new Error(`Service ${serviceId} not found`);
+  }
+  if (!service.databaseConfig) {
+    throw new Error(`Service ${serviceId} does not support database operations`);
+  }
+
+  // Check if container is running
+  const containerState = await serviceStateManager.getServiceContainerState(serviceId);
+  if (!containerState?.running) {
+    throw new Error('Container must be running to perform database operations');
+  }
+
+  // Check if container is healthy (for services with healthchecks)
+  if (containerState.health_status !== 'none' && containerState.health_status !== 'healthy') {
+    throw new Error(
+      `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
+    );
+  }
+
+  return service;
+}
 
 /**
  * Add service event listeners
@@ -203,31 +237,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(CHANNELS.SERVICES_DATABASE_LIST_DBS, async (_event, serviceId: ServiceId) => {
     try {
       await ensureInitialized();
-
-      // Verify service is a database type
-      const service = await serviceStateManager.getService(serviceId);
-      if (!service) {
-        throw new Error(`Service ${serviceId} not found`);
-      }
-      if (!service.databaseConfig) {
-        throw new Error(`Service ${serviceId} does not support database operations`);
-      }
-
-      // Check if container is running
-      const containerState = await serviceStateManager.getServiceContainerState(serviceId);
-      if (!containerState?.running) {
-        throw new Error('Container must be running to list databases');
-      }
-
-      // Check if container is healthy (for services with healthchecks)
-      if (
-        containerState.health_status !== 'none' &&
-        containerState.health_status !== 'healthy'
-      ) {
-        throw new Error(
-          `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
-        );
-      }
+      await validateDatabaseOperation(serviceId);
 
       const { listDatabases } = await import('@main/domains/services/database-operations');
       return await listDatabases(serviceId);
@@ -244,32 +254,11 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
     CHANNELS.SERVICES_DATABASE_DUMP,
     async (_event, serviceId: ServiceId, databaseName: string) => {
       try {
+        // Validate database name
+        databaseNameSchema.parse(databaseName);
+
         await ensureInitialized();
-
-        // Verify service is a database type
-        const service = await serviceStateManager.getService(serviceId);
-        if (!service) {
-          throw new Error(`Service ${serviceId} not found`);
-        }
-        if (!service.databaseConfig) {
-          throw new Error(`Service ${serviceId} does not support database operations`);
-        }
-
-        // Check if container is running
-        const containerState = await serviceStateManager.getServiceContainerState(serviceId);
-        if (!containerState?.running) {
-          throw new Error('Container must be running to dump database');
-        }
-
-        // Check if container is healthy (for services with healthchecks)
-        if (
-          containerState.health_status !== 'none' &&
-          containerState.health_status !== 'healthy'
-        ) {
-          throw new Error(
-            `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
-          );
-        }
+        await validateDatabaseOperation(serviceId);
 
         const { dialog } = await import('electron');
         const { writeFileSync } = await import('node:fs');
@@ -316,32 +305,11 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
     CHANNELS.SERVICES_DATABASE_RESTORE,
     async (_event, serviceId: ServiceId, databaseName: string) => {
       try {
+        // Validate database name
+        databaseNameSchema.parse(databaseName);
+
         await ensureInitialized();
-
-        // Verify service is a database type
-        const service = await serviceStateManager.getService(serviceId);
-        if (!service) {
-          throw new Error(`Service ${serviceId} not found`);
-        }
-        if (!service.databaseConfig) {
-          throw new Error(`Service ${serviceId} does not support database operations`);
-        }
-
-        // Check if container is running
-        const containerState = await serviceStateManager.getServiceContainerState(serviceId);
-        if (!containerState?.running) {
-          throw new Error('Container must be running to restore database');
-        }
-
-        // Check if container is healthy (for services with healthchecks)
-        if (
-          containerState.health_status !== 'none' &&
-          containerState.health_status !== 'healthy'
-        ) {
-          throw new Error(
-            `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
-          );
-        }
+        await validateDatabaseOperation(serviceId);
 
         const { dialog } = await import('electron');
         const { readFileSync } = await import('node:fs');

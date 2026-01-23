@@ -1,5 +1,6 @@
 import { Button } from '@renderer/components/ui/button';
 import { Card, CardContent } from '@renderer/components/ui/card';
+import { Input } from '@renderer/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ function getDisabledMessage(
 export function DatabaseOperations({ service, isRunning, healthStatus }: DatabaseOperationsProps) {
   const [databases, setDatabases] = useState<string[]>([]);
   const [selectedDatabase, setSelectedDatabase] = useState<string>('');
+  const [customDatabaseName, setCustomDatabaseName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isDumping, setIsDumping] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
@@ -39,6 +41,7 @@ export function DatabaseOperations({ service, isRunning, healthStatus }: Databas
   useEffect(() => {
     setDatabases([]);
     setSelectedDatabase('');
+    setCustomDatabaseName('');
     setIsLoading(false);
     setIsDumping(false);
     setIsRestoring(false);
@@ -88,19 +91,25 @@ export function DatabaseOperations({ service, isRunning, healthStatus }: Databas
   };
 
   const handleRestoreDatabase = async () => {
+    const targetDatabase = customDatabaseName.trim() || selectedDatabase;
+
+    if (!targetDatabase) {
+      toast.error('Please select or enter a database name', {
+        description: 'You must specify a target database before restoring',
+      });
+      return;
+    }
+
     setIsRestoring(true);
     try {
-      // Use selected database if available, otherwise the restore dialog will prompt
-      const result = await servicesApi.restoreDatabase(
-        service.id,
-        selectedDatabase || 'development'
-      );
+      const result = await servicesApi.restoreDatabase(service.id, targetDatabase);
       if (result.success) {
-        toast.success('Database restored');
-        // Refresh database list if we can
-        if (databases.length > 0) {
-          await handleFetchDatabases();
-        }
+        toast.success('Database restored', {
+          description: `Restored to database: ${targetDatabase}`,
+        });
+        // Clear custom input and refresh database list
+        setCustomDatabaseName('');
+        await handleFetchDatabases();
       } else {
         toast.error('Failed to restore', { description: result.error });
       }
@@ -155,6 +164,20 @@ export function DatabaseOperations({ service, isRunning, healthStatus }: Databas
                 </Button>
               </div>
 
+              <div className="space-y-1.5">
+                <label htmlFor="custom-db-name" className="text-muted-foreground text-xs">
+                  Or enter custom database name for restore:
+                </label>
+                <Input
+                  id="custom-db-name"
+                  type="text"
+                  placeholder="e.g., staging_db, test_db"
+                  value={customDatabaseName}
+                  onChange={e => setCustomDatabaseName(e.target.value)}
+                  className="h-7 text-xs"
+                />
+              </div>
+
               <div className="flex gap-2">
                 <Button
                   variant="default"
@@ -169,7 +192,7 @@ export function DatabaseOperations({ service, isRunning, healthStatus }: Databas
                 <Button
                   variant="outline"
                   onClick={handleRestoreDatabase}
-                  disabled={isRestoring}
+                  disabled={(!selectedDatabase && !customDatabaseName.trim()) || isRestoring}
                   className="flex-1"
                   size="sm"
                 >

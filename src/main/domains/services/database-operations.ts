@@ -1,6 +1,11 @@
-import { execCommand, findContainerByLabel } from '@main/core/docker';
+import { execCommand, findContainerByLabel, putFileToContainer } from '@main/core/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { ServiceId } from '@shared/types/service';
+
+/**
+ * Temporary file path in container for database restore operations
+ */
+const TEMP_RESTORE_FILE_PATH = '/tmp/damp_restore.dump';
 
 function sanitizeDatabaseName(dbName: string): string {
   const sanitized = dbName.replaceAll(/[^a-zA-Z0-9_-]/g, '');
@@ -54,7 +59,7 @@ function getListDatabasesCommand(serviceId: ServiceId): string[] {
       return [
         'sh',
         '-c',
-        'psql -U postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN (\'postgres\')"',
+        'psql -U postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false"',
       ];
 
     case ServiceId.MongoDB:
@@ -88,14 +93,14 @@ function getDumpCommand(serviceId: ServiceId, sanitizedDbName: string): string[]
       return [
         'sh',
         '-c',
-        `exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases ${sanitizedDbName}`,
+        `exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers ${sanitizedDbName}`,
       ];
 
     case ServiceId.MariaDB:
       return [
         'sh',
         '-c',
-        `exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction --routines --triggers --databases ${sanitizedDbName}`,
+        `exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction --routines --triggers ${sanitizedDbName}`,
       ];
 
     case ServiceId.PostgreSQL:
@@ -133,10 +138,18 @@ export async function dumpDatabase(
 function getRestoreCommand(serviceId: ServiceId, sanitizedDbName: string, tempFile: string): string[] {
   switch (serviceId) {
     case ServiceId.MySQL:
-      return ['sh', '-c', `exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`];
+      return [
+        'sh',
+        '-c',
+        `exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`" && exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
+      ];
 
     case ServiceId.MariaDB:
-      return ['sh', '-c', `exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`];
+      return [
+        'sh',
+        '-c',
+        `exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`" && exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
+      ];
 
     case ServiceId.PostgreSQL:
       return [
@@ -164,23 +177,22 @@ export async function restoreDatabase(
 ): Promise<void> {
   const sanitizedDbName = sanitizeDatabaseName(databaseName);
   const containerId = await getContainerIdOrName(serviceId);
-  const tempFile = '/tmp/damp_restore.dump';
 
-  const base64Data = dumpData.toString('base64');
-  const writeCmd = ['sh', '-c', `echo '${base64Data}' | base64 -d > ${tempFile}`];
-  const writeResult = await execCommand(containerId, writeCmd);
+  // Upload dump file to container using Docker API (secure and efficient)
+  await putFileToContainer(containerId, dumpData, TEMP_RESTORE_FILE_PATH);
 
-  if (writeResult.exitCode !== 0) {
-    throw new Error(`Failed to write dump file to container: ${writeResult.stderr}`);
-  }
+  try {
+    const restoreCmd = getRestoreCommand(serviceId, sanitizedDbName, TEMP_RESTORE_FILE_PATH);
+    const restoreResult = await execCommand(containerId, restoreCmd);
 
-  const restoreCmd = getRestoreCommand(serviceId, sanitizedDbName, tempFile);
-  const restoreResult = await execCommand(containerId, restoreCmd);
-
-  await execCommand(containerId, ['rm', '-f', tempFile]);
-
-  if (restoreResult.exitCode !== 0) {
-    throw new Error(`Failed to restore database: ${restoreResult.stderr || 'Unknown error'}`);
+    if (restoreResult.exitCode !== 0) {
+      throw new Error(`Failed to restore database: ${restoreResult.stderr || 'Unknown error'}`);
+    }
+  } finally {
+    // Always clean up temp file, even if restore fails
+    await execCommand(containerId, ['rm', '-f', TEMP_RESTORE_FILE_PATH]).catch(() => {
+      // Ignore cleanup errors
+    });
   }
 }
 

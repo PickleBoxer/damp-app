@@ -611,6 +611,48 @@ export async function getFileFromContainer(
 }
 
 /**
+ * Upload a file to a container using Docker's putArchive API
+ * More secure and efficient than shell commands for large files
+ * @param containerIdOrName Container ID or name
+ * @param fileContent File content as Buffer
+ * @param containerPath Full path where file should be placed (e.g., '/tmp/restore.dump')
+ */
+export async function putFileToContainer(
+  containerIdOrName: string,
+  fileContent: Buffer,
+  containerPath: string
+): Promise<void> {
+  try {
+    const container = docker.getContainer(containerIdOrName);
+
+    // Extract directory and filename from path
+    const lastSlash = containerPath.lastIndexOf('/');
+    const directory = containerPath.slice(0, lastSlash) || '/';
+    const filename = containerPath.slice(lastSlash + 1);
+
+    // Create tar archive containing the file
+    const pack = tar.pack();
+
+    // Add file to archive
+    pack.entry({ name: filename, size: fileContent.length }, fileContent);
+    pack.finalize();
+
+    // Upload tar archive to container
+    await container.putArchive(pack, { path: directory });
+
+    logger.debug('File uploaded to container', {
+      container: containerIdOrName,
+      path: containerPath,
+      size: fileContent.length,
+    });
+  } catch (error) {
+    throw new Error(
+      `Failed to upload file to container ${containerIdOrName}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
+
+/**
  * Stream container logs in real-time
  * @param containerIdOrName Container ID or name
  * @param onLog Callback for each log line
