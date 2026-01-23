@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@renderer/components/ui/select';
 import type { ContainerState } from '@shared/types/container';
-import { ServiceInfo } from '@shared/types/service';
+import type { ServiceInfo } from '@shared/types/service';
 import { Download, RefreshCw, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';

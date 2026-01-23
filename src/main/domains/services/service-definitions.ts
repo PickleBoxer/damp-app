@@ -169,7 +169,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     service_type: 'database',
     required: false,
     default_config: {
-      image: 'mongo',
+      image: 'mongo:8',
       ports: [['27017', '27017']],
       volumes: [],
       environment_vars: ['MONGO_INITDB_ROOT_USERNAME=root', 'MONGO_INITDB_ROOT_PASSWORD=root'],
