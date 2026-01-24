@@ -131,7 +131,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
   // MariaDB service definition (OPTIONAL)
   [ServiceId.MariaDB]: {
     id: ServiceId.MariaDB,
-    name: 'mariadb:latest',
+    name: 'mariadb',
     display_name: 'MariaDB Database',
     description: 'MariaDB database server',
     service_type: 'database',
