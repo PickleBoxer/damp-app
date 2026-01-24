@@ -49,6 +49,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       volumes: [],
       environment_vars: [
         'MYSQL_ROOT_PASSWORD=root',
+        'MYSQL_ROOT_HOST=%',
         'MYSQL_DATABASE=development',
         'MYSQL_USER=developer',
         'MYSQL_PASSWORD=developer',
@@ -141,6 +142,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       volumes: [],
       environment_vars: [
         'MARIADB_ROOT_PASSWORD=root',
+        'MARIADB_ROOT_HOST=%',
         'MARIADB_DATABASE=development',
         'MARIADB_USER=developer',
         'MARIADB_PASSWORD=developer',
