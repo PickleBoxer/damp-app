@@ -3,42 +3,41 @@
  * Coordinates between service registry, Docker manager, and storage
  */
 
-import type {
-  ServiceState,
-  ServiceInfo,
-  ServiceDefinition,
-  CustomConfig,
-  InstallOptions,
-  PullProgress,
-} from '@shared/types/service';
-import type { Result } from '@shared/types/result';
-import type { ContainerState, PortMapping } from '@shared/types/container';
-import { ServiceId } from '@shared/types/service';
+import {
+  createContainer,
+  ensureImage,
+  getContainerStateByLabel,
+  isDockerAvailable,
+  removeContainer,
+  removeServiceVolumes,
+  restartContainer,
+  startContainer,
+  stopContainer,
+} from '@main/core/docker';
+import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
+import { serviceStorage } from '@main/core/storage/service-storage';
+import { createLogger } from '@main/utils/logger';
 import {
   buildServiceContainerLabels,
   buildServiceVolumeLabels,
   LABEL_KEYS,
   RESOURCE_TYPES,
 } from '@shared/constants/labels';
-import { createLogger } from '@main/utils/logger';
+import type { ContainerState, PortMapping } from '@shared/types/container';
+import type { Result } from '@shared/types/result';
+import type {
+  CustomConfig,
+  InstallOptions,
+  ServiceDefinition,
+  ServiceInfo,
+  ServiceState,
+} from '@shared/types/service';
+import { ServiceId } from '@shared/types/service';
 import {
-  getServiceDefinition,
   getAllServiceDefinitions,
+  getServiceDefinition,
   POST_INSTALL_HOOKS,
 } from './service-definitions';
-import {
-  isDockerAvailable,
-  pullImage,
-  createContainer,
-  startContainer,
-  getContainerStateByLabel,
-  removeContainer,
-  stopContainer,
-  restartContainer,
-  removeServiceVolumes,
-} from '@main/core/docker';
-import { serviceStorage } from '@main/core/storage/service-storage';
-import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 
 const logger = createLogger('ServiceStateManager');
 
@@ -190,8 +189,7 @@ class ServiceStateManager {
    */
   async installService(
     serviceId: ServiceId,
-    options?: InstallOptions,
-    onProgress?: (progress: PullProgress) => void
+    options?: InstallOptions
   ): Promise<Result<{ message?: string; container_id: string; ports?: PortMapping[] }>> {
     this.ensureInitialized();
 
@@ -215,7 +213,7 @@ class ServiceStateManager {
 
       // Pull image
       logger.info(`Pulling image ${definition.default_config.image}...`);
-      await pullImage(definition.default_config.image, onProgress);
+      await ensureImage(definition.default_config.image);
 
       // Create container with port resolution
       logger.info(`Creating container for ${serviceId}...`);

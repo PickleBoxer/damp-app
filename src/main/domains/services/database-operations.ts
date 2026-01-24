@@ -1,4 +1,9 @@
-import { execCommand, findContainerByLabel, putFileToContainer } from '@main/core/docker';
+import {
+  execCommand,
+  findContainerByLabel,
+  getFileFromContainer,
+  putFileToContainer,
+} from '@main/core/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { ServiceId } from '@shared/types/service';
 
@@ -106,33 +111,74 @@ function getDumpCommand(serviceId: ServiceId, sanitizedDbName: string): string[]
         `exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction --routines --triggers ${sanitizedDbName}`,
       ];
 
+    default:
+      throw new Error(`Service ${serviceId} does not support database dump operations`);
+  }
+}
+
+/**
+ * Get dump command that writes to a file (for binary formats)
+ * Used for PostgreSQL and MongoDB which produce binary output
+ */
+function getDumpCommandToFile(
+  serviceId: ServiceId,
+  sanitizedDbName: string,
+  outputPath: string
+): string[] {
+  switch (serviceId) {
     case ServiceId.PostgreSQL:
-      return ['sh', '-c', `pg_dump -U "$POSTGRES_USER" -Fc ${sanitizedDbName}`];
+      return ['sh', '-c', `pg_dump -U "$POSTGRES_USER" -Fc ${sanitizedDbName} > ${outputPath}`];
 
     case ServiceId.MongoDB:
       return [
         'sh',
         '-c',
-        `mongodump --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db ${sanitizedDbName} --archive --gzip`,
+        `mongodump --username "$MONGO_INITDB_ROOT_USERNAME" --password "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --db ${sanitizedDbName} --archive=${outputPath} --gzip`,
       ];
 
     default:
-      throw new Error(`Service ${serviceId} does not support database dump operations`);
+      throw new Error(`Service ${serviceId} does not support file-based dump operations`);
   }
 }
 
 export async function dumpDatabase(serviceId: ServiceId, databaseName: string): Promise<Buffer> {
   const sanitizedDbName = sanitizeDatabaseName(databaseName);
   const containerId = await getContainerIdOrName(serviceId);
-  const cmd = getDumpCommand(serviceId, sanitizedDbName);
 
+  // PostgreSQL and MongoDB produce binary dumps - use temp file approach to avoid corruption
+  if (serviceId === ServiceId.PostgreSQL || serviceId === ServiceId.MongoDB) {
+    const tempDumpPath = `/tmp/damp_dump_${Date.now()}.dump`;
+
+    try {
+      // Write dump to temp file in container
+      const dumpCmd = getDumpCommandToFile(serviceId, sanitizedDbName, tempDumpPath);
+      const result = await execCommand(containerId, dumpCmd);
+
+      if (result.exitCode !== 0) {
+        throw new Error(`Failed to dump database: ${result.stderr || 'Unknown error'}`);
+      }
+
+      // Retrieve binary file from container
+      const dumpBuffer = await getFileFromContainer(containerId, tempDumpPath);
+
+      return dumpBuffer;
+    } finally {
+      // Always clean up temp file, even if retrieval fails
+      await execCommand(containerId, ['rm', '-f', tempDumpPath]).catch(() => {
+        // Ignore cleanup errors
+      });
+    }
+  }
+
+  // MySQL and MariaDB produce text SQL dumps - can use stdout directly
+  const cmd = getDumpCommand(serviceId, sanitizedDbName);
   const result = await execCommand(containerId, cmd);
 
   if (result.exitCode !== 0) {
     throw new Error(`Failed to dump database: ${result.stderr || 'Unknown error'}`);
   }
 
-  return Buffer.from(result.stdout, 'binary');
+  return Buffer.from(result.stdout, 'utf8');
 }
 
 function getRestoreCommand(
@@ -145,14 +191,14 @@ function getRestoreCommand(
       return [
         'sh',
         '-c',
-        `exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e 'CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`' && exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
+        `mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e 'CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`' && exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
       ];
 
     case ServiceId.MariaDB:
       return [
         'sh',
         '-c',
-        `exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e 'CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`' && exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
+        `mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" -e 'CREATE DATABASE IF NOT EXISTS \`${sanitizedDbName}\`' && exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" ${sanitizedDbName} < ${tempFile}`,
       ];
 
     case ServiceId.PostgreSQL:
