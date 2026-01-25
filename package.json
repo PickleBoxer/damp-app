@@ -104,6 +104,7 @@
     "@tanstack/react-query-devtools": "^5.91.1",
     "@tanstack/react-router": "^1.141.2",
     "@tanstack/react-router-devtools": "^1.141.2",
+    "@tanstack/react-table": "^8.21.3",
     "@vscode/sudo-prompt": "^9.3.1",
     "ansi-to-html": "^0.7.2",
     "class-variance-authority": "^0.7.1",

@@ -1,12 +1,15 @@
-import { Globe, Home, Server } from 'lucide-react';
-import { Link, useRouterState } from '@tanstack/react-router';
+import { cn } from '@renderer/components/lib/utils';
+import { Badge } from '@renderer/components/ui/badge';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { cn } from '@renderer/components/lib/utils';
+import { getOrphanCount, getUpdateCount, resourcesQueryOptions } from '@renderer/resources';
+import { useQuery } from '@tanstack/react-query';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { Container, Globe, Home, Server } from 'lucide-react';
 
 export default function Sidebar() {
   const location = useRouterState({ select: s => s.location });
@@ -17,21 +20,36 @@ export default function Sidebar() {
     return location.pathname.startsWith(to);
   };
 
+  // Get resource counts for badge
+  const { data: resources = [] } = useQuery(resourcesQueryOptions());
+  const orphanCount = getOrphanCount(resources);
+  const updateCount = getUpdateCount(resources);
+  const resourceBadgeCount = orphanCount + updateCount;
+
   const navItems = [
     {
       to: '/',
       icon: Home,
       label: 'Dashboard',
+      badge: null,
     },
     {
       to: '/services',
       icon: Server,
       label: 'Services',
+      badge: null,
     },
     {
       to: '/projects',
       icon: Globe,
       label: 'Projects',
+      badge: null,
+    },
+    {
+      to: '/resources',
+      icon: Container,
+      label: 'Resources',
+      badge: resourceBadgeCount > 0 ? resourceBadgeCount : null,
     },
   ];
 
@@ -50,17 +68,34 @@ export default function Sidebar() {
                   <Link
                     to={item.to}
                     className={cn(
-                      'text-muted-foreground flex h-[35px] w-[35px] items-center justify-center transition-colors',
-                      'hover:text-foreground',
-                      active && 'text-foreground border-foreground border-r-2'
+                      'text-muted-foreground relative flex h-[35px] w-[35px] items-center justify-center transition-colors',
+                      'hover:text-foreground hover:bg-accent/50',
+                      active && 'text-foreground bg-accent'
                     )}
                   >
                     <Icon className="size-4" />
+                    {item.badge && (
+                      <Badge
+                        variant="outline"
+                        className="absolute right-0 bottom-0 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px]"
+                      >
+                        {item.badge}
+                      </Badge>
+                    )}
                     <span className="sr-only">{item.label}</span>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>{item.label}</p>
+                  <div>
+                    <p>{item.label}</p>
+                    {item.to === '/resources' && resourceBadgeCount > 0 && (
+                      <p className="text-muted-foreground text-xs">
+                        {orphanCount > 0 && `${orphanCount} orphan${orphanCount > 1 ? 's' : ''}`}
+                        {orphanCount > 0 && updateCount > 0 && ', '}
+                        {updateCount > 0 && `${updateCount} update${updateCount > 1 ? 's' : ''}`}
+                      </p>
+                    )}
+                  </div>
                 </TooltipContent>
               </Tooltip>
             );
