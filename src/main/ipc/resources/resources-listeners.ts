@@ -73,7 +73,8 @@ async function getAllResources(): Promise<DockerResource[]> {
         category = 'ngrok';
       }
 
-      const containerName = container.Names?.[0]?.replace(/^\//, '') || container.Id.substring(0, 12);
+      const containerName =
+        container.Names?.[0]?.replace(/^\//, '') || container.Id.substring(0, 12);
 
       // Determine owner ID and display name
       const ownerId = projectId || serviceId || category || 'uncategorized';
