@@ -57,7 +57,7 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { AlertTriangle, Container, Database, Info, RefreshCw, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export const Route = createFileRoute('/resources')({
@@ -87,15 +87,9 @@ function ResourcesPage() {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<DockerResource | null>(null);
 
-  // Subscribe to Docker events for real-time updates
-  useEffect(() => {
-    const cleanup = (globalThis as unknown as Window).dockerEvents.onEvent(() => {
-      void queryClient.invalidateQueries({ queryKey: resourcesKeys.all() });
-    });
-    return cleanup;
-  }, [queryClient]);
+  // Docker events handled centrally in use-docker-events.ts hook
 
-  // Mutations
+  // Mutations for individual resource actions (not used for bulk operations)
   const deleteResourceMutation = useMutation({
     mutationFn: ({ type, id }: { type: string; id: string }) =>
       (globalThis as unknown as Window).resources.deleteResource(type, id),
@@ -136,18 +130,45 @@ function ResourcesPage() {
       return;
     }
 
-    for (const orphan of orphans) {
-      try {
-        await (globalThis as unknown as Window).resources.deleteResource(orphan.type, orphan.id);
-      } catch (error) {
-        console.error(`Failed to delete ${orphan.type} ${orphan.id}:`, error);
-      }
-    }
+    // Separate orphans by type for batch deletion
+    const containerIds = orphans.filter(o => o.type === 'container').map(o => o.id);
+    const volumeNames = orphans.filter(o => o.type === 'volume').map(o => o.id);
 
-    void queryClient.invalidateQueries({ queryKey: resourcesKeys.all() });
-    toast.success('Orphaned resources deleted', {
-      description: `Successfully deleted ${orphans.length} orphaned resource(s).`,
-    });
+    try {
+      // Batch delete using Docker prune APIs (single call, much faster)
+      const result = await (globalThis as unknown as Window).resources.pruneOrphans(
+        containerIds,
+        volumeNames
+      );
+
+      // Single invalidation after batch operation
+      void queryClient.invalidateQueries({ queryKey: resourcesKeys.all() });
+
+      const totalDeleted = result.deletedContainers.length + result.deletedVolumes.length;
+      const totalFailed = result.failedContainers.length + result.failedVolumes.length;
+
+      if (totalFailed === 0 && totalDeleted > 0) {
+        toast.success('Orphaned resources deleted', {
+          description: `Successfully deleted ${totalDeleted} orphaned resource(s).`,
+        });
+        return;
+      }
+
+      if (totalDeleted > 0 && totalFailed > 0) {
+        toast.warning('Some orphaned resources could not be deleted', {
+          description: `Deleted ${totalDeleted} orphaned resource(s); ${totalFailed} deletion(s) failed. Check logs for details.`,
+        });
+        return;
+      }
+
+      toast.error('Failed to delete orphaned resources', {
+        description: `${totalFailed} orphaned resource(s) could not be deleted. Check logs for details.`,
+      });
+    } catch (error) {
+      toast.error('Failed to delete orphaned resources', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred.',
+      });
+    }
   };
 
   const handleUpdateAllServices = async () => {
@@ -159,143 +180,157 @@ function ResourcesPage() {
       return;
     }
 
+    let successCount = 0;
+    let failCount = 0;
+
+    // Update services individually (no batch API for service updates)
     for (const resource of servicesNeedingUpdate) {
       const serviceId = resource.labels['com.pickleboxer.damp.service-id'];
       if (serviceId) {
         try {
           await (globalThis as unknown as Window).resources.updateService(serviceId);
+          successCount++;
         } catch (error) {
+          failCount++;
           console.error(`Failed to update service ${serviceId}:`, error);
         }
       }
     }
 
+    // Single invalidation after all updates complete
     void queryClient.invalidateQueries({ queryKey: resourcesKeys.all() });
-    toast.success('Services updated', {
-      description: `Successfully updated ${servicesNeedingUpdate.length} service(s).`,
-    });
+
+    if (failCount === 0 && successCount > 0) {
+      toast.success('Services updated', {
+        description: `Successfully updated ${successCount} service(s).`,
+      });
+      return;
+    }
+
+    if (successCount > 0 && failCount > 0) {
+      toast.warning('Some services failed to update', {
+        description: `Updated ${successCount} service(s), ${failCount} failed.`,
+      });
+    }
   };
 
   // Resources already include ownerId and ownerDisplayName from backend
 
-  // Table columns
-  const columns = useMemo<ColumnDef<DockerResource>[]>(
-    () => [
-      {
-        accessorKey: 'ownerId',
-        enableHiding: true,
-        enableGrouping: true,
-        cell: () => null,
-        header: () => null,
-      },
-      {
-        accessorKey: 'name',
-        header: 'Name',
-        enableGrouping: false,
-        cell: ({ row }) => {
-          if (row.getIsGrouped()) return null;
+  // Table columns (React Compiler auto-memoizes)
+  const columns: ColumnDef<DockerResource>[] = [
+    {
+      accessorKey: 'ownerId',
+      enableHiding: true,
+      enableGrouping: true,
+      cell: () => null,
+      header: () => null,
+    },
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      enableGrouping: false,
+      cell: ({ row }) => {
+        if (row.getIsGrouped()) return null;
 
-          const Icon = row.original.type === 'volume' ? Database : Container;
+        const Icon = row.original.type === 'volume' ? Database : Container;
 
-          return (
-            <div className="flex items-center gap-2">
-              <Icon className="text-muted-foreground h-4 w-4" />
-              <span className="font-mono text-sm">{row.original.name}</span>
-            </div>
-          );
-        },
+        return (
+          <div className="flex items-center gap-2">
+            <Icon className="text-muted-foreground h-4 w-4" />
+            <span className="font-mono text-sm">{row.original.name}</span>
+          </div>
+        );
       },
-      {
-        accessorKey: 'type',
-        header: 'Type',
-        filterFn: 'equals',
-        cell: ({ row }) => {
-          if (row.getIsGrouped()) return null;
-          return (
-            <Badge variant="outline" className="capitalize">
-              {row.original.type}
-            </Badge>
-          );
-        },
+    },
+    {
+      accessorKey: 'type',
+      header: 'Type',
+      filterFn: 'equals',
+      cell: ({ row }) => {
+        if (row.getIsGrouped()) return null;
+        return (
+          <Badge variant="outline" className="capitalize">
+            {row.original.type}
+          </Badge>
+        );
       },
-      {
-        accessorKey: 'category',
-        header: 'Category',
-        filterFn: 'equals',
-        cell: ({ row }) => {
-          if (row.getIsGrouped()) return null;
-          return (
-            <Badge variant="secondary" className="capitalize">
-              {row.original.category}
-            </Badge>
-          );
-        },
+    },
+    {
+      accessorKey: 'category',
+      header: 'Category',
+      filterFn: 'equals',
+      cell: ({ row }) => {
+        if (row.getIsGrouped()) return null;
+        return (
+          <Badge variant="secondary" className="capitalize">
+            {row.original.category}
+          </Badge>
+        );
       },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        cell: ({ row }) => {
-          if (row.getIsGrouped()) return null;
-          const { status, isOrphan, needsUpdate } = row.original;
-          return (
-            <div className="flex items-center gap-2">
-              <span className="text-sm capitalize">{status}</span>
-              {isOrphan && (
-                <Badge variant="destructive" className="flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  Orphan
-                </Badge>
-              )}
-              {needsUpdate && (
-                <Badge variant="default" className="flex items-center gap-1">
-                  <Info className="h-3 w-3" />
-                  Update Available
-                </Badge>
-              )}
-            </div>
-          );
-        },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        if (row.getIsGrouped()) return null;
+        const { status, isOrphan, needsUpdate } = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-sm capitalize">{status}</span>
+            {isOrphan && (
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Orphan
+              </Badge>
+            )}
+            {needsUpdate && (
+              <Badge variant="default" className="flex items-center gap-1">
+                <Info className="h-3 w-3" />
+                Update Available
+              </Badge>
+            )}
+          </div>
+        );
       },
-      {
-        id: 'actions',
-        header: 'Actions',
-        cell: ({ row }) => {
-          if (row.getIsGrouped()) return null;
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => {
+        if (row.getIsGrouped()) return null;
 
-          const resource = row.original;
-          return (
-            <div className="flex items-center gap-2">
-              {resource.needsUpdate && resource.type === 'container' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedResource(resource);
-                    setUpdateDialogOpen(true);
-                  }}
-                  disabled={updateServiceMutation.isPending}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              )}
+        const resource = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            {resource.needsUpdate && resource.type === 'container' && (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   setSelectedResource(resource);
-                  setDeleteDialogOpen(true);
+                  setUpdateDialogOpen(true);
                 }}
-                disabled={deleteResourceMutation.isPending}
+                disabled={updateServiceMutation.isPending}
               >
-                <Trash2 className="text-destructive h-4 w-4" />
+                <RefreshCw className="h-4 w-4" />
               </Button>
-            </div>
-          );
-        },
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedResource(resource);
+                setDeleteDialogOpen(true);
+              }}
+              disabled={deleteResourceMutation.isPending}
+            >
+              <Trash2 className="text-destructive h-4 w-4" />
+            </Button>
+          </div>
+        );
       },
-    ],
-    [deleteResourceMutation.isPending, updateServiceMutation.isPending]
-  );
+    },
+  ];
 
   const table = useReactTable({
     data: resources,
@@ -335,6 +370,16 @@ function ResourcesPage() {
 
   const orphanCount = getOrphanCount(resources);
   const updateCount = getUpdateCount(resources);
+
+  // Calculate actual resource count (excluding group rows)
+  const totalResourceCount = table
+    .getFilteredRowModel()
+    .rows.filter(row => !row.getIsGrouped()).length;
+  const startRow = table.getState().pagination.pageIndex * pageSize + 1;
+  const endRow = Math.min(
+    (table.getState().pagination.pageIndex + 1) * pageSize,
+    totalResourceCount
+  );
 
   if (isLoading) {
     return (
@@ -426,7 +471,7 @@ function ResourcesPage() {
       </div>
 
       {/* Table */}
-      <ScrollArea className="max-h-[calc(100vh-20rem)] rounded-md border">
+      <ScrollArea className="min-h-0 flex-1 rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map(headerGroup => (
@@ -448,6 +493,7 @@ function ResourcesPage() {
                   const firstResource = row.subRows[0]?.original;
                   const displayName =
                     firstResource?.ownerDisplayName || (row.groupingValue as string);
+                  const groupOrphanCount = row.subRows.filter(r => r.original.isOrphan).length;
 
                   return (
                     <TableRow key={row.id} className="bg-muted/50">
@@ -456,6 +502,8 @@ function ResourcesPage() {
                           <button
                             onClick={row.getToggleExpandedHandler()}
                             className="cursor-pointer hover:opacity-70"
+                            aria-expanded={row.getIsExpanded()}
+                            aria-label={`${row.getIsExpanded() ? 'Collapse' : 'Expand'} ${displayName} group`}
                           >
                             {row.getIsExpanded() ? '▼' : '▶'}
                           </button>
@@ -463,6 +511,13 @@ function ResourcesPage() {
                           <span className="text-muted-foreground text-xs font-normal">
                             ({row.subRows.length} resource{row.subRows.length !== 1 ? 's' : ''})
                           </span>
+                          {groupOrphanCount > 0 && (
+                            <span
+                              title={`${groupOrphanCount} orphan${groupOrphanCount !== 1 ? 's' : ''}`}
+                            >
+                              <AlertTriangle className="text-destructive h-3 w-3" />
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -493,12 +548,7 @@ function ResourcesPage() {
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <div className="text-muted-foreground text-sm">
-          Showing {table.getState().pagination.pageIndex * pageSize + 1} to{' '}
-          {Math.min(
-            (table.getState().pagination.pageIndex + 1) * pageSize,
-            table.getFilteredRowModel().rows.length
-          )}{' '}
-          of {table.getFilteredRowModel().rows.length} resources
+          Showing {startRow} to {endRow} of {totalResourceCount} resources
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -561,16 +611,16 @@ function ResourcesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Update Service</DialogTitle>
-            <DialogDescription>
+            <DialogDescription asChild>
               <div className="space-y-2">
-                <p>
+                <div>
                   Updating this service will <strong>DELETE ALL DATA</strong> including the
                   container and volumes, then reinstall with the new service definition.
-                </p>
-                <p className="text-destructive font-semibold">
+                </div>
+                <div className="text-destructive font-semibold">
                   ⚠️ BACKUP YOUR DATA BEFORE PROCEEDING
-                </p>
-                <p className="font-mono text-sm">{selectedResource?.name}</p>
+                </div>
+                <div className="font-mono text-sm">{selectedResource?.name}</div>
               </div>
             </DialogDescription>
           </DialogHeader>

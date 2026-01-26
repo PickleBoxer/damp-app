@@ -167,11 +167,12 @@ async function startEventMonitoring(
     logger.info('Starting Docker event monitoring');
 
     // Subscribe to Docker events
-    // Filter for container events only (start, stop, die, health_status, etc.)
+    // Filter for container and volume events
     eventStream = (await docker.getEvents({
       filters: {
-        type: ['container'],
+        type: ['container', 'volume'],
         event: [
+          // Container events
           'start',
           'stop',
           'die',
@@ -181,6 +182,10 @@ async function startEventMonitoring(
           'unpause',
           'restart',
           'destroy',
+          // Volume events
+          'create',
+          'mount',
+          'unmount',
         ],
       },
     })) as Readable;
@@ -215,6 +220,16 @@ async function startEventMonitoring(
 
         // Extract relevant information including labels
         const labels = event.Actor?.Attributes || {};
+
+        // Filter: Only process DAMP-managed resources
+        // Volume events don't include labels in Actor.Attributes, so we skip the check
+        // and let the resources query filter them when it refetches
+        const isDampManaged = event.Type === 'volume' || labels[LABEL_KEYS.MANAGED] === 'true';
+        if (!isDampManaged) {
+          // Skip non-DAMP resources (external containers)
+          return;
+        }
+
         const containerEvent = {
           containerId: event.Actor?.ID || event.id,
           action: event.Action || event.status,
@@ -225,7 +240,7 @@ async function startEventMonitoring(
           resourceType: labels[LABEL_KEYS.TYPE],
         };
 
-        logger.debug('Docker event received', containerEvent);
+        logger.debug('Docker event received (DAMP-managed)', containerEvent);
 
         // Trigger Caddy sync when a project container starts
         if (
@@ -240,32 +255,42 @@ async function startEventMonitoring(
         }
 
         // Handle service container deletion - clear state to mark as not installed
+        // Only for services with definitions (not test orphans)
         if (
           containerEvent.action === 'destroy' &&
           containerEvent.serviceId &&
           containerEvent.resourceType === RESOURCE_TYPES.SERVICE_CONTAINER
         ) {
           logger.info(
-            `Service container destroyed: ${containerEvent.serviceId}, clearing service state`
+            `Service container destroyed: ${containerEvent.serviceId}, checking if state update needed`
           );
 
-          // Clear service state asynchronously (mark as not installed)
-          import('@main/core/storage/service-storage')
-            .then(({ serviceStorage }) => {
-              serviceStorage
-                .setServiceState(containerEvent.serviceId, {
-                  id: containerEvent.serviceId,
-                  custom_config: null,
-                })
-                .catch(error => {
-                  logger.error('Failed to clear service state after container destruction', {
-                    serviceId: containerEvent.serviceId,
-                    error: error instanceof Error ? error.message : String(error),
-                  });
-                });
+          // Check if this is a real service (has definition) before updating storage
+          // This prevents test orphans from getting storage entries
+          Promise.all([
+            import('@main/domains/services/service-definitions'),
+            import('@main/core/storage/service-storage'),
+          ])
+            .then(([{ getServiceDefinition }, { serviceStorage }]) => {
+              const definition = getServiceDefinition(containerEvent.serviceId);
+
+              if (!definition) {
+                logger.debug(
+                  `Skipping state update for unknown service: ${containerEvent.serviceId} (likely a test orphan)`
+                );
+                return;
+              }
+
+              // Only clear state for real services with definitions
+              logger.info(`Clearing service state for real service: ${containerEvent.serviceId}`);
+              return serviceStorage.setServiceState(containerEvent.serviceId, {
+                id: containerEvent.serviceId,
+                custom_config: null,
+              });
             })
             .catch(error => {
-              logger.error('Failed to import service storage', {
+              logger.error('Failed to handle service container destruction', {
+                serviceId: containerEvent.serviceId,
                 error: error instanceof Error ? error.message : String(error),
               });
             });

@@ -291,4 +291,13 @@ export interface ResourcesContext {
   getAll: () => Promise<DockerResource[]>;
   deleteResource: (type: string, id: string) => Promise<void>;
   updateService: (serviceId: string) => Promise<void>;
+  pruneOrphans: (
+    containerIds?: string[],
+    volumeNames?: string[]
+  ) => Promise<{
+    deletedContainers: string[];
+    deletedVolumes: string[];
+    failedContainers: string[];
+    failedVolumes: string[];
+  }>;
 }

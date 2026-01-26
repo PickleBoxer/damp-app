@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   RESOURCES_DELETE,
   RESOURCES_GET_ALL,
+  RESOURCES_PRUNE_ORPHANS,
   RESOURCES_UPDATE_SERVICE,
 } from './resources-channels';
 
@@ -13,6 +14,8 @@ export function exposeResourcesContext() {
       ipcRenderer.invoke(RESOURCES_DELETE, { type, id }),
     updateService: (serviceId: string) =>
       ipcRenderer.invoke(RESOURCES_UPDATE_SERVICE, { serviceId }),
+    pruneOrphans: (containerIds?: string[], volumeNames?: string[]) =>
+      ipcRenderer.invoke(RESOURCES_PRUNE_ORPHANS, { containerIds, volumeNames }),
   };
 
   contextBridge.exposeInMainWorld('resources', resourcesApi);

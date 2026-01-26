@@ -209,22 +209,12 @@ export async function restartContainer(containerId: string): Promise<void> {
 
 /**
  * Remove a container
+ * Uses force flag to automatically handle running containers (SIGKILL)
  */
 export async function removeContainer(containerId: string, removeVolumes = false): Promise<void> {
   try {
     const container = docker.getContainer(containerId);
-
-    // Stop container if running
-    try {
-      const info = await container.inspect();
-      if (info.State.Running) {
-        await container.stop({ t: 10 });
-      }
-    } catch {
-      // Container might not exist or already stopped
-    }
-
-    // Remove container
+    // Force remove handles running containers automatically (faster than explicit stop)
     await container.remove({ v: removeVolumes, force: true });
     logger.info(`Container ${containerId} removed successfully`);
   } catch (error) {

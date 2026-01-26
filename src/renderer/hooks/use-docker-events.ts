@@ -4,11 +4,12 @@
  * Call once at app root level.
  */
 
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import type { ServiceId } from '@shared/types/service';
 import { projectKeys } from '@renderer/projects';
+import { resourcesKeys } from '@renderer/resources';
 import { servicesKeys } from '@renderer/services';
+import type { ServiceId } from '@shared/types/service';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 const dockerEventsApi = (globalThis as unknown as Window).dockerEvents;
 
@@ -73,6 +74,12 @@ export function useDockerEvents() {
           queryKey: servicesKeys.containerState(serviceId),
         });
       }
+
+      // Invalidate resources query
+      queryClient.invalidateQueries({
+        queryKey: resourcesKeys.all(),
+        refetchType: 'active',
+      });
     });
 
     // Subscribe to Docker events connection status changes
@@ -90,6 +97,10 @@ export function useDockerEvents() {
           queryKey: ['services'],
           refetchType: 'active',
         });
+        queryClient.invalidateQueries({
+          queryKey: resourcesKeys.all(),
+          refetchType: 'active',
+        });
       } else {
         const errorMsg = status.lastError ? `: ${status.lastError}` : '';
         const attemptMsg =
@@ -103,6 +114,10 @@ export function useDockerEvents() {
         });
         queryClient.invalidateQueries({
           queryKey: ['services'],
+          refetchType: 'active',
+        });
+        queryClient.invalidateQueries({
+          queryKey: resourcesKeys.all(),
           refetchType: 'active',
         });
       }

@@ -18,9 +18,8 @@ export const resourcesQueryOptions = () =>
   queryOptions({
     queryKey: resourcesKeys.all(),
     queryFn: () => resourcesApi.getAll(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: Infinity, // Pure event-driven - Docker events handle updates
     refetchInterval: false, // No auto-refresh - Docker events handle updates
-    refetchOnWindowFocus: true, // Refresh when user returns to the app
   });
 
 /** Get count of orphaned resources */

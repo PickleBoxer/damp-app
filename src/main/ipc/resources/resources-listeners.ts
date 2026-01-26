@@ -15,13 +15,64 @@ import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import type { DockerResource } from '@shared/types/resource';
 import type { ServiceId } from '@shared/types/service';
 import { ipcMain } from 'electron';
+import { z } from 'zod';
 import {
   RESOURCES_DELETE,
   RESOURCES_GET_ALL,
+  RESOURCES_PRUNE_ORPHANS,
   RESOURCES_UPDATE_SERVICE,
 } from './resources-channels';
 
 const logger = createLogger('ResourcesListeners');
+
+// Validation schemas
+const deleteResourceSchema = z.object({
+  type: z.enum(['container', 'volume']),
+  id: z.string().min(1),
+});
+
+const updateServiceSchema = z.object({
+  serviceId: z.string().min(1),
+});
+
+const pruneOrphansSchema = z.object({
+  containerIds: z.array(z.string()).optional(),
+  volumeNames: z.array(z.string()).optional(),
+});
+
+/**
+ * Mapping of internal category names to user-friendly display names
+ */
+const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  helper: 'Helper',
+  ngrok: 'Ngrok',
+  unknown: 'Uncategorized',
+};
+
+/**
+ * Determine owner ID and display name for a resource
+ */
+function getOwnerInfo(
+  projectId: string | undefined,
+  serviceId: string | undefined,
+  category: DockerResource['category'],
+  projects: { id: string; name: string }[]
+): { ownerId: string; ownerDisplayName: string } {
+  const ownerId = projectId || serviceId || category || 'uncategorized';
+  let ownerDisplayName = ownerId;
+
+  if (projectId) {
+    const project = projects.find(p => p.id === projectId);
+    ownerDisplayName = project?.name || projectId;
+  } else if (serviceId) {
+    ownerDisplayName = serviceId;
+  } else {
+    // Use readable category name
+    ownerDisplayName = CATEGORY_DISPLAY_NAMES[category] || category;
+  }
+
+  return { ownerId, ownerDisplayName };
+}
 
 /**
  * Get all DAMP-managed Docker resources with enriched metadata
@@ -77,23 +128,7 @@ async function getAllResources(): Promise<DockerResource[]> {
         container.Names?.[0]?.replace(/^\//, '') || container.Id.substring(0, 12);
 
       // Determine owner ID and display name
-      const ownerId = projectId || serviceId || category || 'uncategorized';
-      let ownerDisplayName = ownerId;
-
-      if (projectId) {
-        const project = projects.find(p => p.id === projectId);
-        ownerDisplayName = project?.name || projectId;
-      } else if (serviceId) {
-        ownerDisplayName = serviceId;
-      } else {
-        // Use readable category name
-        const categoryMap: Record<string, string> = {
-          helper: 'Helper',
-          ngrok: 'Ngrok',
-          unknown: 'Uncategorized',
-        };
-        ownerDisplayName = categoryMap[category] || category;
-      }
+      const { ownerId, ownerDisplayName } = getOwnerInfo(projectId, serviceId, category, projects);
 
       resources.push({
         id: container.Id,
@@ -133,23 +168,7 @@ async function getAllResources(): Promise<DockerResource[]> {
       }
 
       // Determine owner ID and display name
-      const ownerId = projectId || serviceId || category || 'uncategorized';
-      let ownerDisplayName = ownerId;
-
-      if (projectId) {
-        const project = projects.find(p => p.id === projectId);
-        ownerDisplayName = project?.name || projectId;
-      } else if (serviceId) {
-        ownerDisplayName = serviceId;
-      } else {
-        // Use readable category name
-        const categoryMap: Record<string, string> = {
-          helper: 'Helper',
-          ngrok: 'Ngrok',
-          unknown: 'Uncategorized',
-        };
-        ownerDisplayName = categoryMap[category] || category;
-      }
+      const { ownerId, ownerDisplayName } = getOwnerInfo(projectId, serviceId, category, projects);
 
       resources.push({
         id: volume.name,
@@ -197,13 +216,34 @@ async function hasServiceDefinitionChanged(
       return true;
     }
 
-    // Compare environment variables (check if defined vars exist with same values in container)
-    const currentEnv = new Set(inspect.Config.Env || []);
-    const definitionEnv = definition.default_config.environment_vars || [];
+    // Compare environment variables using key/value parsing
+    const parseEnv = (env: string[] | undefined | null): Map<string, string> => {
+      const map = new Map<string, string>();
+      if (!env) return map;
+      for (const entry of env) {
+        const idx = entry.indexOf('=');
+        if (idx === -1) {
+          // Variable without an explicit value
+          map.set(entry, '');
+        } else {
+          const key = entry.slice(0, idx);
+          const value = entry.slice(idx + 1);
+          map.set(key, value);
+        }
+      }
+      return map;
+    };
 
-    for (const envVar of definitionEnv) {
-      if (!currentEnv.has(envVar)) {
-        logger.debug(`Service ${serviceId} missing or changed environment variable: ${envVar}`);
+    const currentEnvMap = parseEnv(inspect.Config.Env);
+    const definitionEnvMap = parseEnv(definition.default_config.environment_vars);
+
+    // Check for missing or changed variables relative to the definition
+    for (const [key, definitionValue] of definitionEnvMap.entries()) {
+      const currentValue = currentEnvMap.get(key);
+      if (currentValue === undefined || currentValue !== definitionValue) {
+        logger.debug(
+          `Service ${serviceId} missing or changed environment variable: ${key}=${definitionValue}`
+        );
         return true;
       }
     }
@@ -243,16 +283,113 @@ async function updateService(serviceId: ServiceId): Promise<void> {
     logger.info(`Updating service: ${serviceId}`);
 
     // Uninstall service (stops container)
-    await serviceStateManager.uninstallService(serviceId, true);
+    const uninstallResult = await serviceStateManager.uninstallService(serviceId, true);
+    if (!uninstallResult.success) {
+      throw new Error(uninstallResult.error || 'Failed to uninstall service');
+    }
 
     // Reinstall service with new definition
-    await serviceStateManager.installService(serviceId);
+    const installResult = await serviceStateManager.installService(serviceId);
+    if (!installResult.success) {
+      throw new Error(installResult.error || 'Failed to install service');
+    }
 
     logger.info(`Service ${serviceId} updated successfully`);
   } catch (error) {
     logger.error(`Failed to update service ${serviceId}`, { error });
     throw error;
   }
+}
+
+/**
+ * Batch delete containers in parallel
+ */
+async function batchDeleteContainers(containerIds: string[]): Promise<{
+  deleted: string[];
+  failed: string[];
+}> {
+  const deleted: string[] = [];
+  const failed: string[] = [];
+
+  logger.info(`Batch deleting ${containerIds.length} containers...`);
+
+  await Promise.allSettled(
+    containerIds.map(async id => {
+      try {
+        await removeContainer(id, true);
+        deleted.push(id);
+        logger.debug(`Deleted container: ${id}`);
+      } catch (error) {
+        failed.push(id);
+        logger.error(`Failed to delete container ${id}`, { error });
+      }
+    })
+  );
+
+  return { deleted, failed };
+}
+
+/**
+ * Batch delete volumes in parallel
+ */
+async function batchDeleteVolumes(volumeNames: string[]): Promise<{
+  deleted: string[];
+  failed: string[];
+}> {
+  const deleted: string[] = [];
+  const failed: string[] = [];
+
+  logger.info(`Batch deleting ${volumeNames.length} volumes...`);
+
+  await Promise.allSettled(
+    volumeNames.map(async name => {
+      try {
+        await removeVolume(name);
+        deleted.push(name);
+        logger.debug(`Deleted volume: ${name}`);
+      } catch (error) {
+        failed.push(name);
+        logger.error(`Failed to delete volume ${name}`, { error });
+      }
+    })
+  );
+
+  return { deleted, failed };
+}
+
+/**
+ * Batch prune orphaned resources using Docker APIs
+ * Much faster than sequential deletion (parallel operations instead of N sequential calls)
+ */
+async function pruneOrphans(
+  containerIds?: string[],
+  volumeNames?: string[]
+): Promise<{
+  deletedContainers: string[];
+  deletedVolumes: string[];
+  failedContainers: string[];
+  failedVolumes: string[];
+}> {
+  const containerResults =
+    containerIds && containerIds.length > 0
+      ? await batchDeleteContainers(containerIds)
+      : { deleted: [], failed: [] };
+
+  const volumeResults =
+    volumeNames && volumeNames.length > 0
+      ? await batchDeleteVolumes(volumeNames)
+      : { deleted: [], failed: [] };
+
+  logger.info(
+    `Batch prune completed: ${containerResults.deleted.length} containers, ${volumeResults.deleted.length} volumes deleted`
+  );
+
+  return {
+    deletedContainers: containerResults.deleted,
+    deletedVolumes: volumeResults.deleted,
+    failedContainers: containerResults.failed,
+    failedVolumes: volumeResults.failed,
+  };
 }
 
 /**
@@ -263,11 +400,18 @@ export function addResourcesListeners() {
     return await getAllResources();
   });
 
-  ipcMain.handle(RESOURCES_DELETE, async (_event, { type, id }) => {
+  ipcMain.handle(RESOURCES_DELETE, async (_event, payload) => {
+    const { type, id } = deleteResourceSchema.parse(payload);
     await deleteResource(type, id);
   });
 
-  ipcMain.handle(RESOURCES_UPDATE_SERVICE, async (_event, { serviceId }) => {
-    await updateService(serviceId);
+  ipcMain.handle(RESOURCES_UPDATE_SERVICE, async (_event, payload) => {
+    const { serviceId } = updateServiceSchema.parse(payload);
+    await updateService(serviceId as ServiceId);
+  });
+
+  ipcMain.handle(RESOURCES_PRUNE_ORPHANS, async (_event, payload) => {
+    const { containerIds, volumeNames } = pruneOrphansSchema.parse(payload);
+    return await pruneOrphans(containerIds, volumeNames);
   });
 }

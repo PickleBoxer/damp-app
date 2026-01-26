@@ -1,9 +1,40 @@
-# Add files here to ignore them from prettier formatting
+# Dependencies
+node_modules/
+bower_components/
+
+# Build outputs
 /dist
 /coverage
 /.vite
 /out
-README.md
+/build
+
+# Docs workspace
+docs/.next/
+docs/out/
+docs/.source/
+docs/build/
+
+# Auto-generated files
 /src/renderer/routeTree.gen.ts
 /src/renderer/components/ui
+
+# Lockfiles
 pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Test results
+test-results/
+playwright-report/
+
+# Misc
+README.md
