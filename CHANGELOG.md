@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-26
+
+### Added
+
+- Resources management UI for Docker: view, group, and clean up containers and related items (PR #25)
+- Database tools to dump and restore project data across MySQL/MariaDB/PostgreSQL/MongoDB (PR #20)
+- Docs site integrated into monorepo; Download page now uses GitHub Releases API for latest assets (PR #16, #17)
+- Simplified local service credentials defaults and UX to speed up setup (PR #19)
+
+### Fixed
+
+- Auto-pull missing Docker images before use to prevent startup failures (PR #22)
+- Reconcile service state when containers are deleted externally for accurate UI (PR #23)
+- Reliability fixes for database operations and service installation flows (PR #24)
+- Updated MySQL healthcheck command for improved stability
+
+### Changed
+
+- General stability and performance improvements across resources and services
+
 ## [0.2.0] - 2026-01-14
 
 ### Added
@@ -53,5 +73,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tailwind CSS v4 for styling
 
 [0.2.0]: https://github.com/PickleBoxer/damp-app/compare/v0.1.1...v0.2.0
+[0.3.0]: https://github.com/PickleBoxer/damp-app/compare/v0.2.0...main
 [0.1.1]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.1.1
 [0.1.0]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.1.0
