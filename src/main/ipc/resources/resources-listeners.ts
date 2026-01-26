@@ -59,7 +59,7 @@ function getOwnerInfo(
   projects: { id: string; name: string }[]
 ): { ownerId: string; ownerDisplayName: string } {
   const ownerId = projectId || serviceId || category || 'uncategorized';
-  let ownerDisplayName = ownerId;
+  let ownerDisplayName: string;
 
   if (projectId) {
     const project = projects.find(p => p.id === projectId);

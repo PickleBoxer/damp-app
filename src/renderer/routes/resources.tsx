@@ -56,7 +56,16 @@ import {
   type GroupingState,
   type SortingState,
 } from '@tanstack/react-table';
-import { AlertTriangle, Container, Database, Info, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Container,
+  Database,
+  Info,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -375,11 +384,13 @@ function ResourcesPage() {
   const totalResourceCount = table
     .getFilteredRowModel()
     .rows.filter(row => !row.getIsGrouped()).length;
-  const startRow = table.getState().pagination.pageIndex * pageSize + 1;
-  const endRow = Math.min(
-    (table.getState().pagination.pageIndex + 1) * pageSize,
-    totalResourceCount
-  );
+  // Number of actual resources on the current page (excluding group header rows)
+  const currentPageResourceCount = table
+    .getPaginationRowModel()
+    .rows.filter(row => !row.getIsGrouped()).length;
+  const startRow =
+    totalResourceCount === 0 ? 0 : table.getState().pagination.pageIndex * pageSize + 1;
+  const endRow = Math.min(startRow + currentPageResourceCount - 1, totalResourceCount);
 
   if (isLoading) {
     return (
@@ -505,7 +516,11 @@ function ResourcesPage() {
                             aria-expanded={row.getIsExpanded()}
                             aria-label={`${row.getIsExpanded() ? 'Collapse' : 'Expand'} ${displayName} group`}
                           >
-                            {row.getIsExpanded() ? '▼' : '▶'}
+                            {row.getIsExpanded() ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
                           </button>
                           <span>{displayName}</span>
                           <span className="text-muted-foreground text-xs font-normal">

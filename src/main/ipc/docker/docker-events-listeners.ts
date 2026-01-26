@@ -186,6 +186,7 @@ async function startEventMonitoring(
           'create',
           'mount',
           'unmount',
+          'destroy',
         ],
       },
     })) as Readable;

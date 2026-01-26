@@ -36,9 +36,9 @@ export function ResourcesBadgeTooltip() {
 
   return (
     <p className="text-muted-foreground text-xs">
-      {orphanCount > 0 && `${orphanCount} orphan${orphanCount > 1 ? 's' : ''}`}
+      {orphanCount > 0 && `${orphanCount} orphan${orphanCount !== 1 ? 's' : ''}`}
       {orphanCount > 0 && updateCount > 0 && ', '}
-      {updateCount > 0 && `${updateCount} update${updateCount > 1 ? 's' : ''}`}
+      {updateCount > 0 && `${updateCount} update${updateCount !== 1 ? 's' : ''}`}
     </p>
   );
 }
