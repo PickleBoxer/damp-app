@@ -1,13 +1,34 @@
 ---
-title: Docker Resources, Database Tools, and Easier Setup
-description: Manage containers, dump/restore databases, and simpler local credentials.
-date: 2026-01-26
-version: 0.3.0
+title: 'Docker Resources, Database Tools, and Easier Setup'
+description: 'Manage containers, dump/restore databases, and simpler local credentials.'
+date: '2026-01-26'
+tags: ['Feature', 'Improvement']
+version: '0.3.0'
 ---
 
-- New Resources page to view and manage containers and related items.
-- Find and clean up leftover resources to keep your setup tidy.
-- Database tools to quickly save and restore project data.
-- Simpler local credentials so services work out of the box.
-- Download page now gets the latest release automatically.
-- More reliable behavior when images are missing or containers change outside the app.
+This release brings powerful resource management, database tools, and improvements to the setup experience.
+
+- **Resources management page** to view, group, and clean up Docker containers and related items
+- **Database dump and restore tools** for MySQL, MariaDB, PostgreSQL, and MongoDB
+- **Simplified service credentials** so services work out of the box for local development
+- **GitHub Releases integration** on the download page for automatic updates
+- **Auto-image pulling** and improved reliability when Docker state changes outside the app
+
+<Accordions type="multiple">
+  <Accordion title="Added">
+    - **Resources management page** with grouping, orphan detection, and live updates - **Database
+    tools** to dump and restore projects across MySQL/MariaDB/PostgreSQL/MongoDB - **Docs site
+    integration** with GitHub Releases-backed download page - **Simplified service credentials**
+    defaults for faster local development setup
+  </Accordion>
+  <Accordion title="Fixed">
+    - **Auto-pull missing Docker images** before use to prevent startup failures - **Service state
+    reconciliation** when containers are deleted externally - **Database operations** and service
+    installation reliability improvements - **MySQL healthcheck** command update for stability
+  </Accordion>
+  <Accordion title="Changed">
+    - **General stability improvements** across resources and services management
+  </Accordion>
+</Accordions>
+
+[0.3.0]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.3.0
