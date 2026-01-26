@@ -1,12 +1,22 @@
-import { Globe, Home, Server } from 'lucide-react';
-import { Link, useRouterState } from '@tanstack/react-router';
+import { cn } from '@renderer/components/lib/utils';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { cn } from '@renderer/components/lib/utils';
+import { Link, useRouterState } from '@tanstack/react-router';
+import { Container, Globe, Home, Server } from 'lucide-react';
+import type { FC } from 'react';
+import { ResourcesBadge, ResourcesBadgeTooltip } from './ResourcesBadge';
+
+interface NavItem {
+  to: string;
+  icon: FC<{ className?: string }>;
+  label: string;
+  badge?: FC;
+  badgeTooltip?: FC;
+}
 
 export default function Sidebar() {
   const location = useRouterState({ select: s => s.location });
@@ -17,7 +27,7 @@ export default function Sidebar() {
     return location.pathname.startsWith(to);
   };
 
-  const navItems = [
+  const navItems: NavItem[] = [
     {
       to: '/',
       icon: Home,
@@ -33,6 +43,13 @@ export default function Sidebar() {
       icon: Globe,
       label: 'Projects',
     },
+    {
+      to: '/resources',
+      icon: Container,
+      label: 'Resources',
+      badge: ResourcesBadge,
+      badgeTooltip: ResourcesBadgeTooltip,
+    },
   ];
 
   return (
@@ -43,6 +60,8 @@ export default function Sidebar() {
           {navItems.map(item => {
             const Icon = item.icon;
             const active = isActive(item.to);
+            const BadgeComponent = item.badge;
+            const BadgeTooltipComponent = item.badgeTooltip;
 
             return (
               <Tooltip key={item.to}>
@@ -50,17 +69,21 @@ export default function Sidebar() {
                   <Link
                     to={item.to}
                     className={cn(
-                      'text-muted-foreground flex h-[35px] w-[35px] items-center justify-center transition-colors',
-                      'hover:text-foreground',
-                      active && 'text-foreground border-foreground border-r-2'
+                      'text-muted-foreground relative flex h-[35px] w-[35px] items-center justify-center transition-colors',
+                      'hover:text-foreground hover:bg-accent/50',
+                      active && 'text-foreground bg-accent'
                     )}
                   >
                     <Icon className="size-4" />
+                    {BadgeComponent && <BadgeComponent />}
                     <span className="sr-only">{item.label}</span>
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right">
-                  <p>{item.label}</p>
+                  <div>
+                    <p>{item.label}</p>
+                    {BadgeTooltipComponent && <BadgeTooltipComponent />}
+                  </div>
                 </TooltipContent>
               </Tooltip>
             );

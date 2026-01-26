@@ -12,6 +12,7 @@ import type {
   UpdateProjectInput,
   VolumeCopyProgress,
 } from './project';
+import type { DockerResource } from './resource';
 import type { Result } from './result';
 import type {
   CustomConfig,
@@ -281,4 +282,22 @@ export interface UpdaterContext {
   onProgress: (callback: (progress: DownloadProgress) => void) => () => void;
   onStatusChange: (callback: (state: UpdateState) => void) => () => void;
   onError: (callback: (error: { message: string; code?: string }) => void) => () => void;
+}
+
+/**
+ * Docker resource management context
+ */
+export interface ResourcesContext {
+  getAll: () => Promise<DockerResource[]>;
+  deleteResource: (type: string, id: string) => Promise<void>;
+  updateService: (serviceId: string) => Promise<void>;
+  pruneOrphans: (
+    containerIds?: string[],
+    volumeNames?: string[]
+  ) => Promise<{
+    deletedContainers: string[];
+    deletedVolumes: string[];
+    failedContainers: string[];
+    failedVolumes: string[];
+  }>;
 }
