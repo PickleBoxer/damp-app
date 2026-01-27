@@ -30,6 +30,7 @@ export function DownloadClient({
     setupUrl: fallbackSetupUrl,
     portableUrl: fallbackPortableUrl,
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch latest release from GitHub API on client-side
   useEffect(() => {
@@ -38,7 +39,10 @@ export function DownloadClient({
         const res = await fetch(
           'https://api.github.com/repos/PickleBoxer/damp-app/releases/latest'
         );
-        if (!res.ok) return;
+        if (!res.ok) {
+          setIsLoading(false);
+          return;
+        }
 
         const data = await res.json();
         const setupAsset = data.assets.find((a: { name: string }) => a.name.endsWith('Setup.exe'));
@@ -54,6 +58,8 @@ export function DownloadClient({
         });
       } catch (error) {
         console.error('Failed to fetch latest release:', error);
+      } finally {
+        setIsLoading(false);
       }
     }
 
@@ -61,8 +67,8 @@ export function DownloadClient({
   }, [fallbackSetupUrl, fallbackPortableUrl]);
 
   useEffect(() => {
-    // Auto-download setup.exe on page load (only once)
-    if (!hasAutoDownloaded.current && release.setupUrl) {
+    // Auto-download setup.exe after data is loaded (only once)
+    if (!hasAutoDownloaded.current && !isLoading && release.setupUrl) {
       hasAutoDownloaded.current = true;
 
       // Create temporary link and trigger download
@@ -73,7 +79,7 @@ export function DownloadClient({
       link.click();
       document.body.removeChild(link);
     }
-  }, [release.setupUrl]);
+  }, [isLoading, release.setupUrl]);
 
   return (
     <div className="mx-auto max-w-2xl">
