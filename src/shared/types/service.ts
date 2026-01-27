@@ -23,6 +23,9 @@ export enum ServiceId {
   Typesense = 'typesense',
   Valkey = 'valkey',
   RustFS = 'rustfs',
+  // Database admin tools (bundleable only)
+  PhpMyAdmin = 'phpmyadmin',
+  Adminer = 'adminer',
 }
 
 /**
@@ -110,6 +113,14 @@ export interface ServiceDefinition {
   post_install_message: string | null;
   /** Database configuration (only for database services) */
   databaseConfig?: DatabaseConfig;
+  /** Whether service can be bundled into a project's docker-compose */
+  bundleable?: boolean;
+  /** Subdomain prefix for Caddy proxy (e.g., "phpmyadmin" for phpmyadmin.project.local) */
+  proxySubdomain?: string;
+  /** Port to proxy for web UI (only for services with web interfaces) */
+  proxyPort?: number;
+  /** For admin tools, which database service this links to */
+  linkedDatabaseService?: ServiceId;
 }
 
 /**

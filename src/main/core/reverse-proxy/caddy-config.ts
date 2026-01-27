@@ -4,10 +4,11 @@
  */
 
 import { execCommand, findContainerByLabel } from '@main/core/docker';
-import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
-import { ServiceId } from '@shared/types/service';
-import type { Project } from '@shared/types/project';
+import { getServiceDefinition } from '@main/domains/services/service-definitions';
 import { createLogger } from '@main/utils/logger';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import type { Project } from '@shared/types/project';
+import { ServiceId } from '@shared/types/service';
 import { hashProjectContainers, hasStateChanged, updateSyncedState } from './caddy-sync-state';
 
 const logger = createLogger('CaddyConfig');
@@ -63,6 +64,26 @@ async function generateCaddyfile(projects: Project[]): Promise<string> {
     lines.push('    }');
     lines.push('}');
     lines.push('');
+
+    // Add subdomain entries for bundled services with web UI
+    if (project.bundledServices && project.bundledServices.length > 0) {
+      for (const bundledService of project.bundledServices) {
+        const serviceDef = getServiceDefinition(bundledService.serviceId);
+
+        // Only add subdomain for services with proxySubdomain and proxyPort
+        if (serviceDef?.proxySubdomain && serviceDef?.proxyPort) {
+          // Bundled services use explicit container names: projectname-servicename
+          const serviceContainerName = `${project.name}-${serviceDef.name}`;
+          const subdomain = `${serviceDef.proxySubdomain}.${project.domain}`;
+
+          lines.push(`${subdomain} {`);
+          lines.push('    tls internal');
+          lines.push(`    reverse_proxy http://${serviceContainerName}:${serviceDef.proxyPort}`);
+          lines.push('}');
+          lines.push('');
+        }
+      }
+    }
   }
 
   return lines.join('\n');

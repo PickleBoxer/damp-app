@@ -6,21 +6,21 @@
 
 import type { ContainerState } from './container';
 import type {
-  CreateProjectInput,
-  FolderSelectionResult,
-  Project,
-  UpdateProjectInput,
-  VolumeCopyProgress,
+    CreateProjectInput,
+    FolderSelectionResult,
+    Project,
+    UpdateProjectInput,
+    VolumeCopyProgress,
 } from './project';
 import type { DockerResource } from './resource';
 import type { Result } from './result';
 import type {
-  CustomConfig,
-  InstallOptions,
-  PullProgress,
-  ServiceDefinition,
-  ServiceId,
-  ServiceInfo,
+    CustomConfig,
+    InstallOptions,
+    PullProgress,
+    ServiceDefinition,
+    ServiceId,
+    ServiceInfo,
 } from './service';
 import type { ThemeMode } from './theme-mode';
 
@@ -102,6 +102,7 @@ export interface DockerEventsContext {
  */
 export interface ServicesContext {
   getAllServices: () => Promise<ServiceDefinition[]>;
+  getBundleableServices: () => Promise<Record<string, ServiceDefinition[]>>;
   getService: (serviceId: ServiceId) => Promise<ServiceInfo>;
   getServiceContainerState: (serviceId: ServiceId) => Promise<ContainerState | null>;
   installService: (

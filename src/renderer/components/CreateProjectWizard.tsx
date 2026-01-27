@@ -1,4 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { BundledServicesStep } from '@renderer/components/BundledServicesStep';
+import {
+  ProjectCreationTerminal,
+  type TerminalLog,
+} from '@renderer/components/ProjectCreationTerminal';
+import { ProjectIcon } from '@renderer/components/ProjectIcon';
+import { Button } from '@renderer/components/ui/button';
+import { Checkbox } from '@renderer/components/ui/checkbox';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@renderer/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -7,17 +19,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
-import { Switch } from '@renderer/components/ui/switch';
-import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@renderer/components/ui/collapsible';
-import { ArrowLeft, ArrowRight, FolderOpen, Info, ChevronDown } from 'lucide-react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@renderer/components/ui/select';
+import { Switch } from '@renderer/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -26,41 +37,31 @@ import {
 } from '@renderer/components/ui/tooltip';
 import { useCreateProject } from '@renderer/hooks/use-projects';
 import {
-  ProjectCreationTerminal,
-  type TerminalLog,
-} from '@renderer/components/ProjectCreationTerminal';
-import { ProjectType } from '@shared/types/project';
+  ADDITIONAL_PHP_EXTENSIONS,
+  PREINSTALLED_PHP_EXTENSIONS,
+} from '@shared/constants/php-extensions';
 import type {
   CreateProjectInput,
-  PhpVersion,
+  FolderSelectionResult,
   NodeVersion,
   PhpVariant,
-  FolderSelectionResult,
+  PhpVersion,
 } from '@shared/types/project';
-import { ProjectIcon } from '@renderer/components/ProjectIcon';
-import { SiClaude, SiNodedotjs, SiPhp, SiReact, SiVuedotjs, SiLivewire } from 'react-icons/si';
+import { ProjectType } from '@shared/types/project';
+import { ArrowLeft, ArrowRight, ChevronDown, FolderOpen, Info } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { SiClaude, SiLivewire, SiNodedotjs, SiPhp, SiReact, SiVuedotjs } from 'react-icons/si';
 import {
   TbBolt,
-  TbFlask,
-  TbLock,
-  TbShieldCheck,
-  TbCode,
-  TbLink,
-  TbRocket,
   TbCheck,
+  TbCode,
+  TbFlask,
+  TbLink,
+  TbLock,
+  TbRocket,
+  TbShieldCheck,
   TbWorld,
 } from 'react-icons/tb';
-import {
-  PREINSTALLED_PHP_EXTENSIONS,
-  ADDITIONAL_PHP_EXTENSIONS,
-} from '@shared/constants/php-extensions';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@renderer/components/ui/select';
 
 /**
  * Validates a site name according to naming rules
@@ -100,7 +101,7 @@ interface CreateProjectWizardProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type WizardStep = 'type' | 'laravel-starter' | 'laravel-config' | 'basic' | 'variant';
+type WizardStep = 'type' | 'laravel-starter' | 'laravel-config' | 'basic' | 'services' | 'variant';
 
 const PROJECT_TYPES: { value: ProjectType; label: string; description: string }[] = [
   {
@@ -155,6 +156,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
     nodeVersion: 'latest',
     enableClaudeAi: false,
     phpExtensions: [],
+    bundledServices: [],
   });
   const [nameError, setNameError] = useState<string | undefined>();
   const [additionalExpanded, setAdditionalExpanded] = useState(false);
@@ -180,6 +182,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           nodeVersion: 'latest',
           enableClaudeAi: false,
           phpExtensions: [],
+          bundledServices: [],
         });
         setNameError(undefined);
         setAdditionalExpanded(false);
@@ -247,11 +250,11 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   };
 
   const handleNext = () => {
-    let steps: WizardStep[] = ['type', 'basic', 'variant'];
+    let steps: WizardStep[] = ['type', 'basic', 'services', 'variant'];
 
     // Insert laravel-starter and laravel-config steps for fresh Laravel projects
     if (formData.type === ProjectType.Laravel) {
-      steps = ['type', 'laravel-starter', 'laravel-config', 'basic', 'variant'];
+      steps = ['type', 'laravel-starter', 'laravel-config', 'basic', 'services', 'variant'];
     }
 
     const currentIndex = steps.indexOf(step);
@@ -264,11 +267,11 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   };
 
   const handleBack = () => {
-    let steps: WizardStep[] = ['type', 'basic', 'variant'];
+    let steps: WizardStep[] = ['type', 'basic', 'services', 'variant'];
 
     // Insert laravel-starter and laravel-config steps for fresh Laravel projects
     if (formData.type === ProjectType.Laravel) {
-      steps = ['type', 'laravel-starter', 'laravel-config', 'basic', 'variant'];
+      steps = ['type', 'laravel-starter', 'laravel-config', 'basic', 'services', 'variant'];
     }
 
     const currentIndex = steps.indexOf(step);
@@ -324,6 +327,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         phpExtensions: formData.phpExtensions || [], // Only send additional extensions
         laravelOptions: formData.laravelOptions, // Include Laravel options if present
         overwriteExisting: formData.type === ProjectType.Existing, // Set to true for existing projects
+        bundledServices: formData.bundledServices, // Include bundled services if present
       });
 
       // Success log (mutation already validated success)
@@ -415,6 +419,8 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           validation.isValid && !!formData.path && !!formData.phpVersion && !!formData.nodeVersion
         );
       }
+      case 'services':
+        return true; // Services step is optional
       case 'variant':
         return !!formData.phpVariant;
       default:
@@ -1050,6 +1056,16 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
           </div>
         );
 
+      case 'services':
+        return (
+          <BundledServicesStep
+            selectedServices={formData.bundledServices || []}
+            onServicesChange={services =>
+              setFormData(prev => ({ ...prev, bundledServices: services }))
+            }
+          />
+        );
+
       case 'variant':
         return (
           <div className="space-y-4">
@@ -1211,6 +1227,8 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
         return 'Configure Options';
       case 'basic':
         return 'Project Configuration';
+      case 'services':
+        return 'Bundled Services';
       case 'variant':
         return 'Server & Extensions';
       default:
@@ -1243,6 +1261,8 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
               {step === 'laravel-config' &&
                 'Configure authentication, testing, and additional options'}
               {step === 'basic' && 'Configure project details, runtime versions, and AI tools'}
+              {step === 'services' &&
+                'Add optional services like database, cache, or email to your project'}
               {step === 'variant' &&
                 'Choose web server variant and PHP extensions for your project'}
             </DialogDescription>

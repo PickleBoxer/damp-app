@@ -3,6 +3,7 @@
  * Handles all service-related IPC calls from renderer process
  */
 
+import { getBundleableServicesByType } from '@main/domains/services/service-definitions';
 import { serviceStateManager } from '@main/domains/services/service-state-manager';
 import { createLogger } from '@main/utils/logger';
 import type { CustomConfig, InstallOptions, ServiceId } from '@shared/types/service';
@@ -76,6 +77,14 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
+   * Get bundleable services grouped by type (for project wizard)
+   */
+  ipcMain.handle(CHANNELS.SERVICES_GET_BUNDLEABLE, () => {
+    // No async needed - this reads from static definitions
+    return getBundleableServicesByType();
+  });
+
+  /**
    * Get a specific service
    */
   ipcMain.handle(CHANNELS.SERVICES_GET_ONE, async (_event, serviceId: ServiceId) => {
@@ -109,15 +118,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
     async (_event, serviceId: ServiceId, options?: InstallOptions) => {
       try {
         await ensureInitialized();
-
-        // Progress callback to send updates to renderer
-        const onProgress = (progress: unknown) => {
-          if (!mainWindow.isDestroyed() && !mainWindow.webContents.isDestroyed()) {
-            mainWindow.webContents.send(CHANNELS.SERVICES_INSTALL_PROGRESS, serviceId, progress);
-          }
-        };
-
-        return await serviceStateManager.installService(serviceId, options, onProgress);
+        return await serviceStateManager.installService(serviceId, options);
       } catch (error) {
         logger.error('Failed to install service', { serviceId, error });
         throw error;
