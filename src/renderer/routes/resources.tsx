@@ -339,6 +339,7 @@ function ResourcesPage() {
     },
   ];
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- File uses 'use no memo' directive
   const table = useReactTable({
     data: resources,
     columns,
