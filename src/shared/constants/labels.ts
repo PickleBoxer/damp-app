@@ -52,6 +52,7 @@ export const RESOURCE_TYPES = {
   SERVICE_VOLUME: 'service-volume',
   PROJECT_CONTAINER: 'project-container',
   PROJECT_VOLUME: 'project-volume',
+  BUNDLED_SERVICE_CONTAINER: 'bundled-service',
   HELPER_CONTAINER: 'helper-container',
   NGROK_TUNNEL: 'ngrok-tunnel',
   NETWORK: 'network',
@@ -143,6 +144,33 @@ export function buildProjectVolumeLabels(
     [LABEL_KEYS.TYPE]: RESOURCE_TYPES.PROJECT_VOLUME,
     [LABEL_KEYS.PROJECT_ID]: projectId,
     [LABEL_KEYS.VOLUME]: volumeName,
+  };
+}
+
+/**
+ * Build labels for bundled service containers (embedded in project docker-compose)
+ */
+export function buildBundledServiceContainerLabels(
+  projectId: string,
+  projectName: string,
+  serviceId: ServiceId
+): Record<string, string> {
+  if (!projectId || typeof projectId !== 'string') {
+    throw new Error('Project ID is required and must be a non-empty string');
+  }
+  if (!projectName || typeof projectName !== 'string') {
+    throw new Error('Project name is required and must be a non-empty string');
+  }
+  if (!serviceId || typeof serviceId !== 'string') {
+    throw new Error('Service ID is required and must be a non-empty string');
+  }
+
+  return {
+    [LABEL_KEYS.MANAGED]: 'true',
+    [LABEL_KEYS.TYPE]: RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER,
+    [LABEL_KEYS.PROJECT_ID]: projectId,
+    [LABEL_KEYS.PROJECT_NAME]: projectName,
+    [LABEL_KEYS.SERVICE_ID]: serviceId,
   };
 }
 

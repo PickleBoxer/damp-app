@@ -3,43 +3,47 @@
  * Coordinates project lifecycle: create, update, delete, and file generation
  */
 
-import { dialog } from 'electron';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import semver from 'semver';
-import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import {
+  copyToVolume,
+  createProjectVolume,
+  getContainerStateByLabel,
+  removeVolume as removeDockerVolume,
+} from '@main/core/docker';
 import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
+import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
+import { projectStorage } from '@main/core/storage/project-storage';
 import { createLogger } from '@main/utils/logger';
+import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import { FORWARDED_PORT } from '@shared/constants/ports';
 import type { ContainerState } from '@shared/types/container';
 import type {
-  Project,
-  ProjectType,
+  BundledService,
+  BundledServiceCredentials,
   CreateProjectInput,
-  UpdateProjectInput,
   FolderSelectionResult,
   LaravelDetectionResult,
-  VolumeCopyProgress,
   PhpVersion,
+  Project,
+  ProjectType,
   TemplateContext,
+  UpdateProjectInput,
+  VolumeCopyProgress,
 } from '@shared/types/project';
 import type { Result } from '@shared/types/result';
-import { projectStorage } from '@main/core/storage/project-storage';
-import {
-  createProjectVolume,
-  removeVolume as removeDockerVolume,
-  copyToVolume,
-  getContainerStateByLabel,
-} from '@main/core/docker';
+import type { ServiceId } from '@shared/types/service';
+import { dialog } from 'electron';
+import { randomUUID } from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import semver from 'semver';
+import { getServiceDefinition } from '../services/service-definitions';
+import { installLaravelToVolume } from './laravel-installer';
 import {
   generateIndexPhp,
   generateProjectTemplates,
   getPostCreateCommand,
   getPostStartCommand,
 } from './project-templates';
-import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
-import { installLaravelToVolume } from './laravel-installer';
-import { FORWARDED_PORT } from '@shared/constants/ports';
 
 const logger = createLogger('ProjectStateManager');
 
@@ -52,6 +56,15 @@ const LARAVEL_MIN_PHP_VERSION = '8.2';
 class ProjectStateManager {
   private initialized = false;
   private initializationPromise: Promise<void> | null = null;
+  /** Track project IDs that are currently being created (to avoid false orphan detection) */
+  private readonly pendingProjectIds = new Set<string>();
+
+  /**
+   * Check if a project ID is currently being created
+   */
+  isPendingProject(projectId: string): boolean {
+    return this.pendingProjectIds.has(projectId);
+  }
 
   /**
    * Initialize the project manager
@@ -287,6 +300,7 @@ class ProjectStateManager {
         postCreateCommand: project.postCreateCommand,
         workspaceFolderName: path.basename(project.path),
         launchIndexPath: project.type === 'laravel' ? 'public/' : '',
+        bundledServices: project.bundledServices,
       };
 
       // Generate templates
@@ -303,11 +317,32 @@ class ProjectStateManager {
       // Write production files to project root
       await fs.writeFile(path.join(project.path, 'Dockerfile'), templates.dockerfile, 'utf-8');
       await fs.writeFile(path.join(project.path, '.dockerignore'), templates.dockerignore, 'utf-8');
+
+      // Write devcontainer-specific docker-compose.yml inside .devcontainer
       await fs.writeFile(
-        path.join(project.path, 'docker-compose.yml'),
-        templates.dockerCompose,
+        path.join(devcontainerPath, 'docker-compose.yml'),
+        templates.devcontainerCompose,
         'utf-8'
       );
+
+      // Write root docker-compose.yml with dev/prod profiles
+      await fs.writeFile(
+        path.join(project.path, 'docker-compose.yml'),
+        templates.rootDockerCompose,
+        'utf-8'
+      );
+
+      // Generate .env.damp file for projects with bundled services
+      // Saved as .env.damp so it doesn't override existing .env - user can decide what to use
+      if (project.bundledServices && project.bundledServices.length > 0) {
+        const envContent = this.generateEnvForBundledServices(project);
+        const envDampPath = path.join(project.path, '.env.damp');
+
+        await fs.writeFile(envDampPath, envContent, 'utf-8');
+        logger.info(
+          `Created .env.damp with bundled service configuration for ${project.name} - user can copy to .env if needed`
+        );
+      }
 
       // Create index.php for basic-php projects if it doesn't exist
       if (project.type === 'basic-php') {
@@ -358,6 +393,222 @@ class ProjectStateManager {
     if (!result.success) {
       throw new Error(result.error || 'Failed to remove domain from hosts file');
     }
+  }
+
+  /**
+   * Generate .env content for projects with bundled services
+   * Sets DB_HOST, REDIS_HOST, MAIL_HOST, etc. based on bundled service types
+   * Works for all project types (Laravel, basic-php, etc.)
+   */
+  private generateEnvForBundledServices(project: Project): string {
+    const lines: string[] = [
+      '# DAMP Environment Configuration',
+      '# Auto-generated by DAMP for bundled services',
+      '# Copy the values you need to your .env file',
+      '',
+      `# Project: ${project.name}`,
+      `# Domain: https://${project.domain}`,
+      '',
+    ];
+
+    if (!project.bundledServices) return lines.join('\n');
+
+    // Build service map by type for quick lookup
+    const serviceByType = this.buildServiceTypeMap(project.bundledServices);
+
+    // Add database configuration
+    this.addDatabaseEnvLines(lines, serviceByType, project.name);
+
+    // Add cache configuration (Redis or Valkey)
+    this.addCacheEnvLines(lines, serviceByType, project.name);
+
+    // Add email configuration (Mailpit)
+    this.addEmailEnvLines(lines, serviceByType, project.name, project.domain);
+
+    // Add search configuration (Meilisearch or Typesense)
+    this.addSearchEnvLines(lines, serviceByType, project.name);
+
+    // Add queue configuration (RabbitMQ)
+    this.addQueueEnvLines(lines, serviceByType, project.name);
+
+    return lines.join('\n');
+  }
+
+  private buildServiceTypeMap(
+    bundledServices: BundledService[]
+  ): Map<string, { serviceId: ServiceId; creds?: BundledServiceCredentials }> {
+    const serviceMap = new Map<
+      string,
+      { serviceId: ServiceId; creds?: BundledServiceCredentials }
+    >();
+
+    for (const bundledService of bundledServices) {
+      const serviceDef = getServiceDefinition(bundledService.serviceId);
+      if (serviceDef) {
+        // Use service name as key for databases (mysql, postgresql, etc.)
+        // Use service_type as key for others (cache, email, search, queue)
+        const key =
+          serviceDef.service_type === 'database' ? serviceDef.name : serviceDef.service_type;
+        serviceMap.set(key, {
+          serviceId: bundledService.serviceId,
+          creds: bundledService.customCredentials,
+        });
+      }
+    }
+
+    return serviceMap;
+  }
+
+  private addDatabaseEnvLines(
+    lines: string[],
+    serviceByType: Map<string, { serviceId: ServiceId; creds?: BundledServiceCredentials }>,
+    projectName: string
+  ): void {
+    const mysqlService = serviceByType.get('mysql') || serviceByType.get('mariadb');
+    const pgsqlService = serviceByType.get('postgresql');
+    const mongoService = serviceByType.get('mongodb');
+
+    if (mysqlService) {
+      const creds = mysqlService.creds;
+      const serviceDef = getServiceDefinition(mysqlService.serviceId);
+      const hostName = `${projectName}-${serviceDef?.name || 'mysql'}`;
+      lines.push(
+        `# Database - ${serviceDef?.display_name || 'MySQL/MariaDB'}`,
+        'DB_CONNECTION=mysql',
+        `DB_HOST=${hostName}`,
+        'DB_PORT=3306',
+        `DB_DATABASE=${creds?.database || 'development'}`,
+        `DB_USERNAME=${creds?.username || 'developer'}`,
+        `DB_PASSWORD=${creds?.password || 'developer'}`,
+        ''
+      );
+    } else if (pgsqlService) {
+      const creds = pgsqlService.creds;
+      const hostName = `${projectName}-postgresql`;
+      lines.push(
+        '# Database - PostgreSQL',
+        'DB_CONNECTION=pgsql',
+        `DB_HOST=${hostName}`,
+        'DB_PORT=5432',
+        `DB_DATABASE=${creds?.database || 'postgres'}`,
+        `DB_USERNAME=${creds?.username || 'postgres'}`,
+        `DB_PASSWORD=${creds?.password || 'postgres'}`,
+        ''
+      );
+    } else if (mongoService) {
+      const creds = mongoService.creds;
+      const hostName = `${projectName}-mongodb`;
+      lines.push(
+        '# Database - MongoDB',
+        'DB_CONNECTION=mongodb',
+        `DB_HOST=${hostName}`,
+        'DB_PORT=27017',
+        `DB_USERNAME=${creds?.username || 'root'}`,
+        `DB_PASSWORD=${creds?.password || 'root'}`,
+        ''
+      );
+    }
+  }
+
+  private addCacheEnvLines(
+    lines: string[],
+    serviceByType: Map<string, { serviceId: ServiceId; creds?: BundledServiceCredentials }>,
+    projectName: string
+  ): void {
+    const cacheService = serviceByType.get('cache');
+    if (!cacheService) return;
+
+    const serviceDef = getServiceDefinition(cacheService.serviceId);
+    const serviceName = serviceDef?.name || 'redis';
+    const hostName = `${projectName}-${serviceName}`;
+    const driver = serviceName === 'valkey' ? 'redis' : serviceName;
+
+    lines.push(
+      `# Cache - ${serviceDef?.display_name || 'Redis'}`,
+      `CACHE_STORE=${driver}`,
+      `REDIS_HOST=${hostName}`,
+      'REDIS_PASSWORD=null',
+      'REDIS_PORT=6379',
+      '',
+      `SESSION_DRIVER=${driver}`,
+      `QUEUE_CONNECTION=${driver}`,
+      ''
+    );
+  }
+
+  private addEmailEnvLines(
+    lines: string[],
+    serviceByType: Map<string, { serviceId: ServiceId; creds?: BundledServiceCredentials }>,
+    projectName: string,
+    domain: string
+  ): void {
+    const emailService = serviceByType.get('email');
+    if (!emailService) return;
+
+    const hostName = `${projectName}-mailpit`;
+    lines.push(
+      '# Email - Mailpit',
+      'MAIL_MAILER=smtp',
+      `MAIL_HOST=${hostName}`,
+      'MAIL_PORT=1025',
+      'MAIL_USERNAME=null',
+      'MAIL_PASSWORD=null',
+      'MAIL_ENCRYPTION=null',
+      `MAIL_FROM_ADDRESS="hello@${domain}"`,
+      'MAIL_FROM_NAME="${APP_NAME}"',
+      ''
+    );
+  }
+
+  private addSearchEnvLines(
+    lines: string[],
+    serviceByType: Map<string, { serviceId: ServiceId; creds?: BundledServiceCredentials }>,
+    projectName: string
+  ): void {
+    const searchService = serviceByType.get('search');
+    if (!searchService) return;
+
+    const serviceDef = getServiceDefinition(searchService.serviceId);
+    if (serviceDef?.name === 'meilisearch') {
+      const hostName = `${projectName}-meilisearch`;
+      lines.push(
+        '# Search - Meilisearch',
+        'SCOUT_DRIVER=meilisearch',
+        `MEILISEARCH_HOST=http://${hostName}:7700`,
+        'MEILISEARCH_KEY=masterkey',
+        ''
+      );
+    } else if (serviceDef?.name === 'typesense') {
+      const hostName = `${projectName}-typesense`;
+      lines.push(
+        '# Search - Typesense',
+        'SCOUT_DRIVER=typesense',
+        'TYPESENSE_API_KEY=xyz',
+        `TYPESENSE_HOST=${hostName}`,
+        'TYPESENSE_PORT=8108',
+        ''
+      );
+    }
+  }
+
+  private addQueueEnvLines(
+    lines: string[],
+    serviceByType: Map<string, { serviceId: ServiceId; creds?: BundledServiceCredentials }>,
+    projectName: string
+  ): void {
+    const queueService = serviceByType.get('queue');
+    if (!queueService) return;
+
+    const hostName = `${projectName}-rabbitmq`;
+    lines.push(
+      '# Queue - RabbitMQ',
+      `RABBITMQ_HOST=${hostName}`,
+      'RABBITMQ_PORT=5672',
+      'RABBITMQ_USER=rabbitmq',
+      'RABBITMQ_PASSWORD=rabbitmq',
+      'RABBITMQ_VHOST=/',
+      ''
+    );
   }
 
   /**
@@ -510,6 +761,7 @@ class ProjectStateManager {
       postStartCommand: getPostStartCommand(),
       postCreateCommand: getPostCreateCommand(),
       laravelOptions: input.laravelOptions,
+      bundledServices: input.bundledServices,
       order: projectStorage.getNextOrder(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -540,11 +792,25 @@ class ProjectStateManager {
 
   /**
    * Update hosts file with non-blocking error handling
+   * Also adds hosts entries for bundled service subdomains
    */
-  private async updateHostsFileNonBlocking(domain: string): Promise<void> {
+  private async updateHostsFileNonBlocking(project: Project): Promise<void> {
     try {
-      await this.addDomainToHosts(domain);
-      logger.info(`Added domain ${domain} to hosts file`);
+      // Add main domain
+      await this.addDomainToHosts(project.domain);
+      logger.info(`Added domain ${project.domain} to hosts file`);
+
+      // Add subdomains for bundled services with web UI
+      if (project.bundledServices && project.bundledServices.length > 0) {
+        for (const bundledService of project.bundledServices) {
+          const serviceDef = getServiceDefinition(bundledService.serviceId);
+          if (serviceDef?.proxySubdomain) {
+            const subdomain = `${serviceDef.proxySubdomain}.${project.domain}`;
+            await this.addDomainToHosts(subdomain);
+            logger.info(`Added subdomain ${subdomain} to hosts file`);
+          }
+        }
+      }
     } catch (error) {
       logger.warn('Failed to update hosts file (may require admin privileges):', { error });
       // Continue anyway - not critical
@@ -561,6 +827,11 @@ class ProjectStateManager {
     projectPath: string | null
   ): Promise<void> {
     try {
+      // Remove from pending set if project was being tracked
+      if (project) {
+        this.pendingProjectIds.delete(project.id);
+      }
+
       // Remove Docker volume if created
       if (volumeCreated && project) {
         try {
@@ -629,6 +900,9 @@ class ProjectStateManager {
         projectPath
       );
 
+      // Track project as pending to avoid false orphan detection during creation
+      this.pendingProjectIds.add(project.id);
+
       // Step 5: Create Docker volume
       if (onProgress) {
         onProgress({
@@ -684,7 +958,7 @@ class ProjectStateManager {
           stage: 'updating-hosts',
         });
       }
-      await this.updateHostsFileNonBlocking(project.domain);
+      await this.updateHostsFileNonBlocking(project);
 
       // Step 10: Save project to storage
       if (onProgress) {
@@ -697,6 +971,9 @@ class ProjectStateManager {
         });
       }
       await projectStorage.setProject(project);
+
+      // Project is now saved, remove from pending set
+      this.pendingProjectIds.delete(project.id);
 
       // Step 11: Sync project to Caddy (non-blocking)
       syncProjectsToCaddy(projectStorage.getAllProjects()).catch(error => {
@@ -856,9 +1133,20 @@ class ProjectStateManager {
         };
       }
 
-      // Remove from hosts file
+      // Remove from hosts file (main domain and bundled service subdomains)
       try {
         await this.removeDomainFromHosts(project.domain);
+
+        // Remove bundled service subdomains
+        if (project.bundledServices && project.bundledServices.length > 0) {
+          for (const bundledService of project.bundledServices) {
+            const serviceDef = getServiceDefinition(bundledService.serviceId);
+            if (serviceDef?.proxySubdomain) {
+              const subdomain = `${serviceDef.proxySubdomain}.${project.domain}`;
+              await this.removeDomainFromHosts(subdomain);
+            }
+          }
+        }
       } catch (error) {
         logger.warn('Failed to remove domain from hosts file:', { error });
       }

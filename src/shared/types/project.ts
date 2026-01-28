@@ -3,6 +3,7 @@
  */
 
 import type { StorageData } from './result';
+import type { ServiceId } from './service';
 
 /**
  * Project type enum
@@ -38,6 +39,31 @@ export interface LaravelInstallerOptions {
   useVolt: boolean;
   testingFramework: 'pest' | 'phpunit';
   installBoost: boolean;
+}
+
+/**
+ * Custom credentials for bundled database services
+ */
+export interface BundledServiceCredentials {
+  /** Database name (for database services) */
+  database?: string;
+  /** Username */
+  username?: string;
+  /** Password */
+  password?: string;
+  /** Root password (for MySQL/MariaDB) */
+  rootPassword?: string;
+}
+
+/**
+ * Bundled service configuration (embedded in project's docker-compose)
+ * These services run as part of the project's devcontainer stack
+ */
+export interface BundledService {
+  /** Service identifier from ServiceId enum */
+  serviceId: ServiceId;
+  /** Custom credentials (for databases) */
+  customCredentials?: BundledServiceCredentials;
 }
 
 /**
@@ -78,6 +104,8 @@ export interface Project {
   postCreateCommand: string | null;
   /** Laravel installer options (for fresh Laravel projects) */
   laravelOptions?: LaravelInstallerOptions;
+  /** Bundled services embedded in project's docker-compose */
+  bundledServices?: BundledService[];
   /** Display order */
   order: number;
   /** Creation timestamp */
@@ -116,6 +144,8 @@ export interface CreateProjectInput {
   overwriteExisting?: boolean;
   /** Laravel installer options (for fresh Laravel projects) */
   laravelOptions?: LaravelInstallerOptions;
+  /** Bundled services to embed in project's docker-compose */
+  bundledServices?: BundledService[];
 }
 
 /**
@@ -161,6 +191,8 @@ export interface TemplateContext {
   postCreateCommand: string | null;
   workspaceFolderName: string;
   launchIndexPath: string;
+  /** Bundled services for docker-compose multi-container mode */
+  bundledServices?: BundledService[];
 }
 
 /**
@@ -171,7 +203,10 @@ export interface ProjectTemplate {
   dockerfile: string;
   launchJson: string;
   dockerignore: string;
-  dockerCompose: string;
+  /** Docker compose for devcontainer (.devcontainer/docker-compose.yml) */
+  devcontainerCompose: string;
+  /** Docker compose for root (docker-compose.yml with dev/prod profiles) */
+  rootDockerCompose: string;
 }
 
 /**

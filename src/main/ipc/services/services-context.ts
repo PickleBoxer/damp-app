@@ -15,6 +15,8 @@ export function exposeServicesContext(): void {
   const servicesApi: ServicesContext = {
     getAllServices: () => ipcRenderer.invoke(CHANNELS.SERVICES_GET_ALL),
 
+    getBundleableServices: () => ipcRenderer.invoke(CHANNELS.SERVICES_GET_BUNDLEABLE),
+
     getService: (serviceId: ServiceId) => ipcRenderer.invoke(CHANNELS.SERVICES_GET_ONE, serviceId),
 
     getServiceContainerState: (serviceId: ServiceId) =>

@@ -40,6 +40,7 @@ import {
 import { projectContainerStateQueryOptions, projectQueryOptions } from '@renderer/projects';
 import { getSettings } from '@renderer/utils/settings';
 import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
+import { ServiceId } from '@shared/types/service';
 import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -52,6 +53,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Database,
   Download,
   ExternalLink,
   FolderOpen,
@@ -153,6 +155,42 @@ function ProjectDetailPage() {
       }
     } catch (error) {
       toast.error('Failed to open browser', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    }
+  };
+
+  // Get database admin tool info (phpMyAdmin or Adminer) if bundled
+  const getDatabaseAdminTool = () => {
+    const bundledServices = project.bundledServices ?? [];
+    const phpMyAdmin = bundledServices.find(s => s.serviceId === ServiceId.PhpMyAdmin);
+    if (phpMyAdmin) {
+      return { name: 'phpMyAdmin', subdomain: 'phpmyadmin' };
+    }
+    const adminer = bundledServices.find(s => s.serviceId === ServiceId.Adminer);
+    if (adminer) {
+      return { name: 'Adminer', subdomain: 'adminer' };
+    }
+    return null;
+  };
+
+  const databaseAdminTool = getDatabaseAdminTool();
+
+  const handleOpenDatabaseAdmin = async () => {
+    if (!databaseAdminTool) return;
+    const baseDomain = project.domain.replace(/^https?:\/\//, '');
+    const url = `http://${databaseAdminTool.subdomain}.${baseDomain}`;
+    try {
+      const result = await window.electronWindow.openExternal(url);
+      if (result.success) {
+        toast.success(`Opening ${databaseAdminTool.name}...`);
+      } else {
+        toast.error(`Failed to open ${databaseAdminTool.name}`, {
+          description: result.error || 'An unknown error occurred',
+        });
+      }
+    } catch (error) {
+      toast.error(`Failed to open ${databaseAdminTool.name}`, {
         description: error instanceof Error ? error.message : 'An unknown error occurred',
       });
     }
@@ -306,6 +344,21 @@ function ProjectDetailPage() {
                 </TooltipTrigger>
                 <TooltipContent>Open site in browser</TooltipContent>
               </Tooltip>
+              {databaseAdminTool && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="h-8.5 w-8.5 shrink-0"
+                      onClick={handleOpenDatabaseAdmin}
+                    >
+                      <Database className="text-muted-foreground h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Open {databaseAdminTool.name}</TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button

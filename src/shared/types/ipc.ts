@@ -102,6 +102,7 @@ export interface DockerEventsContext {
  */
 export interface ServicesContext {
   getAllServices: () => Promise<ServiceDefinition[]>;
+  getBundleableServices: () => Promise<Record<string, ServiceDefinition[]>>;
   getService: (serviceId: ServiceId) => Promise<ServiceInfo>;
   getServiceContainerState: (serviceId: ServiceId) => Promise<ContainerState | null>;
   installService: (

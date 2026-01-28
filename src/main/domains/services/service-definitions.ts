@@ -43,6 +43,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'MySQL database server',
     service_type: 'database',
     required: false,
+    bundleable: true,
     default_config: {
       image: 'mysql:latest',
       ports: [['3306', '3306']],
@@ -77,6 +78,9 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'Email testing server',
     service_type: 'email',
     required: false,
+    bundleable: true,
+    proxySubdomain: 'mailpit',
+    proxyPort: 8025,
     default_config: {
       image: 'axllent/mailpit:latest',
       ports: [
@@ -104,6 +108,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'PostgreSQL database server',
     service_type: 'database',
     required: false,
+    bundleable: true,
     default_config: {
       image: 'postgres:17-alpine',
       ports: [['5432', '5432']],
@@ -136,6 +141,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'MariaDB database server',
     service_type: 'database',
     required: false,
+    bundleable: true,
     default_config: {
       image: 'mariadb:11',
       ports: [['3306', '3306']],
@@ -170,6 +176,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'MongoDB document database',
     service_type: 'database',
     required: false,
+    bundleable: true,
     default_config: {
       image: 'mongo',
       ports: [['27017', '27017']],
@@ -197,6 +204,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'Redis key-value store for caching and sessions',
     service_type: 'cache',
     required: false,
+    bundleable: true,
     default_config: {
       image: 'redis:alpine',
       ports: [['6379', '6379']],
@@ -222,6 +230,9 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'Meilisearch full-text search engine',
     service_type: 'search',
     required: false,
+    bundleable: true,
+    proxySubdomain: 'meilisearch',
+    proxyPort: 7700,
     default_config: {
       image: 'getmeili/meilisearch:latest',
       ports: [['7700', '7700']],
@@ -275,6 +286,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'Memcached distributed memory caching system',
     service_type: 'cache',
     required: false,
+    bundleable: true,
     default_config: {
       image: 'memcached:alpine',
       ports: [['11211', '11211']],
@@ -295,6 +307,9 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'RabbitMQ message broker for queues and messaging',
     service_type: 'queue',
     required: false,
+    bundleable: true,
+    proxySubdomain: 'rabbitmq',
+    proxyPort: 15672,
     default_config: {
       image: 'rabbitmq:4-management-alpine',
       ports: [
@@ -323,6 +338,9 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'Typesense open source search engine',
     service_type: 'search',
     required: false,
+    bundleable: true,
+    proxySubdomain: 'typesense',
+    proxyPort: 8108,
     default_config: {
       image: 'typesense/typesense:27.1',
       ports: [['8108', '8108']],
@@ -357,6 +375,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     description: 'Valkey key-value store for caching and sessions',
     service_type: 'cache',
     required: false,
+    bundleable: true,
     default_config: {
       image: 'valkey/valkey:alpine',
       ports: [['6379', '6379']],
@@ -419,6 +438,56 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     post_install_message:
       "RustFS storage server installed and started successfully. Console: http://localhost:9001, API: http://localhost:9000, Access Key: 'damp', Secret Key: 'password'",
   },
+
+  // phpMyAdmin service definition (BUNDLEABLE ONLY - for project-specific database admin)
+  [ServiceId.PhpMyAdmin]: {
+    id: ServiceId.PhpMyAdmin,
+    name: 'phpmyadmin',
+    display_name: 'phpMyAdmin',
+    description: 'Web-based MySQL/MariaDB database administration tool',
+    service_type: 'database',
+    required: false,
+    bundleable: true,
+    proxySubdomain: 'phpmyadmin',
+    proxyPort: 80,
+    linkedDatabaseService: ServiceId.MySQL, // Also works with MariaDB
+    default_config: {
+      image: 'phpmyadmin:latest',
+      ports: [], // No host ports for bundled services
+      volumes: [],
+      environment_vars: [
+        'PMA_HOST=mysql', // Will be overridden based on linked database
+        'PMA_ARBITRARY=0',
+        'UPLOAD_LIMIT=100M',
+      ],
+      data_volume: null,
+      volume_bindings: [],
+    },
+    post_install_message: 'phpMyAdmin is available for database management.',
+  },
+
+  // Adminer service definition (BUNDLEABLE ONLY - for project-specific database admin)
+  [ServiceId.Adminer]: {
+    id: ServiceId.Adminer,
+    name: 'adminer',
+    display_name: 'Adminer',
+    description: 'Lightweight database management tool (supports MySQL, PostgreSQL, MongoDB)',
+    service_type: 'database',
+    required: false,
+    bundleable: true,
+    proxySubdomain: 'adminer',
+    proxyPort: 8080,
+    linkedDatabaseService: ServiceId.PostgreSQL, // Primary for PostgreSQL, but works with all
+    default_config: {
+      image: 'adminer:latest',
+      ports: [], // No host ports for bundled services
+      volumes: [],
+      environment_vars: ['ADMINER_DEFAULT_SERVER=postgresql'],
+      data_volume: null,
+      volume_bindings: [],
+    },
+    post_install_message: 'Adminer is available for database management.',
+  },
 };
 
 /**
@@ -447,4 +516,29 @@ export function getRequiredServices(): ServiceDefinition[] {
  */
 export function getOptionalServices(): ServiceDefinition[] {
   return getAllServiceDefinitions().filter(service => !service.required);
+}
+
+/**
+ * Get all bundleable service definitions (can be embedded in project docker-compose)
+ */
+export function getBundleableServices(): ServiceDefinition[] {
+  return getAllServiceDefinitions().filter(service => service.bundleable === true);
+}
+
+/**
+ * Get bundleable services grouped by service type
+ */
+export function getBundleableServicesByType(): Record<string, ServiceDefinition[]> {
+  const bundleable = getBundleableServices();
+  return bundleable.reduce(
+    (acc, service) => {
+      const type = service.service_type;
+      if (!acc[type]) {
+        acc[type] = [];
+      }
+      acc[type].push(service);
+      return acc;
+    },
+    {} as Record<string, ServiceDefinition[]>
+  );
 }

@@ -6,7 +6,7 @@ export interface DockerResource {
   id: string;
   name: string;
   type: 'container' | 'volume';
-  category: 'project' | 'service' | 'helper' | 'ngrok' | 'unknown';
+  category: 'project' | 'service' | 'bundled' | 'helper' | 'ngrok' | 'unknown';
   status: string;
   isOrphan: boolean;
   needsUpdate: boolean;
