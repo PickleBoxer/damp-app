@@ -6,21 +6,21 @@
 
 import type { ContainerState } from './container';
 import type {
-    CreateProjectInput,
-    FolderSelectionResult,
-    Project,
-    UpdateProjectInput,
-    VolumeCopyProgress,
+  CreateProjectInput,
+  FolderSelectionResult,
+  Project,
+  UpdateProjectInput,
+  VolumeCopyProgress,
 } from './project';
 import type { DockerResource } from './resource';
 import type { Result } from './result';
 import type {
-    CustomConfig,
-    InstallOptions,
-    PullProgress,
-    ServiceDefinition,
-    ServiceId,
-    ServiceInfo,
+  CustomConfig,
+  InstallOptions,
+  PullProgress,
+  ServiceDefinition,
+  ServiceId,
+  ServiceInfo,
 } from './service';
 import type { ThemeMode } from './theme-mode';
 
