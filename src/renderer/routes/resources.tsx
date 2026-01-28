@@ -96,8 +96,6 @@ function ResourcesPage() {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [selectedResource, setSelectedResource] = useState<DockerResource | null>(null);
 
-  // Docker events handled centrally in use-docker-events.ts hook
-
   // Mutations for individual resource actions (not used for bulk operations)
   const deleteResourceMutation = useMutation({
     mutationFn: ({ type, id }: { type: string; id: string }) =>
@@ -462,6 +460,7 @@ function ResourcesPage() {
             <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="project">Project</SelectItem>
             <SelectItem value="service">Service</SelectItem>
+            <SelectItem value="bundled">Bundled</SelectItem>
             <SelectItem value="helper">Helper</SelectItem>
             <SelectItem value="ngrok">Ngrok</SelectItem>
           </SelectContent>

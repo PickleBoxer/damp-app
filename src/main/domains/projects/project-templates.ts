@@ -3,7 +3,7 @@
  * Generates devcontainer files from templates with dynamic placeholders
  */
 
-import { buildProjectContainerLabels, LABEL_KEYS } from '@shared/constants/labels';
+import { buildBundledServiceContainerLabels, buildProjectContainerLabels, LABEL_KEYS } from '@shared/constants/labels';
 import type { BundledService, ProjectTemplate, TemplateContext } from '@shared/types/project';
 import { ServiceId } from '@shared/types/service';
 import { getServiceDefinition } from '../services/service-definitions';
@@ -97,35 +97,23 @@ function renderTemplate(template: string, context: TemplateContext): string {
     .replaceAll('{{NODE_SETUP_COMMANDS}}', nodeSetup.setupCommands)
     .replaceAll(
       '{{CLAUDE_AI_FEATURE}}',
-      context.enableClaudeAi ? '"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}' : ''
+      context.enableClaudeAi
+        ? '"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}'
+        : '// "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}'
     );
 }
 
 /**
- * Unified devcontainer.json template
- *
- * Configuration:
- * - remoteUser: vscode (connects as vscode user)
- * - workspaceMount: Docker volume for performance
- * - overrideCommand: false (S6 Overlay auto-starts services)
- * - Minimal features (only Claude AI if enabled)
+ * Unified devcontainer.json template using docker-compose mode
+ * Always uses dockerComposeFile for consistent development environment
  */
 const DEVCONTAINER_JSON_TEMPLATE = `{
     "name": "{{PROJECT_NAME}}",
 
-    // Docker volume for better performance and persistent storage
-    "workspaceMount": "source={{VOLUME_NAME}},target=/var/www/html,type=volume",
+    // Docker Compose for unified development environment
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
     "workspaceFolder": "/var/www/html",
-
-    "build": {
-        "dockerfile": "../Dockerfile",
-        "context": "..",
-        "target": "development",
-        "args": {
-            "USER_ID": "\${localEnv:UID:1000}",
-            "GROUP_ID": "\${localEnv:GID:1000}"
-        }
-    },
 
     "remoteUser": "www-data",
     "overrideCommand": false,
@@ -156,14 +144,6 @@ const DEVCONTAINER_JSON_TEMPLATE = `{
             ]
         }
     },
-
-    "runArgs": [
-        "--network={{NETWORK_NAME}}",
-        "--label={{LABEL_MANAGED}}",
-        "--label={{LABEL_TYPE}}",
-        "--label={{LABEL_PROJECT_ID}}",
-        "--label={{LABEL_PROJECT_NAME}}"
-    ],
 
     "forwardPorts": [{{FORWARDED_PORT}}],
 
@@ -438,71 +418,24 @@ networks:
 `;
 
 /**
- * Devcontainer.json template for docker-compose mode (when bundled services are present)
- * Uses dockerComposeFile instead of build to orchestrate multi-container setup
+ * Generate devcontainer docker-compose.yml (.devcontainer/docker-compose.yml)
+ * Used by devcontainer for development environment
  */
-const DEVCONTAINER_COMPOSE_JSON_TEMPLATE = `{
-    "name": "{{PROJECT_NAME}}",
-
-    // Docker Compose for multi-container orchestration
-    "dockerComposeFile": "docker-compose.yml",
-    "service": "app",
-    "workspaceFolder": "/var/www/html",
-
-    "remoteUser": "www-data",
-    "overrideCommand": false,
-
-    "containerEnv": {
-        "SSL_MODE": "full",
-        "PHP_OPCACHE_ENABLE": "0"
-    },
-
-    "features": {
-        {{CLAUDE_AI_FEATURE}}
-    },
-
-    "customizations": {
-        "vscode": {
-            "settings": {
-                "github.copilot.chat.codeGeneration.instructions": [
-                    {
-                        "text": "This dev container includes php (with xdebug), pecl, composer pre-installed and available on the PATH, along with PHP language extensions for PHP development."
-                    }
-                ],
-                "php.validate.executablePath": "/usr/local/bin/php"
-            },
-            "extensions": [
-                "xdebug.php-debug",
-                "bmewburn.vscode-intelephense-client",
-                "streetsidesoftware.code-spell-checker"
-            ]
-        }
-    },
-
-    "forwardPorts": [{{FORWARDED_PORT}}],
-
-    "postCreateCommand": "{{POST_CREATE_COMMAND}}",
-    "postStartCommand": "{{POST_START_COMMAND}}"
-}`;
-
-/**
- * Generate docker-compose.yml content for multi-service projects (bundled services)
- * This is used when project has bundledServices defined
- */
-export function generateDockerComposeMultiService(context: TemplateContext): string {
+export function generateDevcontainerCompose(context: TemplateContext): string {
   const bundledServices = context.bundledServices || [];
-  if (bundledServices.length === 0) {
-    // No bundled services, return standard compose template
-    return renderTemplate(DOCKER_COMPOSE_TEMPLATE, context);
-  }
-
   const labels = buildProjectContainerLabels(context.projectId, context.projectName);
   const lines: string[] = [];
 
   // Header
-  lines.push(`# Docker Compose Configuration with Bundled Services
+  const header = bundledServices.length > 0
+    ? `# Docker Compose Configuration with Bundled Services
 # Project: ${context.projectName}
-# Auto-generated by DAMP - Do not edit manually
+# Auto-generated by DAMP - Do not edit manually`
+    : `# Docker Compose Configuration for Development
+# Project: ${context.projectName}
+# Auto-generated by DAMP - Do not edit manually`;
+
+  lines.push(`${header}
 
 services:`);
 
@@ -536,25 +469,27 @@ services:`);
       - "${LABEL_KEYS.PROJECT_NAME}=${labels[LABEL_KEYS.PROJECT_NAME]}"`);
 
   // Add depends_on for database services if present
-  const databaseServices = bundledServices.filter(s => {
-    const def = getServiceDefinition(s.serviceId);
-    return def?.service_type === 'database' && !def?.linkedDatabaseService;
-  });
+  if (bundledServices.length > 0) {
+    const databaseServices = bundledServices.filter(s => {
+      const def = getServiceDefinition(s.serviceId);
+      return def?.service_type === 'database' && !def?.linkedDatabaseService;
+    });
 
-  if (databaseServices.length > 0) {
-    lines.push(`
+    if (databaseServices.length > 0) {
+      lines.push(`
     depends_on:`);
-    for (const svc of databaseServices) {
-      const def = getServiceDefinition(svc.serviceId);
-      if (def) {
-        // Use health condition for database services
-        const hasHealthcheck = def.default_config.healthcheck;
-        if (hasHealthcheck) {
-          lines.push(`      ${def.name}:
+      for (const svc of databaseServices) {
+        const def = getServiceDefinition(svc.serviceId);
+        if (def) {
+          const projectServiceName = `${context.projectName}-${def.name}`;
+          const hasHealthcheck = def.default_config.healthcheck;
+          if (hasHealthcheck) {
+            lines.push(`      ${projectServiceName}:
         condition: service_healthy`);
-        } else {
-          lines.push(`      ${def.name}:
+          } else {
+            lines.push(`      ${projectServiceName}:
         condition: service_started`);
+          }
         }
       }
     }
@@ -565,8 +500,14 @@ services:`);
     const def = getServiceDefinition(bundledService.serviceId);
     if (!def) continue;
 
-    const serviceName = def.name;
-    const containerName = `${context.projectName}-${serviceName}`;
+    const serviceName = `${context.projectName}-${def.name}`;
+    const containerName = serviceName;
+
+    const bundledLabels = buildBundledServiceContainerLabels(
+      context.projectId,
+      context.projectName,
+      def.id
+    );
 
     lines.push(`
   # ${def.display_name}
@@ -577,14 +518,14 @@ services:`);
     networks:
       - ${context.networkName}
     labels:
-      - "${LABEL_KEYS.MANAGED}=true"
-      - "${LABEL_KEYS.TYPE}=bundled-service"
-      - "${LABEL_KEYS.PROJECT_ID}=${context.projectId}"
-      - "${LABEL_KEYS.PROJECT_NAME}=${context.projectName}"
-      - "${LABEL_KEYS.SERVICE_ID}=${def.id}"`);
+      - "${LABEL_KEYS.MANAGED}=${bundledLabels[LABEL_KEYS.MANAGED]}"
+      - "${LABEL_KEYS.TYPE}=${bundledLabels[LABEL_KEYS.TYPE]}"
+      - "${LABEL_KEYS.PROJECT_ID}=${bundledLabels[LABEL_KEYS.PROJECT_ID]}"
+      - "${LABEL_KEYS.PROJECT_NAME}=${bundledLabels[LABEL_KEYS.PROJECT_NAME]}"
+      - "${LABEL_KEYS.SERVICE_ID}=${bundledLabels[LABEL_KEYS.SERVICE_ID]}"`);
 
     // Environment variables
-    const envVars = generateServiceEnvVars(bundledService, def);
+    const envVars = generateServiceEnvVars(bundledService, def, context.projectName, bundledServices);
     if (envVars.length > 0) {
       lines.push(`    environment:`);
       for (const env of envVars) {
@@ -617,11 +558,11 @@ services:`);
 
     // For database admin tools, link to the database service
     if (def.linkedDatabaseService) {
-      // Find which database is actually bundled
       const linkedDb = findLinkedDatabase(bundledServices, def);
       if (linkedDb) {
+        const linkedServiceName = `${context.projectName}-${linkedDb.name}`;
         lines.push(`    depends_on:
-      ${linkedDb.name}:
+      ${linkedServiceName}:
         condition: service_healthy`);
       }
     }
@@ -656,52 +597,55 @@ networks:
  */
 function generateServiceEnvVars(
   bundledService: BundledService,
-  def: ReturnType<typeof getServiceDefinition>
+  def: ReturnType<typeof getServiceDefinition>,
+  projectName: string,
+  bundledServices: BundledService[]
 ): string[] {
   if (!def) return [];
 
   const envVars = [...def.default_config.environment_vars];
   const creds = bundledService.customCredentials;
 
-  if (creds) {
-    // Apply custom credentials based on service type
-    switch (bundledService.serviceId) {
-      case ServiceId.MySQL:
-        if (creds.rootPassword) replaceEnvVar(envVars, 'MYSQL_ROOT_PASSWORD', creds.rootPassword);
-        if (creds.database) replaceEnvVar(envVars, 'MYSQL_DATABASE', creds.database);
-        if (creds.username) replaceEnvVar(envVars, 'MYSQL_USER', creds.username);
-        if (creds.password) replaceEnvVar(envVars, 'MYSQL_PASSWORD', creds.password);
-        break;
-      case ServiceId.MariaDB:
-        if (creds.rootPassword) replaceEnvVar(envVars, 'MARIADB_ROOT_PASSWORD', creds.rootPassword);
-        if (creds.database) replaceEnvVar(envVars, 'MARIADB_DATABASE', creds.database);
-        if (creds.username) replaceEnvVar(envVars, 'MARIADB_USER', creds.username);
-        if (creds.password) replaceEnvVar(envVars, 'MARIADB_PASSWORD', creds.password);
-        break;
-      case ServiceId.PostgreSQL:
-        if (creds.password) replaceEnvVar(envVars, 'POSTGRES_PASSWORD', creds.password);
-        if (creds.database) replaceEnvVar(envVars, 'POSTGRES_DB', creds.database);
-        if (creds.username) replaceEnvVar(envVars, 'POSTGRES_USER', creds.username);
-        break;
-      case ServiceId.MongoDB:
-        if (creds.username) replaceEnvVar(envVars, 'MONGO_INITDB_ROOT_USERNAME', creds.username);
-        if (creds.password) replaceEnvVar(envVars, 'MONGO_INITDB_ROOT_PASSWORD', creds.password);
-        break;
-      case ServiceId.PhpMyAdmin: {
-        // Set PMA_HOST based on linked database
-        const dbService = findLinkedDatabaseForAdmin(def);
-        if (dbService) {
-          replaceEnvVar(envVars, 'PMA_HOST', dbService);
-        }
-        break;
+  // Apply custom credentials based on service type
+  switch (bundledService.serviceId) {
+    case ServiceId.MySQL:
+      if (creds?.rootPassword) replaceEnvVar(envVars, 'MYSQL_ROOT_PASSWORD', creds.rootPassword);
+      if (creds?.database) replaceEnvVar(envVars, 'MYSQL_DATABASE', creds.database);
+      if (creds?.username) replaceEnvVar(envVars, 'MYSQL_USER', creds.username);
+      if (creds?.password) replaceEnvVar(envVars, 'MYSQL_PASSWORD', creds.password);
+      break;
+    case ServiceId.MariaDB:
+      if (creds?.rootPassword) replaceEnvVar(envVars, 'MARIADB_ROOT_PASSWORD', creds.rootPassword);
+      if (creds?.database) replaceEnvVar(envVars, 'MARIADB_DATABASE', creds.database);
+      if (creds?.username) replaceEnvVar(envVars, 'MARIADB_USER', creds.username);
+      if (creds?.password) replaceEnvVar(envVars, 'MARIADB_PASSWORD', creds.password);
+      break;
+    case ServiceId.PostgreSQL:
+      if (creds?.password) replaceEnvVar(envVars, 'POSTGRES_PASSWORD', creds.password);
+      if (creds?.database) replaceEnvVar(envVars, 'POSTGRES_DB', creds.database);
+      if (creds?.username) replaceEnvVar(envVars, 'POSTGRES_USER', creds.username);
+      break;
+    case ServiceId.MongoDB:
+      if (creds?.username) replaceEnvVar(envVars, 'MONGO_INITDB_ROOT_USERNAME', creds.username);
+      if (creds?.password) replaceEnvVar(envVars, 'MONGO_INITDB_ROOT_PASSWORD', creds.password);
+      break;
+    case ServiceId.PhpMyAdmin: {
+      // Always set PMA_HOST to project-specific container name
+      const linkedDb = findLinkedDatabase(bundledServices, def);
+      if (linkedDb) {
+        const containerName = `${projectName}-${linkedDb.name}`;
+        replaceEnvVar(envVars, 'PMA_HOST', containerName);
       }
-      case ServiceId.Adminer: {
-        const dbService = findLinkedDatabaseForAdmin(def);
-        if (dbService) {
-          replaceEnvVar(envVars, 'ADMINER_DEFAULT_SERVER', dbService);
-        }
-        break;
+      break;
+    }
+    case ServiceId.Adminer: {
+      // Always set ADMINER_DEFAULT_SERVER to project-specific container name
+      const linkedDb = findLinkedDatabase(bundledServices, def);
+      if (linkedDb) {
+        const containerName = `${projectName}-${linkedDb.name}`;
+        replaceEnvVar(envVars, 'ADMINER_DEFAULT_SERVER', containerName);
       }
+      break;
     }
   }
 
@@ -754,18 +698,6 @@ function findLinkedDatabase(
 }
 
 /**
- * Find database service name for admin tool environment
- */
-function findLinkedDatabaseForAdmin(
-  adminDef: ReturnType<typeof getServiceDefinition>
-): string | null {
-  if (!adminDef?.linkedDatabaseService) return null;
-
-  const linkedDef = getServiceDefinition(adminDef.linkedDatabaseService);
-  return linkedDef?.name || null;
-}
-
-/**
  * Get post-start command based on project type
  * With fpm-apache, Apache and PHP-FPM auto-start via S6 Overlay
  */
@@ -784,21 +716,16 @@ export function getPostCreateCommand(): string {
 
 /**
  * Generate project templates from context
- * Uses compose mode when bundled services are present
+ * Always uses docker-compose mode for unified development environment
  */
 export function generateProjectTemplates(context: TemplateContext): ProjectTemplate {
-  const hasBundledServices = context.bundledServices && context.bundledServices.length > 0;
-
   return {
-    devcontainerJson: hasBundledServices
-      ? renderTemplate(DEVCONTAINER_COMPOSE_JSON_TEMPLATE, context)
-      : renderTemplate(DEVCONTAINER_JSON_TEMPLATE, context),
+    devcontainerJson: renderTemplate(DEVCONTAINER_JSON_TEMPLATE, context),
     dockerfile: renderTemplate(DOCKERFILE_TEMPLATE, context),
     launchJson: renderTemplate(LAUNCH_JSON_TEMPLATE, context),
     dockerignore: renderTemplate(DOCKERIGNORE_TEMPLATE, context),
-    dockerCompose: hasBundledServices
-      ? generateDockerComposeMultiService(context)
-      : renderTemplate(DOCKER_COMPOSE_TEMPLATE, context),
+    devcontainerCompose: generateDevcontainerCompose(context),
+    rootDockerCompose: renderTemplate(DOCKER_COMPOSE_TEMPLATE, context),
   };
 }
 

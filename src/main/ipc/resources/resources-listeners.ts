@@ -8,6 +8,7 @@ import { docker } from '@main/core/docker/docker';
 import { getAllManagedVolumes, removeVolume } from '@main/core/docker/volume';
 import { projectStorage } from '@main/core/storage/project-storage';
 import { serviceStorage } from '@main/core/storage/service-storage';
+import { projectStateManager } from '@main/domains/projects/project-state-manager';
 import { getServiceDefinition } from '@main/domains/services/service-definitions';
 import { serviceStateManager } from '@main/domains/services/service-state-manager';
 import { createLogger } from '@main/utils/logger';
@@ -93,6 +94,7 @@ async function getAllResources(): Promise<DockerResource[]> {
     const allContainers = [
       ...containerGroups.projects,
       ...containerGroups.services,
+      ...containerGroups.bundled,
       ...containerGroups.helpers,
       ...containerGroups.ngrok,
     ];
@@ -109,7 +111,10 @@ async function getAllResources(): Promise<DockerResource[]> {
 
       if (type === RESOURCE_TYPES.PROJECT_CONTAINER && projectId) {
         category = 'project';
-        isOrphan = !projects.some(p => p.id === projectId);
+        // Not orphan if project exists or is currently being created
+        isOrphan =
+          !projects.some(p => p.id === projectId) &&
+          !projectStateManager.isPendingProject(projectId);
       } else if (type === RESOURCE_TYPES.SERVICE_CONTAINER && serviceId) {
         category = 'service';
         isOrphan = !serviceStates[serviceId];
@@ -118,6 +123,12 @@ async function getAllResources(): Promise<DockerResource[]> {
         if (!isOrphan) {
           needsUpdate = await hasServiceDefinitionChanged(serviceId, container.Id);
         }
+      } else if (type === RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER && projectId) {
+        category = 'bundled';
+        // Not orphan if project exists or is currently being created
+        isOrphan =
+          !projects.some(p => p.id === projectId) &&
+          !projectStateManager.isPendingProject(projectId);
       } else if (type === RESOURCE_TYPES.HELPER_CONTAINER) {
         category = 'helper';
       } else if (type === RESOURCE_TYPES.NGROK_TUNNEL) {
@@ -157,7 +168,10 @@ async function getAllResources(): Promise<DockerResource[]> {
 
       if (type === RESOURCE_TYPES.PROJECT_VOLUME && projectId) {
         category = 'project';
-        isOrphan = !projects.some(p => p.id === projectId);
+        // Not orphan if project exists or is currently being created
+        isOrphan =
+          !projects.some(p => p.id === projectId) &&
+          !projectStateManager.isPendingProject(projectId);
       } else if (type === RESOURCE_TYPES.SERVICE_VOLUME && serviceId) {
         category = 'service';
         // Volume is orphaned if there's no container for this service

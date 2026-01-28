@@ -203,7 +203,10 @@ export interface ProjectTemplate {
   dockerfile: string;
   launchJson: string;
   dockerignore: string;
-  dockerCompose: string;
+  /** Docker compose for devcontainer (.devcontainer/docker-compose.yml) */
+  devcontainerCompose: string;
+  /** Docker compose for root (docker-compose.yml with dev/prod profiles) */
+  rootDockerCompose: string;
 }
 
 /**
