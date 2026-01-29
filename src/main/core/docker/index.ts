@@ -12,7 +12,6 @@ export { checkNetworkExists, ensureNetworkExists } from './network';
 // Container operations
 export {
   createContainer,
-  ensureImage,
   execCommand,
   findContainerByLabel,
   getAllManagedContainers,
@@ -43,6 +42,7 @@ export {
   getAllManagedVolumes,
   getVolumeNamesFromBindings,
   removeServiceVolumes,
+  removeServiceVolumesByLabel,
   removeVolume,
   syncFromVolume,
   syncToVolume,

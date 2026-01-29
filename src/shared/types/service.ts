@@ -3,7 +3,7 @@
  */
 
 import type { PortMapping } from './container';
-import type { Result, StorageData } from './result';
+import type { Result } from './result';
 
 /**
  * Unique identifier for each service
@@ -124,17 +124,6 @@ export interface ServiceDefinition {
 }
 
 /**
- * Persistent state of a service (user preferences only)
- * Note: installed, enabled, and container_status are computed from Docker at runtime
- */
-export interface ServiceState {
-  /** Service identifier */
-  id: ServiceId;
-  /** Custom configuration overrides (ports, env vars, etc.) */
-  custom_config: CustomConfig | null;
-}
-
-/**
  * Progress information during image pull
  */
 export interface PullProgress {
@@ -151,19 +140,10 @@ export interface PullProgress {
 }
 
 /**
- * Combined service information (definition + state)
- * All ServiceDefinition properties are flattened to root level with state properties
+ * Combined service information returned by getService
+ * Just the service definition - container state is queried separately via getServiceContainerState
  */
-export interface ServiceInfo extends ServiceDefinition {
-  /** Custom configuration overrides */
-  custom_config: CustomConfig | null;
-}
-
-/**
- * Service definition with basic state flags (no container status)
- * Used for lightweight list queries without Docker API calls
- * All ServiceDefinition properties are flattened to root level
- */
+export type ServiceInfo = ServiceDefinition;
 
 /**
  * Installation options
@@ -174,11 +154,6 @@ export interface InstallOptions {
   /** Whether to start container immediately after installation */
   start_immediately?: boolean;
 }
-
-/**
- * Service storage data structure (saved to file)
- */
-export type ServiceStorageData = StorageData<ServiceState>;
 
 /**
  * Context passed to post-install hooks

@@ -1,17 +1,17 @@
-import { ipcMain } from 'electron';
 import {
-  DOCKER_STATUS_CHANNEL,
-  DOCKER_INFO_CHANNEL,
-  DOCKER_ENSURE_NETWORK_CHANNEL,
-  DOCKER_NETWORK_STATUS_CHANNEL,
-} from './docker-channels';
-import {
-  isDockerAvailable,
-  getManagedContainersStats,
-  ensureNetworkExists,
   checkNetworkExists,
+  ensureNetworkExists,
+  getManagedContainersStats,
+  isDockerAvailable,
 } from '@main/core/docker';
 import { createLogger } from '@main/utils/logger';
+import { ipcMain } from 'electron';
+import {
+  DOCKER_ENSURE_NETWORK_CHANNEL,
+  DOCKER_INFO_CHANNEL,
+  DOCKER_NETWORK_STATUS_CHANNEL,
+  DOCKER_STATUS_CHANNEL,
+} from './docker-channels';
 
 const logger = createLogger('docker-ipc');
 
@@ -27,7 +27,6 @@ export function addDockerListeners() {
       try {
         const isRunning = await isDockerAvailable();
         if (isRunning) {
-          logger.debug('Docker is running');
           return { isRunning: true };
         } else {
           return {

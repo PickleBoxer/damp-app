@@ -1,7 +1,7 @@
 /** Query keys and query options for services */
 
-import { queryOptions } from '@tanstack/react-query';
 import type { ServiceId } from '@shared/types/service';
+import { queryOptions } from '@tanstack/react-query';
 
 // Direct access to IPC API exposed via preload script
 const servicesApi = (globalThis as unknown as Window).services;
@@ -39,4 +39,13 @@ export const serviceContainerStateQueryOptions = (serviceId: ServiceId) =>
     queryFn: () => servicesApi.getServiceContainerState(serviceId),
     staleTime: Infinity, // Pure event-driven - Docker events handle updates
     refetchInterval: false, // No polling - Docker events provide real-time updates
+  });
+
+/** Query options for Caddy certificate installation status */
+export const caddyCertStatusQueryOptions = () =>
+  queryOptions({
+    queryKey: ['services', 'caddy', 'certInstalled'] as const,
+    queryFn: () => servicesApi.getCaddyCertInstalled(),
+    staleTime: Infinity, // Only changes when user installs cert
+    refetchInterval: false,
   });

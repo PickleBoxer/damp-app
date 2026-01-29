@@ -2,6 +2,7 @@
  * Service UI configuration and helpers
  */
 
+import type { PortMapping } from '@shared/types/container';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 
 /**
@@ -25,14 +26,19 @@ export function hasServiceUI(serviceId: ServiceId): boolean {
 
 /**
  * Get the web UI URL for a service
+ * @param service - The service definition
+ * @param containerPorts - Optional actual port mappings from container state
  */
-export function getServiceUIUrl(service: ServiceInfo): string | null {
+export function getServiceUIUrl(
+  service: ServiceInfo,
+  containerPorts?: PortMapping[]
+): string | null {
   const uiConfig = SERVICE_UI_PORTS[service.id];
   if (!uiConfig) return null;
 
-  // Get the actual port from service state (custom or default)
+  // Get the actual port from container state, fallback to default
   const actualPort =
-    service.custom_config?.ports?.[uiConfig.portIndex]?.[0] ||
+    containerPorts?.[uiConfig.portIndex]?.[0] ||
     service.default_config.ports?.[uiConfig.portIndex]?.[0];
 
   if (!actualPort) return null;

@@ -12,7 +12,7 @@ import {
 } from '@shared/constants/labels';
 import type { VolumeCopyProgress } from '@shared/types/project';
 import { Writable } from 'node:stream';
-import { ensureImage } from './container';
+import { pullImage } from './container';
 import { docker } from './docker';
 import { ensureRsyncImage, RSYNC_IMAGE_NAME } from './rsync-image-builder';
 
@@ -177,7 +177,7 @@ export async function copyToVolume(
     }
 
     // Ensure alpine image exists
-    await ensureImage('alpine:latest');
+    await pullImage('alpine:latest');
 
     // Create Alpine container with both source folder and volume mounted
     const labels = buildHelperContainerLabels(HELPER_OPERATIONS.VOLUME_COPY, volumeName, projectId);
@@ -548,6 +548,41 @@ export async function removeServiceVolumes(volumeNames: string[]): Promise<void>
     } catch (error) {
       logger.error('Failed to remove volume', { volumeName, error });
     }
+  }
+}
+
+/**
+ * Remove all volumes associated with a service by label
+ * More reliable than removing by name since it uses the actual labels set during creation
+ * Note: Volumes created before the labeling system won't be found by this method
+ */
+export async function removeServiceVolumesByLabel(serviceId: string): Promise<void> {
+  try {
+    logger.info(`Looking for volumes with SERVICE_ID label: ${serviceId}`);
+
+    const volumesResponse = await docker.listVolumes({
+      filters: {
+        label: [`${LABEL_KEYS.MANAGED}=true`, `${LABEL_KEYS.SERVICE_ID}=${serviceId}`],
+      },
+    });
+
+    const volumes = volumesResponse.Volumes || [];
+    if (volumes.length === 0) {
+      logger.info(`No labeled volumes found for service ${serviceId}`);
+      return;
+    }
+
+    logger.info(`Found ${volumes.length} volume(s) to remove for service ${serviceId}`);
+
+    for (const volume of volumes) {
+      try {
+        await removeVolume(volume.Name);
+      } catch (error) {
+        logger.error(`Failed to remove volume ${volume.Name}`, { error });
+      }
+    }
+  } catch (error) {
+    logger.error(`Failed to find volumes for service ${serviceId}`, { error });
   }
 }
 

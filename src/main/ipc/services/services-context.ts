@@ -4,7 +4,7 @@
  */
 
 import type { ServicesContext } from '@shared/types/ipc';
-import type { CustomConfig, InstallOptions, PullProgress, ServiceId } from '@shared/types/service';
+import type { InstallOptions, PullProgress, ServiceId } from '@shared/types/service';
 import { contextBridge, ipcRenderer } from 'electron';
 import * as CHANNELS from './services-channels';
 
@@ -35,8 +35,7 @@ export function exposeServicesContext(): void {
     restartService: (serviceId: ServiceId) =>
       ipcRenderer.invoke(CHANNELS.SERVICES_RESTART, serviceId),
 
-    updateConfig: (serviceId: ServiceId, customConfig: CustomConfig) =>
-      ipcRenderer.invoke(CHANNELS.SERVICES_UPDATE_CONFIG, serviceId, customConfig),
+    getCaddyCertInstalled: () => ipcRenderer.invoke(CHANNELS.SERVICES_CADDY_GET_CERT_STATUS),
 
     downloadCaddyCertificate: () => ipcRenderer.invoke(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT),
 
