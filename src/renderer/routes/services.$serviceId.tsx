@@ -10,7 +10,11 @@ import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Separator } from '@renderer/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { serviceContainerStateQueryOptions, serviceQueryOptions } from '@renderer/services';
+import {
+  caddyCertStatusQueryOptions,
+  serviceContainerStateQueryOptions,
+  serviceQueryOptions,
+} from '@renderer/services';
 import { getServiceUIUrl, hasServiceUI } from '@renderer/utils/services/ui';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
@@ -56,9 +60,14 @@ function getStatusText(isRunning?: boolean, exists?: boolean): string {
 }
 
 // Helper function to get the actual external port for a service
-function getServicePort(service: ServiceInfo, portIndex = 0): string {
-  // Try to get the actual mapped port from state config
-  const actualPort = service.custom_config?.ports?.[portIndex]?.[0];
+// Uses container state for actual runtime ports, falls back to definition defaults
+function getServicePort(
+  service: ServiceInfo,
+  containerPorts?: import('@shared/types/container').PortMapping[],
+  portIndex = 0
+): string {
+  // Try to get the actual mapped port from container state
+  const actualPort = containerPorts?.[portIndex]?.[0];
   // Fallback to default port from definition
   const defaultPort = service.default_config.ports?.[portIndex]?.[0];
 
@@ -106,8 +115,9 @@ function CredentialRow({
 
 // Credentials summary card component
 function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) {
+  const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
   const [isExpanded, setIsExpanded] = useState(false);
-  const envVars = getEnvironmentVars(service);
+  const envVars = getEnvironmentVars(service, state?.environment_vars);
   const credentials: { label: string; value: string; copyLabel: string }[] = [];
 
   // Extract credentials based on service type
@@ -229,9 +239,9 @@ function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) 
   );
 }
 
-// Helper function to get actual environment variables (custom or default)
-function getEnvironmentVars(service: ServiceInfo): string[] {
-  return service.custom_config?.environment_vars || service.default_config.environment_vars;
+// Get environment variables from container state, falling back to definition defaults
+function getEnvironmentVars(service: ServiceInfo, containerEnvVars?: string[]): string[] {
+  return containerEnvVars?.length ? containerEnvVars : service.default_config.environment_vars;
 }
 
 // Helper function to parse env vars into an object
@@ -244,9 +254,14 @@ function parseEnvVars(envVars: string[]): Record<string, string> {
   return parsed;
 }
 
-// Helper function to format environment variables as Laravel .env format
-function formatAsLaravelEnv(service: ServiceInfo, host: string, port: string): string {
-  const envVars = parseEnvVars(getEnvironmentVars(service));
+// Format environment variables as Laravel .env configuration
+function formatAsLaravelEnv(
+  service: ServiceInfo,
+  host: string,
+  port: string,
+  containerEnvVars?: string[]
+): string {
+  const envVars = parseEnvVars(getEnvironmentVars(service, containerEnvVars));
 
   switch (service.id) {
     case ServiceId.MySQL:
@@ -371,7 +386,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 
   // Use actual container name from Docker, fallback to display format
   const containerName = state?.container_name || `damp-${service.id}`;
-  const port = getServicePort(service, 0);
+  const port = getServicePort(service, state?.ports, 0);
   const internalPort = service.default_config.ports?.[0]?.[1] || port;
 
   // Docker network connection
@@ -381,8 +396,9 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
   const hostConnection = `localhost:${port}`;
 
   // Format as Laravel .env configuration
-  const dockerEnvConfig = formatAsLaravelEnv(service, containerName, internalPort);
-  const hostEnvConfig = formatAsLaravelEnv(service, 'localhost', port);
+  const containerEnv = state?.environment_vars;
+  const dockerEnvConfig = formatAsLaravelEnv(service, containerName, internalPort, containerEnv);
+  const hostEnvConfig = formatAsLaravelEnv(service, 'localhost', port, containerEnv);
 
   return (
     <Card size="sm" className="mx-auto w-full">
@@ -414,11 +430,11 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 
             <div className="space-y-2 px-1.5">
               <p className="text-muted-foreground text-xs font-medium">Connection String</p>
-              <div className="bg-background border-border flex items-center justify-between overflow-hidden border">
-                <code className="text-foreground flex-1 truncate p-2 font-mono text-xs outline-none select-text">
+              <div className="bg-background border-border flex items-center justify-between gap-2 overflow-hidden border">
+                <code className="text-foreground min-w-0 flex-1 p-2 font-mono text-xs break-all outline-none select-text">
                   {dockerConnection}
                 </code>
-                <div className="px-2">
+                <div className="shrink-0 px-2">
                   <CopyButton text={dockerConnection} label="Connection string" />
                 </div>
               </div>
@@ -430,7 +446,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
                 <div className="absolute top-2 right-2 z-10">
                   <CopyButton text={dockerEnvConfig} label=".env configuration" />
                 </div>
-                <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-xs leading-relaxed whitespace-pre-wrap outline-none select-text">
+                <pre className="text-foreground min-w-0 flex-1 overflow-x-auto p-2 pr-12 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap outline-none select-text">
                   {dockerEnvConfig}
                 </pre>
               </div>
@@ -462,11 +478,11 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 
             <div className="space-y-2 px-1.5">
               <p className="text-muted-foreground text-xs font-medium">Connection String</p>
-              <div className="bg-background border-border flex items-center justify-between overflow-hidden border">
-                <code className="text-foreground flex-1 truncate p-2 font-mono text-xs outline-none select-text">
+              <div className="bg-background border-border flex items-center justify-between gap-2 overflow-hidden border">
+                <code className="text-foreground min-w-0 flex-1 p-2 font-mono text-xs break-all outline-none select-text">
                   {hostConnection}
                 </code>
-                <div className="px-2">
+                <div className="shrink-0 px-2">
                   <CopyButton text={hostConnection} label="Connection string" />
                 </div>
               </div>
@@ -478,7 +494,7 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
                 <div className="absolute top-2 right-2 z-10">
                   <CopyButton text={hostEnvConfig} label=".env configuration" />
                 </div>
-                <pre className="text-foreground flex-1 p-2 pr-12 font-mono text-xs leading-relaxed whitespace-pre-wrap outline-none select-text">
+                <pre className="text-foreground min-w-0 flex-1 overflow-x-auto p-2 pr-12 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap outline-none select-text">
                   {hostEnvConfig}
                 </pre>
               </div>
@@ -503,15 +519,15 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
 // Service Info Card Component
 function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
   const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
-  const port = getServicePort(service, 0);
+  const port = getServicePort(service, state?.ports, 0);
   const isRunning = state?.running;
   const healthStatus = state?.health_status;
 
   return (
     <div className="bg-muted/30 dark:bg-muted/10 border-border border-b px-4 py-3">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 @sm:gap-4">
         {/* Status Section */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 @sm:gap-4">
           <div className="flex items-center gap-2">
             <div
               className={`h-2 w-2 rounded-full ${
@@ -551,6 +567,10 @@ function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
 // Service details component
 function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
   const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
+  const { data: caddyCertInstalled = false } = useQuery({
+    ...caddyCertStatusQueryOptions(),
+    enabled: service.id === ServiceId.Caddy,
+  });
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadCertificate = async () => {
@@ -583,7 +603,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
   };
 
   const handleOpenUI = async () => {
-    const uiUrl = getServiceUIUrl(service);
+    const uiUrl = getServiceUIUrl(service, state?.ports);
     if (!uiUrl) {
       toast.error('No UI available for this service');
       return;
@@ -606,12 +626,11 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
   };
 
   const isCaddy = service.id === ServiceId.Caddy;
-  const certInstalled =
-    (service.custom_config?.metadata?.certInstalled as boolean | undefined) ?? false;
+  const certInstalled = caddyCertInstalled;
   const showUIButton = hasServiceUI(service.id) && state?.running;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="@container flex h-full flex-col">
       {/* Service Header */}
       <div className="bg-background border-border border-b px-4 py-4">
         <div className="flex items-center gap-3">

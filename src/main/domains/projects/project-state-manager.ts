@@ -3,17 +3,18 @@
  * Coordinates project lifecycle: create, update, delete, and file generation
  */
 
+import { BaseStateManager } from '@main/core/base-state-manager';
 import {
   copyToVolume,
   createProjectVolume,
   getContainerStateByLabel,
+  removeContainersByLabels,
   removeVolume as removeDockerVolume,
 } from '@main/core/docker';
 import { docker } from '@main/core/docker/docker';
 import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
 import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 import { projectStorage } from '@main/core/storage/project-storage';
-import { createLogger } from '@main/utils/logger';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import { FORWARDED_PORT } from '@shared/constants/ports';
 import type { ContainerState } from '@shared/types/container';
@@ -46,19 +47,19 @@ import {
   getPostStartCommand,
 } from './project-templates';
 
-const logger = createLogger('ProjectStateManager');
-
 const DOCKER_NETWORK = 'damp-network';
 const LARAVEL_MIN_PHP_VERSION = '8.2';
 
 /**
  * Project state manager class
  */
-class ProjectStateManager {
-  private initialized = false;
-  private initializationPromise: Promise<void> | null = null;
+class ProjectStateManager extends BaseStateManager {
   /** Track project IDs that are currently being created (to avoid false orphan detection) */
   private readonly pendingProjectIds = new Set<string>();
+
+  constructor() {
+    super('ProjectStateManager');
+  }
 
   /**
    * Check if a project ID is currently being created
@@ -70,45 +71,9 @@ class ProjectStateManager {
   /**
    * Initialize the project manager
    */
-  async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-
-    if (this.initializationPromise) {
-      return this.initializationPromise;
-    }
-
-    this.initializationPromise = this._initialize();
-    try {
-      await this.initializationPromise;
-    } finally {
-      this.initializationPromise = null;
-    }
-  }
-
-  private async _initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-
-    try {
-      await projectStorage.initialize();
-      this.initialized = true;
-      logger.info('Project state manager initialized');
-    } catch (error) {
-      logger.error('Failed to initialize project state manager:', { error });
-      throw error;
-    }
-  }
-
-  /**
-   * Check initialization
-   */
-  private ensureInitialized(): void {
-    if (!this.initialized) {
-      throw new Error('Project manager not initialized. Call initialize() first.');
-    }
+  protected async _initialize(): Promise<void> {
+    await projectStorage.initialize();
+    this.logger.info('Project state manager initialized');
   }
 
   /**
@@ -131,7 +96,7 @@ class ProjectStateManager {
         path: result.filePaths[0],
       };
     } catch (error) {
-      logger.error('Failed to open folder selection dialog:', { error });
+      this.logger.error('Failed to open folder selection dialog:', { error });
       return {
         success: false,
         cancelled: false,
@@ -183,7 +148,7 @@ class ProjectStateManager {
           composerJson.require?.['laravel/framework'] ||
           composerJson['require-dev']?.['laravel/framework'];
 
-        logger.info(
+        this.logger.info(
           `High-confidence Laravel detection: composer.json + artisan file present (version: ${version || 'unknown'})`
         );
 
@@ -196,14 +161,14 @@ class ProjectStateManager {
 
       // If either check fails, treat as non-Laravel project
       if (hasLaravelInComposer && !artisanExists) {
-        logger.info(
+        this.logger.info(
           'Laravel package found in composer.json but artisan file missing - treating as non-Laravel'
         );
       }
 
       return { isLaravel: false };
     } catch (error) {
-      logger.error('Error detecting Laravel:', { error });
+      this.logger.error('Error detecting Laravel:', { error });
       return { isLaravel: false };
     }
   }
@@ -340,7 +305,7 @@ class ProjectStateManager {
         const envDampPath = path.join(project.path, '.env.damp');
 
         await fs.writeFile(envDampPath, envContent, 'utf-8');
-        logger.info(
+        this.logger.info(
           `Created .env.damp with bundled service configuration for ${project.name} - user can copy to .env if needed`
         );
       }
@@ -361,11 +326,11 @@ class ProjectStateManager {
 
           const indexContent = generateIndexPhp(project.name, project.phpVersion);
           await fs.writeFile(indexPath, indexContent, 'utf-8');
-          logger.info(`Created public/index.php for project ${project.name}`);
+          this.logger.info(`Created public/index.php for project ${project.name}`);
         }
       }
 
-      logger.info(`Created devcontainer files for project ${project.name}`);
+      this.logger.info(`Created devcontainer files for project ${project.name}`);
 
       return { success: true };
     } catch (error) {
@@ -701,10 +666,12 @@ class ProjectStateManager {
     if (importMethod === 'import') {
       const laravelDetection = await this.detectLaravel(projectPath);
       if (laravelDetection.isLaravel) {
-        logger.info(`Detected Laravel project: ${laravelDetection.version || 'unknown version'}`);
+        this.logger.info(
+          `Detected Laravel project: ${laravelDetection.version || 'unknown version'}`
+        );
         return 'laravel' as ProjectType;
       }
-      logger.info('No Laravel detected, using basic PHP configuration');
+      this.logger.info('No Laravel detected, using basic PHP configuration');
       return 'basic-php' as ProjectType;
     }
     return (inputType as ProjectType) || 'basic-php';
@@ -780,7 +747,7 @@ class ProjectStateManager {
     onProgress?: (progress: VolumeCopyProgress) => void
   ): Promise<void> {
     if (laravelOptions) {
-      logger.info('Installing fresh Laravel project to volume...');
+      this.logger.info('Installing fresh Laravel project to volume...');
       await installLaravelToVolume(
         project.volumeName,
         project.name,
@@ -799,7 +766,7 @@ class ProjectStateManager {
     try {
       // Add main domain
       await this.addDomainToHosts(project.domain);
-      logger.info(`Added domain ${project.domain} to hosts file`);
+      this.logger.info(`Added domain ${project.domain} to hosts file`);
 
       // Add subdomains for bundled services with web UI
       if (project.bundledServices && project.bundledServices.length > 0) {
@@ -808,12 +775,12 @@ class ProjectStateManager {
           if (serviceDef?.proxySubdomain) {
             const subdomain = `${serviceDef.proxySubdomain}.${project.domain}`;
             await this.addDomainToHosts(subdomain);
-            logger.info(`Added subdomain ${subdomain} to hosts file`);
+            this.logger.info(`Added subdomain ${subdomain} to hosts file`);
           }
         }
       }
     } catch (error) {
-      logger.warn('Failed to update hosts file (may require admin privileges):', { error });
+      this.logger.warn('Failed to update hosts file (may require admin privileges):', { error });
       // Continue anyway - not critical
     }
   }
@@ -837,9 +804,9 @@ class ProjectStateManager {
       if (volumeCreated && project) {
         try {
           await removeDockerVolume(project.volumeName);
-          logger.info('Rollback: Removed Docker volume');
+          this.logger.info('Rollback: Removed Docker volume');
         } catch (rollbackError) {
-          logger.warn('Rollback failed: Could not remove volume', { error: rollbackError });
+          this.logger.warn('Rollback failed: Could not remove volume', { error: rollbackError });
         }
       }
 
@@ -847,15 +814,15 @@ class ProjectStateManager {
       if (folderCreated && projectPath) {
         try {
           await fs.rm(projectPath, { recursive: true, force: true });
-          logger.info('Rollback: Removed project folder');
+          this.logger.info('Rollback: Removed project folder');
         } catch (rollbackError) {
-          logger.warn('Rollback failed: Could not remove project folder', {
+          this.logger.warn('Rollback failed: Could not remove project folder', {
             error: rollbackError,
           });
         }
       }
     } catch (rollbackError) {
-      logger.error('Error during rollback:', { error: rollbackError });
+      this.logger.error('Error during rollback:', { error: rollbackError });
     }
   }
 
@@ -978,10 +945,10 @@ class ProjectStateManager {
 
       // Step 11: Sync project to Caddy (non-blocking)
       syncProjectsToCaddy(projectStorage.getAllProjects()).catch(error => {
-        logger.warn('Failed to sync project to Caddy:', { error });
+        this.logger.warn('Failed to sync project to Caddy:', { error });
       });
 
-      logger.info(`Project ${project.name} created successfully`);
+      this.logger.info(`Project ${project.name} created successfully`);
 
       // Final completion message
       if (onProgress) {
@@ -999,7 +966,7 @@ class ProjectStateManager {
         data: project,
       };
     } catch (error) {
-      logger.error('Failed to create project, rolling back changes:', { error });
+      this.logger.error('Failed to create project, rolling back changes:', { error });
       await this.rollbackProjectCreation(volumeCreated, folderCreated, project, projectPath);
 
       return {
@@ -1056,7 +1023,7 @@ class ProjectStateManager {
       await this.removeDomainFromHosts(oldDomain);
       await this.addDomainToHosts(newDomain);
     } catch (error) {
-      logger.warn('Failed to update hosts file:', { error });
+      this.logger.warn('Failed to update hosts file:', { error });
     }
   }
 
@@ -1100,14 +1067,14 @@ class ProjectStateManager {
 
       await projectStorage.updateProject(input.id, updatedProject);
 
-      logger.info(`Project ${updatedProject.name} updated successfully`);
+      this.logger.info(`Project ${updatedProject.name} updated successfully`);
 
       return {
         success: true,
         data: updatedProject,
       } as Result<Project>;
     } catch (error) {
-      logger.error('Failed to update project:', { error });
+      this.logger.error('Failed to update project:', { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -1149,7 +1116,15 @@ class ProjectStateManager {
           }
         }
       } catch (error) {
-        logger.warn('Failed to remove domain from hosts file:', { error });
+        this.logger.warn('Failed to remove domain from hosts file:', { error });
+      }
+
+      // Remove all project containers (main + bundled services) before removing volume
+      try {
+        await removeContainersByLabels([`${LABEL_KEYS.PROJECT_ID}=${projectId}`]);
+        this.logger.debug('Removed all containers for project:', { projectId });
+      } catch (error) {
+        this.logger.warn('Failed to remove project containers:', { error });
       }
 
       // Remove Docker volume if requested
@@ -1171,16 +1146,16 @@ class ProjectStateManager {
 
       // Sync Caddy to remove project (non-blocking)
       syncProjectsToCaddy(projectStorage.getAllProjects()).catch(error => {
-        logger.warn('Failed to sync Caddy after project deletion:', error);
+        this.logger.warn('Failed to sync Caddy after project deletion:', error);
       });
 
-      logger.info(`Project ${project.name} deleted successfully`);
+      this.logger.info(`Project ${project.name} deleted successfully`);
 
       return {
         success: true,
       };
     } catch (error) {
-      logger.error('Failed to delete project:', { error });
+      this.logger.error('Failed to delete project:', { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -1197,13 +1172,13 @@ class ProjectStateManager {
     try {
       await projectStorage.reorderProjects(projectIds);
 
-      logger.info('Projects reordered successfully');
+      this.logger.info('Projects reordered successfully');
 
       return {
         success: true,
       };
     } catch (error) {
-      logger.error('Failed to reorder projects:', { error });
+      this.logger.error('Failed to reorder projects:', { error });
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
@@ -1223,24 +1198,13 @@ class ProjectStateManager {
     }
 
     try {
-      // Use unified container state query (single call instead of find + inspect)
-      const containerState = await getContainerStateByLabel(
+      return await getContainerStateByLabel(
         LABEL_KEYS.PROJECT_ID,
         projectId,
         RESOURCE_TYPES.PROJECT_CONTAINER
       );
-
-      return {
-        running: containerState.running,
-        exists: containerState.exists,
-        container_id: containerState.container_id,
-        container_name: containerState.container_name,
-        state: containerState.state,
-        ports: containerState.ports,
-        health_status: containerState.health_status ?? 'none',
-      };
     } catch (error) {
-      logger.error('Failed to get project container state', { projectId, error });
+      this.logger.error('Failed to get project container state', { projectId, error });
       return {
         running: false,
         exists: false,
@@ -1249,6 +1213,7 @@ class ProjectStateManager {
         state: null,
         ports: [],
         health_status: 'none',
+        environment_vars: [],
       };
     }
   }
@@ -1291,7 +1256,7 @@ class ProjectStateManager {
 
       return envVars;
     } catch (error) {
-      logger.error('Failed to get bundled service env', { projectId, serviceId, error });
+      this.logger.error('Failed to get bundled service env', { projectId, serviceId, error });
       throw error;
     }
   }

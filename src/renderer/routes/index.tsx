@@ -496,6 +496,7 @@ function ServiceStatusCard({
                       exists: true,
                       state: isRunning ? 'running' : 'exited',
                       ports: [],
+                      environment_vars: [],
                     }
                   : null
               }

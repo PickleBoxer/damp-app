@@ -7,7 +7,7 @@ import { createLogger } from '@main/utils/logger';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import type { ContainerState, PortMapping } from '@shared/types/container';
-import type { CustomConfig, PullProgress, ServiceConfig } from '@shared/types/service';
+import type { CustomConfig, ServiceConfig } from '@shared/types/service';
 import type { ContainerCreateOptions } from 'dockerode';
 import Docker from 'dockerode';
 import * as tar from 'tar-stream';
@@ -19,81 +19,55 @@ import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
 const logger = createLogger('Container');
 
 /**
- * Ensure Docker image exists locally, pull if missing (silent, no progress)
+ * Pull Docker image with configurable options
+ * - By default, only pulls if image doesn't exist locally
+ * - Automatically forces pull for :latest tags
+ * - Use force=true to always pull regardless of tag
+ *
+ * @param imageName Docker image name (e.g., 'alpine:latest', 'mysql:8.0')
+ * @param force Force pull even if image exists (auto-enabled for :latest tags)
  */
-export async function ensureImage(imageName: string): Promise<void> {
+export async function pullImage(imageName: string, force?: boolean): Promise<void> {
+  // Auto-force for :latest tags (or images without explicit tag, which default to latest)
+  const isLatestTag = imageName.endsWith(':latest') || !imageName.includes(':');
+  const shouldForce = force ?? isLatestTag;
+
   try {
-    const images = await docker.listImages({
-      filters: { reference: [imageName] },
-    });
-
-    if (images.length > 0) {
-      return;
-    }
-
-    logger.debug(`Pulling image ${imageName}...`);
-    await new Promise<void>((resolve, reject) => {
-      docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
-        if (err) return reject(err);
-        docker.modem.followProgress(stream, err => (err ? reject(err) : resolve()));
+    // Check if image already exists (skip if force=true)
+    if (!shouldForce) {
+      const images = await docker.listImages({
+        filters: { reference: [imageName] },
       });
-    });
-    logger.debug(`Image ${imageName} pulled successfully`);
-  } catch (error) {
-    throw new Error(`Failed to ensure image ${imageName}: ${error}`);
-  }
-}
 
-/**
- * Pull Docker image with progress callback
- */
-export async function pullImage(
-  imageName: string,
-  onProgress?: (progress: PullProgress) => void
-): Promise<void> {
-  try {
-    // Check if image already exists
-    const images = await docker.listImages({
-      filters: { reference: [imageName] },
-    });
-
-    if (images.length > 0) {
-      logger.info(`Image ${imageName} already exists locally`);
-      return;
+      if (images.length > 0) {
+        logger.debug(`Image ${imageName} already exists locally`);
+        return;
+      }
     }
+
+    logger.info(`Pulling image ${imageName}${shouldForce ? ' (forced)' : ''}...`);
 
     return new Promise((resolve, reject) => {
       docker.pull(imageName, (err: Error | null, stream: NodeJS.ReadableStream) => {
         if (err) {
-          reject(err);
+          reject(new Error(`Failed to pull image ${imageName}: ${err.message}`));
           return;
         }
 
-        // Track pull progress
-        docker.modem.followProgress(
-          stream,
-          err => {
-            if (err) {
-              reject(err);
-            } else {
-              logger.info(`Successfully pulled image ${imageName}`);
-              resolve();
-            }
-          },
-          onProgress
-            ? (event: { status?: string; progress?: string; id?: string }) => {
-                onProgress({
-                  status: event.status || '',
-                  progress: event.progress || '',
-                  id: event.id || '',
-                });
-              }
-            : undefined
-        );
+        docker.modem.followProgress(stream, err => {
+          if (err) {
+            reject(new Error(`Failed to pull image ${imageName}: ${err.message}`));
+          } else {
+            logger.info(`Successfully pulled image ${imageName}`);
+            resolve();
+          }
+        });
       });
     });
   } catch (error) {
-    throw new Error(`Failed to pull image ${imageName}: ${error}`);
+    throw new Error(
+      `Failed to pull image ${imageName}: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
@@ -288,6 +262,9 @@ export async function getContainerState(containerNameOrId: string): Promise<Cont
     // Extract container name (remove leading '/')
     const containerName = inspection.Name?.replace(/^\//, '') || null;
 
+    // Extract environment variables from container config
+    const environmentVars = inspection.Config.Env || [];
+
     return {
       exists: true,
       running: inspection.State.Running,
@@ -296,6 +273,7 @@ export async function getContainerState(containerNameOrId: string): Promise<Cont
       state: inspection.State.Status,
       ports,
       health_status: healthStatus,
+      environment_vars: environmentVars,
     };
   } catch (error) {
     logger.error('Failed to get container status', { containerNameOrId, error });
@@ -307,6 +285,7 @@ export async function getContainerState(containerNameOrId: string): Promise<Cont
       state: null,
       ports: [],
       health_status: 'none',
+      environment_vars: [],
     };
   }
 }
@@ -359,6 +338,7 @@ export async function getContainerStateByLabel(
       container_name: null,
       ports: [],
       health_status: 'none',
+      environment_vars: [],
     };
   }
 

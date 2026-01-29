@@ -3,22 +3,22 @@
  * Manages ngrok tunnel containers for projects
  */
 
-import { z } from 'zod';
-import type { Project } from '@shared/types/project';
 import {
   docker,
-  isDockerAvailable,
   ensureNetworkExists,
-  pullImage,
   findContainerByLabel,
+  getContainerHostPort,
+  isContainerRunning,
+  isDockerAvailable,
+  pullImage,
   removeContainersByLabels,
   stopAndRemoveContainer,
-  isContainerRunning,
-  getContainerHostPort,
 } from '@main/core/docker';
-import { buildNgrokLabels, LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
-import { ngrokStateManager, type NgrokStatus } from './ngrok-state-manager';
 import { createLogger } from '@main/utils/logger';
+import { buildNgrokLabels, LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import type { Project } from '@shared/types/project';
+import { z } from 'zod';
+import { ngrokStateManager, type NgrokStatus } from './ngrok-state-manager';
 
 const logger = createLogger('ngrok-manager');
 

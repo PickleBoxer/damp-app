@@ -28,4 +28,6 @@ export interface ContainerState {
   ports: PortMapping[];
   /** Health status of the container */
   health_status: 'starting' | 'healthy' | 'unhealthy' | 'none';
+  /** Environment variables from container config */
+  environment_vars: string[];
 }

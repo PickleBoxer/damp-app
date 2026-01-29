@@ -22,7 +22,7 @@ import {
 } from '@renderer/components/ui/tooltip';
 import type { FolderSelectionResult, NodeVersion, PhpVersion } from '@shared/types/project';
 import { ProjectType } from '@shared/types/project';
-import { FolderOpen, Info } from 'lucide-react';
+import { AlertTriangle, FolderOpen, Info } from 'lucide-react';
 import { useState } from 'react';
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
 import { TbWorld } from 'react-icons/tb';
@@ -54,11 +54,21 @@ function sanitizeProjectName(name: string): string {
 
 export function ProjectConfigStep({ formData, setFormData }: Readonly<WizardStepProps>) {
   const [nameError, setNameError] = useState<string | undefined>();
+  const [folderWarning, setFolderWarning] = useState<string | undefined>();
 
   const handleSelectFolder = async () => {
     const projectsApi = (globalThis as unknown as Window).projects;
     const result: FolderSelectionResult = await projectsApi.selectFolder();
     if (result.success && result.path) {
+      // Check if another project is using this folder
+      const projects = await projectsApi.getAllProjects();
+      const existingProject = projects.find(p => p.path === result.path);
+      if (existingProject) {
+        setFolderWarning(`This folder is already used by project "${existingProject.name}"`);
+      } else {
+        setFolderWarning(undefined);
+      }
+
       setFormData(prev => {
         const newData = { ...prev, path: result.path };
         if (prev.type === ProjectType.Existing && result.path) {
@@ -159,6 +169,12 @@ export function ProjectConfigStep({ formData, setFormData }: Readonly<WizardStep
             <p className="text-destructive text-xs">{nameError}</p>
           ) : (
             <p className="text-muted-foreground text-xs">{renderNameHint()}</p>
+          )}
+          {folderWarning && (
+            <div className="mt-2 flex items-center gap-2 rounded-md bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <p className="text-xs">{folderWarning}</p>
+            </div>
           )}
         </div>
       </div>

@@ -6,7 +6,7 @@
 import { getBundleableServicesByType } from '@main/domains/services/service-definitions';
 import { serviceStateManager } from '@main/domains/services/service-state-manager';
 import { createLogger } from '@main/utils/logger';
-import type { CustomConfig, InstallOptions, ServiceId } from '@shared/types/service';
+import type { InstallOptions, ServiceId } from '@shared/types/service';
 import { BrowserWindow, ipcMain } from 'electron';
 import { z } from 'zod';
 import * as CHANNELS from './services-channels';
@@ -131,7 +131,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
    */
   ipcMain.handle(
     CHANNELS.SERVICES_UNINSTALL,
-    async (_event, serviceId: ServiceId, removeVolumes = false) => {
+    async (_event, serviceId: ServiceId, removeVolumes = true) => {
       try {
         await ensureInitialized();
         return await serviceStateManager.uninstallService(serviceId, removeVolumes);
@@ -182,20 +182,17 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * Update service configuration
+   * Get Caddy SSL certificate installed status
    */
-  ipcMain.handle(
-    CHANNELS.SERVICES_UPDATE_CONFIG,
-    async (_event, serviceId: ServiceId, customConfig: CustomConfig) => {
-      try {
-        await ensureInitialized();
-        return await serviceStateManager.updateServiceConfig(serviceId, customConfig);
-      } catch (error) {
-        logger.error('Failed to update service configuration', { serviceId, error });
-        throw error;
-      }
+  ipcMain.handle(CHANNELS.SERVICES_CADDY_GET_CERT_STATUS, async () => {
+    try {
+      await ensureInitialized();
+      return serviceStateManager.getCaddyCertInstalled();
+    } catch (error) {
+      logger.error('Failed to get Caddy cert status', { error });
+      return false;
     }
-  );
+  });
 
   /**
    * Download Caddy SSL certificate
@@ -203,12 +200,25 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT, async () => {
     try {
       const { dialog } = await import('electron');
-      const { getFileFromContainer } = await import('@main/core/docker');
+      const { findContainerByLabel, getFileFromContainer } = await import('@main/core/docker');
       const { writeFileSync } = await import('node:fs');
+      const { LABEL_KEYS, RESOURCE_TYPES } = await import('@shared/constants/labels');
+      const { ServiceId } = await import('@shared/types/service');
 
-      // Get certificate from container
+      // Find Caddy container by label instead of hardcoded name
+      const caddyContainer = await findContainerByLabel(
+        LABEL_KEYS.SERVICE_ID,
+        ServiceId.Caddy,
+        RESOURCE_TYPES.SERVICE_CONTAINER
+      );
+
+      if (!caddyContainer) {
+        throw new Error('Caddy container not found. Please ensure Caddy is installed and running.');
+      }
+
+      // Get certificate from container using container ID
       const CADDY_ROOT_CERT_PATH = '/data/caddy/pki/authorities/local/root.crt';
-      const certBuffer = await getFileFromContainer('damp-web', CADDY_ROOT_CERT_PATH);
+      const certBuffer = await getFileFromContainer(caddyContainer.Id, CADDY_ROOT_CERT_PATH);
 
       // Show save dialog
       const result = await dialog.showSaveDialog(mainWindow, {

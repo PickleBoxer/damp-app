@@ -1,9 +1,9 @@
 /** Mutation hooks for service management */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ServiceId, PullProgress, InstallOptions, CustomConfig } from '@shared/types/service';
-import { useEffect, useState } from 'react';
 import { servicesKeys } from '@renderer/services';
+import type { InstallOptions, PullProgress, ServiceId } from '@shared/types/service';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 
 // Direct access to IPC API exposed via preload script
 const servicesApi = (globalThis as unknown as Window).services;
@@ -160,27 +160,6 @@ export function useRestartService() {
       void queryClient.invalidateQueries({
         queryKey: servicesKeys.containerState(serviceId),
       });
-    },
-  });
-}
-
-/** Updates service configuration */
-export function useUpdateServiceConfig() {
-  const queryClient = useQueryClient();
-
-  return useMutation<unknown, Error, { serviceId: ServiceId; customConfig: CustomConfig }>({
-    mutationFn: async ({ serviceId, customConfig }) => {
-      const result = await servicesApi.updateConfig(serviceId, customConfig);
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to update service configuration');
-      }
-      return result.data;
-    },
-    onSuccess: (data, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: servicesKeys.detail(variables.serviceId),
-      });
-      void queryClient.invalidateQueries({ queryKey: servicesKeys.list() });
     },
   });
 }

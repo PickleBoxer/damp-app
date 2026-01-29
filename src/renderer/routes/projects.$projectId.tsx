@@ -103,6 +103,7 @@ function ProjectDetailPage() {
   const stopNgrokMutation = useStopNgrokTunnel();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [removeFolder, setRemoveFolder] = useState(false);
+  const [removeVolume, setRemoveVolume] = useState(false);
   const [consoleExpanded, setConsoleExpanded] = useState(false);
   const [includeNodeModules, setIncludeNodeModules] = useState(false);
   const [includeVendor, setIncludeVendor] = useState(false);
@@ -268,7 +269,7 @@ function ProjectDetailPage() {
     deleteProjectMutation.mutate(
       {
         projectId: project.id,
-        removeVolume: false,
+        removeVolume,
         removeFolder,
       },
       {
@@ -280,6 +281,7 @@ function ProjectDetailPage() {
     );
     setShowDeleteDialog(false);
     setRemoveFolder(false);
+    setRemoveVolume(false);
   };
 
   const handleSyncFromVolume = () => {
@@ -1030,15 +1032,27 @@ function ProjectDetailPage() {
               This action cannot be undone. Choose what to delete:
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex items-center justify-center space-x-2">
-            <Checkbox
-              id="removeFolder"
-              checked={removeFolder}
-              onCheckedChange={(checked: boolean) => setRemoveFolder(checked === true)}
-            />
-            <Label htmlFor="removeFolder" className="cursor-pointer text-xs font-normal">
-              Delete project folder
-            </Label>
+          <div className="flex flex-col items-center justify-center gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="removeVolume"
+                checked={removeVolume}
+                onCheckedChange={(checked: boolean) => setRemoveVolume(checked === true)}
+              />
+              <Label htmlFor="removeVolume" className="cursor-pointer text-xs font-normal">
+                Delete Docker volume
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="removeFolder"
+                checked={removeFolder}
+                onCheckedChange={(checked: boolean) => setRemoveFolder(checked === true)}
+              />
+              <Label htmlFor="removeFolder" className="cursor-pointer text-xs font-normal">
+                Delete project folder
+              </Label>
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

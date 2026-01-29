@@ -1,18 +1,18 @@
-import { useEffect, useRef } from 'react';
 import { Button } from '@renderer/components/ui/button';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import type { ServiceInfo } from '@shared/types/service';
-import { useQuery } from '@tanstack/react-query';
 import { dockerStatusQueryOptions } from '@renderer/docker';
-import { serviceContainerStateQueryOptions } from '@renderer/services';
 import {
   useInstallService,
+  useRestartService,
   useStartService,
   useStopService,
-  useRestartService,
   useUninstallService,
 } from '@renderer/hooks/use-services';
+import { serviceContainerStateQueryOptions } from '@renderer/services';
+import type { ServiceInfo } from '@shared/types/service';
+import { useQuery } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 
 interface ServiceActionsProps {
   readonly service: ServiceInfo;
@@ -113,7 +113,7 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
     try {
       await uninstallMutation.mutateAsync({
         serviceId: service.id,
-        removeVolumes: false,
+        removeVolumes: true,
       });
       toast.success(`${service.display_name} uninstalled successfully`);
     } catch (error) {

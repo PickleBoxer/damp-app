@@ -7,9 +7,11 @@ import { getAllManagedContainers, removeContainer } from '@main/core/docker/cont
 import { docker } from '@main/core/docker/docker';
 import { getAllManagedVolumes, removeVolume } from '@main/core/docker/volume';
 import { projectStorage } from '@main/core/storage/project-storage';
-import { serviceStorage } from '@main/core/storage/service-storage';
 import { projectStateManager } from '@main/domains/projects/project-state-manager';
-import { getServiceDefinition } from '@main/domains/services/service-definitions';
+import {
+  getAllServiceDefinitions,
+  getServiceDefinition,
+} from '@main/domains/services/service-definitions';
 import { serviceStateManager } from '@main/domains/services/service-state-manager';
 import { createLogger } from '@main/utils/logger';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
@@ -86,7 +88,8 @@ async function getAllResources(): Promise<DockerResource[]> {
     ]);
 
     const projects = projectStorage.getAllProjects();
-    const serviceStates = serviceStorage.getAllServiceStates();
+    // Get all valid service IDs from definitions (Docker is source of truth for installed state)
+    const validServiceIds = new Set(getAllServiceDefinitions().map(def => def.id));
 
     const resources: DockerResource[] = [];
 
@@ -117,7 +120,8 @@ async function getAllResources(): Promise<DockerResource[]> {
           !projectStateManager.isPendingProject(projectId);
       } else if (type === RESOURCE_TYPES.SERVICE_CONTAINER && serviceId) {
         category = 'service';
-        isOrphan = !serviceStates[serviceId];
+        // Service is orphan if there's no valid service definition for this ID
+        isOrphan = !validServiceIds.has(serviceId);
 
         // Check if service definition has changed
         if (!isOrphan) {
@@ -264,6 +268,14 @@ async function hasServiceDefinitionChanged(
 
     return false;
   } catch (error) {
+    // Handle container not found (race condition when container was just deleted)
+    const statusCode = (error as { statusCode?: number }).statusCode;
+    if (statusCode === 404) {
+      logger.debug(
+        `Container for service ${serviceId} no longer exists, skipping definition check`
+      );
+      return false;
+    }
     logger.error(`Failed to check service definition changes for ${serviceId}`, { error });
     return false;
   }

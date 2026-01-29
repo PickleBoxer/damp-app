@@ -15,7 +15,6 @@ import type {
 import type { DockerResource } from './resource';
 import type { Result } from './result';
 import type {
-  CustomConfig,
   InstallOptions,
   PullProgress,
   ServiceDefinition,
@@ -118,10 +117,7 @@ export interface ServicesContext {
   startService: (serviceId: ServiceId) => Promise<Result<{ message: string }>>;
   stopService: (serviceId: ServiceId) => Promise<Result<{ message: string }>>;
   restartService: (serviceId: ServiceId) => Promise<Result<{ message: string }>>;
-  updateConfig: (
-    serviceId: ServiceId,
-    customConfig: CustomConfig
-  ) => Promise<Result<{ message: string }>>;
+  getCaddyCertInstalled: () => Promise<boolean>;
   downloadCaddyCertificate: () => Promise<{ success: boolean; path?: string; error?: string }>;
   listDatabases: (serviceId: ServiceId) => Promise<string[]>;
   dumpDatabase: (

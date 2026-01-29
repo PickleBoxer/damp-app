@@ -262,39 +262,9 @@ async function startEventMonitoring(
           containerEvent.serviceId &&
           containerEvent.resourceType === RESOURCE_TYPES.SERVICE_CONTAINER
         ) {
-          logger.info(
-            `Service container destroyed: ${containerEvent.serviceId}, checking if state update needed`
-          );
-
-          // Check if this is a real service (has definition) before updating storage
-          // This prevents test orphans from getting storage entries
-          Promise.all([
-            import('@main/domains/services/service-definitions'),
-            import('@main/core/storage/service-storage'),
-          ])
-            .then(([{ getServiceDefinition }, { serviceStorage }]) => {
-              const definition = getServiceDefinition(containerEvent.serviceId);
-
-              if (!definition) {
-                logger.debug(
-                  `Skipping state update for unknown service: ${containerEvent.serviceId} (likely a test orphan)`
-                );
-                return;
-              }
-
-              // Only clear state for real services with definitions
-              logger.info(`Clearing service state for real service: ${containerEvent.serviceId}`);
-              return serviceStorage.setServiceState(containerEvent.serviceId, {
-                id: containerEvent.serviceId,
-                custom_config: null,
-              });
-            })
-            .catch(error => {
-              logger.error('Failed to handle service container destruction', {
-                serviceId: containerEvent.serviceId,
-                error: error instanceof Error ? error.message : String(error),
-              });
-            });
+          logger.info(`Service container destroyed: ${containerEvent.serviceId}`);
+          // No storage update needed - Docker container state IS the source of truth
+          // The container no longer exists, which means the service is not installed
         }
 
         // Send event to renderer

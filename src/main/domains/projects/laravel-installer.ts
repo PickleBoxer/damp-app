@@ -3,7 +3,7 @@
  * Installs Laravel projects to Docker volumes using pickleboxer/laravel-installer
  */
 
-import { ensureImage } from '@main/core/docker';
+import { pullImage } from '@main/core/docker';
 import { createLogger } from '@main/utils/logger';
 import { buildHelperContainerLabels, HELPER_OPERATIONS } from '@shared/constants/labels';
 import type { LaravelInstallerOptions, VolumeCopyProgress } from '@shared/types/project';
@@ -83,7 +83,7 @@ async function flattenVolumeStructure(
     }
 
     // Ensure alpine image exists
-    await ensureImage('alpine:latest');
+    await pullImage('alpine:latest');
 
     // Create Alpine container to move files from /app/projectName to /app/
     const labels = buildHelperContainerLabels(
@@ -152,7 +152,7 @@ export async function installLaravelToVolume(
       });
     }
 
-    await ensureImage(INSTALLER_IMAGE);
+    await pullImage(INSTALLER_IMAGE, true);
 
     // Step 2: Run Laravel installer
     logger.info(`Installing Laravel project: ${projectName}`);
