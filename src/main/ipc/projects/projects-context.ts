@@ -3,13 +3,13 @@
  * Exposes project management APIs to the renderer process
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
 import type { ProjectsContext } from '@shared/types/ipc';
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   VolumeCopyProgress,
 } from '@shared/types/project';
+import { contextBridge, ipcRenderer } from 'electron';
 import * as CHANNELS from './projects-channels';
 
 /**
@@ -38,6 +38,9 @@ export function exposeProjectsContext(): void {
 
     getProjectContainerState: (projectId: string) =>
       ipcRenderer.invoke(CHANNELS.PROJECTS_GET_CONTAINER_STATE, projectId),
+
+    getBundledServiceEnv: (projectId: string, serviceId: string) =>
+      ipcRenderer.invoke(CHANNELS.PROJECTS_GET_BUNDLED_SERVICE_ENV, projectId, serviceId),
 
     onCopyProgress: callback => {
       const listener = (_event: unknown, projectId: string, progress: VolumeCopyProgress) => {

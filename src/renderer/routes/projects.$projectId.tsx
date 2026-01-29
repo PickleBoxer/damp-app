@@ -1,6 +1,7 @@
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectLogs, type ProjectLogsRef } from '@renderer/components/ProjectLogs';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';
+import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import {
   Accordion,
   AccordionContent,
@@ -21,6 +22,13 @@ import {
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@renderer/components/ui/dialog';
 import { Input } from '@renderer/components/ui/input';
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
 import { Label } from '@renderer/components/ui/label';
@@ -59,6 +67,7 @@ import {
   FolderOpen,
   Globe,
   Loader2,
+  Package,
   Sparkles,
   Terminal,
   Trash2,
@@ -97,6 +106,7 @@ function ProjectDetailPage() {
   const [consoleExpanded, setConsoleExpanded] = useState(false);
   const [includeNodeModules, setIncludeNodeModules] = useState(false);
   const [includeVendor, setIncludeVendor] = useState(false);
+  const [selectedService, setSelectedService] = useState<ServiceId | null>(null);
   const projectLogsRef = useRef<ProjectLogsRef>(null);
 
   // Close console and clear logs when navigating to a different project
@@ -172,6 +182,29 @@ function ProjectDetailPage() {
       return { name: 'Adminer', subdomain: 'adminer' };
     }
     return null;
+  };
+
+  // Helper to get service display name
+  const getServiceDisplayName = (serviceId: ServiceId): string => {
+    const names: Record<ServiceId, string> = {
+      [ServiceId.MariaDB]: 'MariaDB',
+      [ServiceId.MySQL]: 'MySQL',
+      [ServiceId.PostgreSQL]: 'PostgreSQL',
+      [ServiceId.MongoDB]: 'MongoDB',
+      [ServiceId.Redis]: 'Redis',
+      [ServiceId.PhpMyAdmin]: 'phpMyAdmin',
+      [ServiceId.Adminer]: 'Adminer',
+      [ServiceId.Mailpit]: 'Mailpit',
+      [ServiceId.Caddy]: 'Caddy',
+      [ServiceId.Meilisearch]: 'Meilisearch',
+      [ServiceId.MinIO]: 'MinIO',
+      [ServiceId.Memcached]: 'Memcached',
+      [ServiceId.RabbitMQ]: 'RabbitMQ',
+      [ServiceId.Typesense]: 'Typesense',
+      [ServiceId.Valkey]: 'Valkey',
+      [ServiceId.RustFS]: 'RustFS',
+    };
+    return names[serviceId] || serviceId;
   };
 
   const databaseAdminTool = getDatabaseAdminTool();
@@ -486,6 +519,40 @@ function ProjectDetailPage() {
                     </Badge>
                   </div>
                 </div>
+
+                {/* Bundled Services Section */}
+                {project.bundledServices && project.bundledServices.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="text-muted-foreground h-4 w-4" />
+                      <h3 className="text-sm font-medium">Bundled Services</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {project.bundledServices.map(service => (
+                        <button
+                          key={service.serviceId}
+                          onClick={() => setSelectedService(service.serviceId)}
+                          className="hover:bg-accent flex w-full items-center justify-between border p-3 text-left transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <ServiceIcon serviceId={service.serviceId} className="h-6 w-6" />
+                            <div>
+                              <p className="text-foreground text-sm font-medium">
+                                {getServiceDisplayName(service.serviceId)}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                Click to view credentials
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            Configured
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Configuration and PHP Extensions */}
                 <Accordion key={project.id} type="single" collapsible>
@@ -981,6 +1048,137 @@ function ProjectDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Bundled Service Credentials Dialog */}
+      <Dialog
+        open={selectedService !== null}
+        onOpenChange={open => !open && setSelectedService(null)}
+      >
+        <DialogContent className="max-w-md select-none">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedService && getServiceDisplayName(selectedService)} Credentials
+            </DialogTitle>
+            <DialogDescription>Connection details for this bundled service</DialogDescription>
+          </DialogHeader>
+          {selectedService && (
+            <ServiceCredentialsView projectId={project.id} serviceId={selectedService} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// Component to fetch and display service credentials
+function ServiceCredentialsView({
+  projectId,
+  serviceId,
+}: Readonly<{
+  projectId: string;
+  serviceId: ServiceId;
+}>) {
+  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCredentials = async () => {
+      setLoading(true);
+      try {
+        const envVars = await window.projects.getBundledServiceEnv(projectId, serviceId);
+        const project = await window.projects.getProject(projectId);
+        if (!project) return;
+
+        const creds: Record<string, string> = {};
+
+        // Database services
+        if ([ServiceId.MySQL, ServiceId.MariaDB].includes(serviceId)) {
+          creds.host = `${project.name}-${serviceId}`;
+          creds.port = envVars.MYSQL_TCP_PORT || '3306';
+          creds.database = envVars.MYSQL_DATABASE || 'development';
+          creds.username = envVars.MYSQL_USER || 'developer';
+          creds.password = envVars.MYSQL_PASSWORD || 'developer';
+          creds.rootPassword = envVars.MYSQL_ROOT_PASSWORD || 'root';
+        } else if (serviceId === ServiceId.PostgreSQL) {
+          creds.host = `${project.name}-postgresql`;
+          creds.port = envVars.PGPORT || '5432';
+          creds.database = envVars.POSTGRES_DB || 'postgres';
+          creds.username = envVars.POSTGRES_USER || 'postgres';
+          creds.password = envVars.POSTGRES_PASSWORD || 'postgres';
+        } else if (serviceId === ServiceId.MongoDB) {
+          creds.host = `${project.name}-mongodb`;
+          creds.port = '27017';
+          creds.username = envVars.MONGO_INITDB_ROOT_USERNAME || 'root';
+          creds.password = envVars.MONGO_INITDB_ROOT_PASSWORD || 'root';
+        } else if (serviceId === ServiceId.Redis) {
+          creds.host = `${project.name}-redis`;
+          creds.port = '6379';
+        } else if (serviceId === ServiceId.PhpMyAdmin) {
+          creds.url = `http://phpmyadmin.${project.domain.replace(/^https?:\/\//, '')}`;
+        } else if (serviceId === ServiceId.Adminer) {
+          creds.url = `http://adminer.${project.domain.replace(/^https?:\/\//, '')}`;
+        } else if (serviceId === ServiceId.Mailpit) {
+          creds.smtp = `${project.name}-mailpit:1025`;
+          creds.webUI = `http://mailpit.${project.domain.replace(/^https?:\/\//, '')}`;
+        } else {
+          // Fallback for services without explicit credential mapping:
+          // expose raw env vars so the dialog is not empty.
+          Object.entries(envVars).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              creds[key] = value;
+            }
+          });
+          if (Object.keys(creds).length === 0) {
+            creds.message = 'Credentials not available for this service yet.';
+          }
+        }
+
+        setCredentials(creds);
+      } catch (error) {
+        console.error('Failed to fetch service credentials:', error);
+        toast.error('Failed to fetch service credentials');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCredentials();
+  }, [projectId, serviceId]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {Object.entries(credentials).map(([key, value]) => (
+        <div key={key} className="space-y-1.5">
+          <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, ' $1')}</Label>
+          <div className="flex gap-2">
+            <Input value={value} readOnly className="h-9 font-mono text-xs" />
+            <Button
+              size="icon"
+              variant="outline"
+              className="h-9 w-9 shrink-0"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(value);
+                  toast.success(`${key} copied to clipboard`);
+                } catch (error) {
+                  console.error('Failed to copy to clipboard', error);
+                  toast.error('Failed to copy to clipboard');
+                }
+              }}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
