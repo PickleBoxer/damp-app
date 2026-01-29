@@ -546,7 +546,7 @@ function ProjectDetailPage() {
                             </div>
                           </div>
                           <Badge variant="secondary" className="text-xs">
-                            Active
+                            Configured
                           </Badge>
                         </button>
                       ))}
@@ -1120,6 +1120,17 @@ function ServiceCredentialsView({
         } else if (serviceId === ServiceId.Mailpit) {
           creds.smtp = `${project.name}-mailpit:1025`;
           creds.webUI = `http://mailpit.${project.domain.replace(/^https?:\/\//, '')}`;
+        } else {
+          // Fallback for services without explicit credential mapping:
+          // expose raw env vars so the dialog is not empty.
+          Object.entries(envVars).forEach(([key, value]) => {
+            if (typeof value === 'string') {
+              creds[key] = value;
+            }
+          });
+          if (Object.keys(creds).length === 0) {
+            creds.message = 'Credentials not available for this service yet.';
+          }
         }
 
         setCredentials(creds);
@@ -1153,9 +1164,14 @@ function ServiceCredentialsView({
               size="icon"
               variant="outline"
               className="h-9 w-9 shrink-0"
-              onClick={() => {
-                navigator.clipboard.writeText(value);
-                toast.success(`${key} copied to clipboard`);
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(value);
+                  toast.success(`${key} copied to clipboard`);
+                } catch (error) {
+                  console.error('Failed to copy to clipboard', error);
+                  toast.error('Failed to copy to clipboard');
+                }
               }}
             >
               <Copy className="h-4 w-4" />

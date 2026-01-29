@@ -1292,7 +1292,7 @@ class ProjectStateManager {
       return envVars;
     } catch (error) {
       logger.error('Failed to get bundled service env', { projectId, serviceId, error });
-      return {};
+      throw error;
     }
   }
 }

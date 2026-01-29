@@ -153,7 +153,10 @@ export interface ProjectsContext {
   reorderProjects: (projectIds: string[]) => Promise<Result<void>>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
   getProjectContainerState: (projectId: string) => Promise<ContainerState | null>;
-  getBundledServiceEnv: (projectId: string, serviceId: string) => Promise<Record<string, string>>;
+  getBundledServiceEnv: (
+    projectId: string,
+    serviceId: ServiceId
+  ) => Promise<Record<string, string>>;
   onCopyProgress: (
     callback: (projectId: string, progress: VolumeCopyProgress) => void
   ) => () => void;
