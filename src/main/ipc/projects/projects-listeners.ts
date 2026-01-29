@@ -3,16 +3,16 @@
  * Handles all project-related IPC calls from renderer process
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
-import { z } from 'zod';
+import { projectStateManager } from '@main/domains/projects/project-state-manager';
+import { createLogger } from '@main/utils/logger';
 import type {
   CreateProjectInput,
   UpdateProjectInput,
   VolumeCopyProgress,
 } from '@shared/types/project';
-import { projectStateManager } from '@main/domains/projects/project-state-manager';
+import { BrowserWindow, ipcMain } from 'electron';
+import { z } from 'zod';
 import * as CHANNELS from './projects-channels';
-import { createLogger } from '@main/utils/logger';
 
 const logger = createLogger('projects-ipc');
 
@@ -167,4 +167,20 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       throw error;
     }
   });
+
+  /**
+   * Get bundled service environment variables
+   */
+  ipcMain.handle(
+    CHANNELS.PROJECTS_GET_BUNDLED_SERVICE_ENV,
+    async (_event, projectId: string, serviceId: string) => {
+      try {
+        await ensureInitialized();
+        return await projectStateManager.getBundledServiceEnv(projectId, serviceId);
+      } catch (error) {
+        logger.error('Failed to get bundled service env', { projectId, serviceId, error });
+        throw error;
+      }
+    }
+  );
 }

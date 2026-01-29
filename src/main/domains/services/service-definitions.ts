@@ -457,7 +457,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       volumes: [],
       environment_vars: [
         'PMA_HOST=mysql', // Will be overridden based on linked database
-        'PMA_ARBITRARY=0',
+        'PMA_ARBITRARY=1',
         'UPLOAD_LIMIT=100M',
       ],
       data_volume: null,

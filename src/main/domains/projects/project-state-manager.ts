@@ -9,6 +9,7 @@ import {
   getContainerStateByLabel,
   removeVolume as removeDockerVolume,
 } from '@main/core/docker';
+import { docker } from '@main/core/docker/docker';
 import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
 import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 import { projectStorage } from '@main/core/storage/project-storage';
@@ -1249,6 +1250,49 @@ class ProjectStateManager {
         ports: [],
         health_status: 'none',
       };
+    }
+  }
+
+  /**
+   * Get environment variables from a bundled service container
+   */
+  async getBundledServiceEnv(
+    projectId: string,
+    serviceId: string
+  ): Promise<Record<string, string>> {
+    try {
+      const project = await this.getProject(projectId);
+      if (!project) {
+        throw new Error(`Project ${projectId} not found`);
+      }
+
+      // Build container name: {project-name}-{service-name}
+      const serviceDef = getServiceDefinition(serviceId as ServiceId);
+      if (!serviceDef) {
+        throw new Error(`Service ${serviceId} not found`);
+      }
+
+      const containerName = `${project.name}-${serviceDef.name}`;
+
+      // Get container inspect data
+      const container = docker.getContainer(containerName);
+      const inspect = await container.inspect();
+
+      // Extract environment variables
+      const envVars: Record<string, string> = {};
+      if (inspect.Config?.Env) {
+        for (const envPair of inspect.Config.Env) {
+          const [key, ...valueParts] = envPair.split('=');
+          if (key) {
+            envVars[key] = valueParts.join('=');
+          }
+        }
+      }
+
+      return envVars;
+    } catch (error) {
+      logger.error('Failed to get bundled service env', { projectId, serviceId, error });
+      return {};
     }
   }
 }

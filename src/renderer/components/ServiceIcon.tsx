@@ -1,20 +1,22 @@
-import ValkeyIcon from '@renderer/assets/valkey';
-import TypesenseIcon from '@renderer/assets/typesense';
 import MailpitIcon from '@renderer/assets/mailpit';
 import MemcachedIcon from '@renderer/assets/memcached';
+import TypesenseIcon from '@renderer/assets/typesense';
+import ValkeyIcon from '@renderer/assets/valkey';
+import { Database } from 'lucide-react';
 import React from 'react';
+import { FaQuestionCircle } from 'react-icons/fa';
 import {
   SiCaddy,
-  SiMysql,
-  SiPostgresql,
   SiMariadb,
-  SiMongodb,
-  SiRedis,
   SiMeilisearch,
   SiMinio,
+  SiMongodb,
+  SiMysql,
+  SiPhpmyadmin,
+  SiPostgresql,
   SiRabbitmq,
+  SiRedis,
 } from 'react-icons/si';
-import { FaQuestionCircle } from 'react-icons/fa';
 
 interface ServiceIconProps {
   serviceId: string;
@@ -35,6 +37,8 @@ const serviceColors: Record<string, string> = {
   rabbitmq: '#FF6600',
   typesense: '#FF2B6A',
   valkey: '#00B2B2',
+  phpmyadmin: '#FF8C00',
+  adminer: '#8B4789',
 };
 
 const iconMap: Record<
@@ -50,6 +54,7 @@ const iconMap: Record<
   meilisearch: SiMeilisearch,
   minio: SiMinio,
   rabbitmq: SiRabbitmq,
+  phpmyadmin: SiPhpmyadmin,
 };
 
 export function ServiceIcon({ serviceId, className = 'w-10 h-10' }: Readonly<ServiceIconProps>) {
@@ -69,6 +74,9 @@ export function ServiceIcon({ serviceId, className = 'w-10 h-10' }: Readonly<Ser
       break;
     case 'mailpit':
       IconComponent = MailpitIcon;
+      break;
+    case 'adminer':
+      IconComponent = Database;
       break;
     default:
       IconComponent = iconMap[serviceId] || FaQuestionCircle;
