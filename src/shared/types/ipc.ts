@@ -119,14 +119,16 @@ export interface ServicesContext {
   restartService: (serviceId: ServiceId) => Promise<Result<{ message: string }>>;
   getCaddyCertInstalled: () => Promise<boolean>;
   downloadCaddyCertificate: () => Promise<{ success: boolean; path?: string; error?: string }>;
-  listDatabases: (serviceId: ServiceId) => Promise<string[]>;
+  listDatabases: (serviceId: ServiceId, projectId?: string) => Promise<string[]>;
   dumpDatabase: (
     serviceId: ServiceId,
-    databaseName: string
+    databaseName: string,
+    projectId?: string
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   restoreDatabase: (
     serviceId: ServiceId,
-    databaseName: string
+    databaseName: string,
+    projectId?: string
   ) => Promise<{ success: boolean; error?: string }>;
   onInstallProgress: (
     callback: (serviceId: ServiceId, progress: PullProgress) => void

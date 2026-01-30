@@ -21,28 +21,44 @@ const logger = createLogger('Container');
 /**
  * Pull Docker image with configurable options
  * - By default, only pulls if image doesn't exist locally
- * - Automatically forces pull for :latest tags
- * - Use force=true to always pull regardless of tag
+ * - Automatically forces pull for :latest tags if image is older than a week
+ * - Use force=true to always pull regardless of tag or age
  *
  * @param imageName Docker image name (e.g., 'alpine:latest', 'mysql:8.0')
- * @param force Force pull even if image exists (auto-enabled for :latest tags)
+ * @param force Force pull even if image exists (overrides age check)
  */
 export async function pullImage(imageName: string, force?: boolean): Promise<void> {
   // Auto-force for :latest tags (or images without explicit tag, which default to latest)
   const isLatestTag = imageName.endsWith(':latest') || !imageName.includes(':');
-  const shouldForce = force ?? isLatestTag;
 
   try {
-    // Check if image already exists (skip if force=true)
-    if (!shouldForce) {
-      const images = await docker.listImages({
-        filters: { reference: [imageName] },
-      });
+    // Check if image already exists
+    const images = await docker.listImages({
+      filters: { reference: [imageName] },
+    });
 
-      if (images.length > 0) {
-        logger.debug(`Image ${imageName} already exists locally`);
+    const imageExists = images.length > 0;
+
+    // Determine if we should force pull
+    let shouldForce = force ?? false;
+
+    if (isLatestTag && imageExists && !force) {
+      // For latest tags, check if image is older than a week
+      const image = images[0];
+      const createdTimestamp = image.Created * 1000; // Convert to milliseconds
+      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+      if (createdTimestamp < oneWeekAgo) {
+        shouldForce = true;
+        logger.info(`Image ${imageName} is older than a week, forcing pull`);
+      } else {
+        logger.debug(`Image ${imageName} is less than a week old, skipping pull`);
         return;
       }
+    } else if (!shouldForce && imageExists) {
+      // Non-latest tag or force not specified: skip if exists
+      logger.debug(`Image ${imageName} already exists locally`);
+      return;
     }
 
     logger.info(`Pulling image ${imageName}${shouldForce ? ' (forced)' : ''}...`);

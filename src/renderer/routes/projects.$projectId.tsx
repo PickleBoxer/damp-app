@@ -1,3 +1,4 @@
+import { DatabaseOperations } from '@renderer/components/DatabaseOperations';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectLogs, type ProjectLogsRef } from '@renderer/components/ProjectLogs';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';
@@ -554,6 +555,21 @@ function ProjectDetailPage() {
                       ))}
                     </div>
                   </div>
+                )}
+
+                {/* Database Operations for Bundled Database Services */}
+                {project.bundledServices && project.bundledServices.length > 0 && (
+                  <>
+                    {project.bundledServices.map(service => (
+                      <DatabaseOperations
+                        key={service.serviceId}
+                        serviceId={service.serviceId}
+                        projectId={project.id}
+                        isRunning={isRunning}
+                        healthStatus={containerState?.health_status || 'none'}
+                      />
+                    ))}
+                  </>
                 )}
 
                 {/* Configuration and PHP Extensions */}
