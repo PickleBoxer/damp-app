@@ -385,8 +385,8 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
           await restoreDatabase(
             validatedServiceId,
             validatedDatabaseName,
-            dumpData,
-            validatedProjectId
+            validatedProjectId,
+            dumpData
           );
 
           return { success: true };

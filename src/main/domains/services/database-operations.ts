@@ -223,8 +223,8 @@ function getRestoreCommand(
 export async function restoreDatabase(
   serviceId: ServiceId,
   databaseName: string,
-  dumpData: Buffer,
-  projectId?: string
+  projectId: string | undefined,
+  dumpData: Buffer
 ): Promise<void> {
   const sanitizedDbName = sanitizeDatabaseName(databaseName);
   const containerId = await getServiceContainerId(serviceId, projectId);

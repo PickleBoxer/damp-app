@@ -68,6 +68,7 @@ export function DatabaseOperations({
     setIsLoading(false);
     setIsDumping(false);
     setIsRestoring(false);
+    setIsExpanded(false);
   }, [currentServiceId, projectId]);
 
   // Check if service supports database operations

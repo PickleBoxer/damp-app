@@ -3,6 +3,7 @@
  * Handles all container lifecycle and execution operations
  */
 
+import { appSettingsStorage } from '@main/core/storage/app-settings-storage';
 import { createLogger } from '@main/utils/logger';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
@@ -18,10 +19,13 @@ import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
 
 const logger = createLogger('Container');
 
+/** One week in milliseconds */
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * Pull Docker image with configurable options
  * - By default, only pulls if image doesn't exist locally
- * - Automatically forces pull for :latest tags if image is older than a week
+ * - Automatically forces pull for :latest tags if last pull was over a week ago
  * - Use force=true to always pull regardless of tag or age
  *
  * @param imageName Docker image name (e.g., 'alpine:latest', 'mysql:8.0')
@@ -43,16 +47,19 @@ export async function pullImage(imageName: string, force?: boolean): Promise<voi
     let shouldForce = force ?? false;
 
     if (isLatestTag && imageExists && !force) {
-      // For latest tags, check if image is older than a week
-      const image = images[0];
-      const createdTimestamp = image.Created * 1000; // Convert to milliseconds
-      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      // For latest tags, check when we last pulled this image (not image build time)
+      const lastPullTime = appSettingsStorage.getImageLastPullTime(imageName);
+      const oneWeekAgo = Date.now() - ONE_WEEK_MS;
 
-      if (createdTimestamp < oneWeekAgo) {
+      if (lastPullTime === null) {
+        // Never tracked - pull to establish baseline and record the time
         shouldForce = true;
-        logger.info(`Image ${imageName} is older than a week, forcing pull`);
+        logger.info(`Image ${imageName} pull time unknown, pulling to establish baseline`);
+      } else if (lastPullTime < oneWeekAgo) {
+        shouldForce = true;
+        logger.info(`Image ${imageName} was last pulled over a week ago, forcing pull`);
       } else {
-        logger.debug(`Image ${imageName} is less than a week old, skipping pull`);
+        logger.debug(`Image ${imageName} was pulled recently, skipping pull`);
         return;
       }
     } else if (!shouldForce && imageExists) {
@@ -70,10 +77,12 @@ export async function pullImage(imageName: string, force?: boolean): Promise<voi
           return;
         }
 
-        docker.modem.followProgress(stream, err => {
+        docker.modem.followProgress(stream, async err => {
           if (err) {
             reject(new Error(`Failed to pull image ${imageName}: ${err.message}`));
           } else {
+            // Record the pull time for future age checks
+            await appSettingsStorage.setImageLastPullTime(imageName);
             logger.info(`Successfully pulled image ${imageName}`);
             resolve();
           }
