@@ -16,6 +16,8 @@ const logger = createLogger('AppSettingsStorage');
 export interface AppSettings {
   /** Whether Caddy SSL certificate has been installed on host */
   caddyCertInstalled: boolean;
+  /** Timestamps of when Docker images were last pulled (imageName -> timestamp) */
+  imagePullTimes: Record<string, number>;
   /** Storage schema version for future migrations */
   version: string;
   /** Last update timestamp */
@@ -24,6 +26,7 @@ export interface AppSettings {
 
 const DEFAULT_SETTINGS: AppSettings = {
   caddyCertInstalled: false,
+  imagePullTimes: {},
   version: '1.0.0',
   lastUpdated: Date.now(),
 };
@@ -121,6 +124,32 @@ class AppSettingsStorage {
     this.settings = { ...DEFAULT_SETTINGS, lastUpdated: Date.now() };
     await this.save();
     logger.info('App settings reset to defaults');
+  }
+
+  /**
+   * Get the last pull time for a Docker image
+   * @returns Timestamp in milliseconds, or null if never pulled
+   */
+  getImageLastPullTime(imageName: string): number | null {
+    this.ensureInitialized();
+    // Ensure imagePullTimes exists (for older settings files)
+    if (!this.settings!.imagePullTimes) {
+      this.settings!.imagePullTimes = {};
+    }
+    return this.settings!.imagePullTimes[imageName] ?? null;
+  }
+
+  /**
+   * Record that an image was pulled
+   */
+  async setImageLastPullTime(imageName: string, timestamp = Date.now()): Promise<void> {
+    this.ensureInitialized();
+    // Ensure imagePullTimes exists (for older settings files)
+    if (!this.settings!.imagePullTimes) {
+      this.settings!.imagePullTimes = {};
+    }
+    this.settings!.imagePullTimes[imageName] = timestamp;
+    await this.save();
   }
 }
 

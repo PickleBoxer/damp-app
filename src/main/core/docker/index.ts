@@ -13,11 +13,11 @@ export { checkNetworkExists, ensureNetworkExists } from './network';
 export {
   createContainer,
   execCommand,
-  findContainerByLabel,
+  findContainerByLabels,
   getAllManagedContainers,
   getContainerHostPort,
   getContainerState,
-  getContainerStateByLabel,
+  getContainerStateByLabels,
   getFileFromContainer,
   isContainerRunning,
   pullImage,

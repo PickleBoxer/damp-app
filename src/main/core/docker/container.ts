@@ -3,6 +3,7 @@
  * Handles all container lifecycle and execution operations
  */
 
+import { appSettingsStorage } from '@main/core/storage/app-settings-storage';
 import { createLogger } from '@main/utils/logger';
 import { DAMP_NETWORK_NAME } from '@shared/constants/docker';
 import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
@@ -18,31 +19,53 @@ import { ensureVolumesExist, getVolumeNamesFromBindings } from './volume';
 
 const logger = createLogger('Container');
 
+/** One week in milliseconds */
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * Pull Docker image with configurable options
  * - By default, only pulls if image doesn't exist locally
- * - Automatically forces pull for :latest tags
- * - Use force=true to always pull regardless of tag
+ * - Automatically forces pull for :latest tags if last pull was over a week ago
+ * - Use force=true to always pull regardless of tag or age
  *
  * @param imageName Docker image name (e.g., 'alpine:latest', 'mysql:8.0')
- * @param force Force pull even if image exists (auto-enabled for :latest tags)
+ * @param force Force pull even if image exists (overrides age check)
  */
 export async function pullImage(imageName: string, force?: boolean): Promise<void> {
   // Auto-force for :latest tags (or images without explicit tag, which default to latest)
   const isLatestTag = imageName.endsWith(':latest') || !imageName.includes(':');
-  const shouldForce = force ?? isLatestTag;
 
   try {
-    // Check if image already exists (skip if force=true)
-    if (!shouldForce) {
-      const images = await docker.listImages({
-        filters: { reference: [imageName] },
-      });
+    // Check if image already exists
+    const images = await docker.listImages({
+      filters: { reference: [imageName] },
+    });
 
-      if (images.length > 0) {
-        logger.debug(`Image ${imageName} already exists locally`);
+    const imageExists = images.length > 0;
+
+    // Determine if we should force pull
+    let shouldForce = force ?? false;
+
+    if (isLatestTag && imageExists && !force) {
+      // For latest tags, check when we last pulled this image (not image build time)
+      const lastPullTime = appSettingsStorage.getImageLastPullTime(imageName);
+      const oneWeekAgo = Date.now() - ONE_WEEK_MS;
+
+      if (lastPullTime === null) {
+        // Never tracked - pull to establish baseline and record the time
+        shouldForce = true;
+        logger.info(`Image ${imageName} pull time unknown, pulling to establish baseline`);
+      } else if (lastPullTime < oneWeekAgo) {
+        shouldForce = true;
+        logger.info(`Image ${imageName} was last pulled over a week ago, forcing pull`);
+      } else {
+        logger.debug(`Image ${imageName} was pulled recently, skipping pull`);
         return;
       }
+    } else if (!shouldForce && imageExists) {
+      // Non-latest tag or force not specified: skip if exists
+      logger.debug(`Image ${imageName} already exists locally`);
+      return;
     }
 
     logger.info(`Pulling image ${imageName}${shouldForce ? ' (forced)' : ''}...`);
@@ -54,10 +77,12 @@ export async function pullImage(imageName: string, force?: boolean): Promise<voi
           return;
         }
 
-        docker.modem.followProgress(stream, err => {
+        docker.modem.followProgress(stream, async err => {
           if (err) {
             reject(new Error(`Failed to pull image ${imageName}: ${err.message}`));
           } else {
+            // Record the pull time for future age checks
+            await appSettingsStorage.setImageLastPullTime(imageName);
             logger.info(`Successfully pulled image ${imageName}`);
             resolve();
           }
@@ -291,43 +316,35 @@ export async function getContainerState(containerNameOrId: string): Promise<Cont
 }
 
 /**
- * Generic method to find container by any label key-value pair
- * Works for projects, services, helpers, and ngrok tunnels
+ * Base function to find container by multiple label filters
+ * This is the foundational function for all label-based container lookups
+ * @param labels - Array of label filters in "key=value" format
+ * @returns Container info or null if not found
  */
-export async function findContainerByLabel(
-  labelKey: string,
-  labelValue: string,
-  resourceType?: string
+export async function findContainerByLabels(
+  labels: string[]
 ): Promise<Docker.ContainerInfo | null> {
   try {
-    const filters: string[] = [`${labelKey}=${labelValue}`];
-
-    if (resourceType) {
-      filters.push(`${LABEL_KEYS.TYPE}=${resourceType}`);
-    }
-
     const containers = await docker.listContainers({
       all: true,
-      filters: { label: filters },
+      filters: { label: labels },
     });
 
     return containers[0] || null;
   } catch (error) {
-    logger.error('Failed to find container by label', { labelKey, labelValue, error });
+    logger.error('Failed to find container by labels', { labels, error });
     return null;
   }
 }
 
 /**
- * Get container state by label (combines find + inspect in 1 operation)
- * More efficient than calling findContainerByLabel + getContainerState separately
+ * Get container state by labels (combines find + inspect in 1 operation)
+ * More efficient than calling findContainerByLabels + getContainerState separately
+ * @param labels - Array of label filters in "key=value" format
+ * @returns Container state
  */
-export async function getContainerStateByLabel(
-  labelKey: string,
-  labelValue: string,
-  resourceType?: string
-): Promise<ContainerState> {
-  const containerInfo = await findContainerByLabel(labelKey, labelValue, resourceType);
+export async function getContainerStateByLabels(labels: string[]): Promise<ContainerState> {
+  const containerInfo = await findContainerByLabels(labels);
 
   if (!containerInfo) {
     return {
@@ -421,7 +438,6 @@ export async function getContainerHostPort(
 export async function getAllManagedContainers(): Promise<{
   projects: Docker.ContainerInfo[];
   services: Docker.ContainerInfo[];
-  bundled: Docker.ContainerInfo[];
   helpers: Docker.ContainerInfo[];
   ngrok: Docker.ContainerInfo[];
 }> {
@@ -440,9 +456,6 @@ export async function getAllManagedContainers(): Promise<{
       services: containers.filter(
         c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.SERVICE_CONTAINER
       ),
-      bundled: containers.filter(
-        c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER
-      ),
       helpers: containers.filter(
         c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.HELPER_CONTAINER
       ),
@@ -450,7 +463,7 @@ export async function getAllManagedContainers(): Promise<{
     };
   } catch (error) {
     logger.error('Failed to get all managed containers', { error });
-    return { projects: [], services: [], bundled: [], helpers: [], ngrok: [] };
+    return { projects: [], services: [], helpers: [], ngrok: [] };
   }
 }
 

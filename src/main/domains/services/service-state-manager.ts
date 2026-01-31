@@ -7,7 +7,6 @@
 import { BaseStateManager } from '@main/core/base-state-manager';
 import {
   createContainer,
-  getContainerStateByLabel,
   getVolumeNamesFromBindings,
   isDockerAvailable,
   pullImage,
@@ -20,16 +19,12 @@ import {
 } from '@main/core/docker';
 import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 import { appSettingsStorage } from '@main/core/storage/app-settings-storage';
-import {
-  buildServiceContainerLabels,
-  buildServiceVolumeLabels,
-  LABEL_KEYS,
-  RESOURCE_TYPES,
-} from '@shared/constants/labels';
+import { buildServiceContainerLabels, buildServiceVolumeLabels } from '@shared/constants/labels';
 import type { ContainerState, PortMapping } from '@shared/types/container';
 import type { Result } from '@shared/types/result';
 import type { InstallOptions, ServiceDefinition, ServiceInfo } from '@shared/types/service';
 import { ServiceId } from '@shared/types/service';
+import { getServiceContainerState } from './container';
 import {
   getAllServiceDefinitions,
   getServiceDefinition,
@@ -75,11 +70,7 @@ class ServiceStateManager extends BaseStateManager {
     }
 
     try {
-      return await getContainerStateByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        serviceId,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      return await getServiceContainerState(serviceId);
     } catch (error) {
       this.logger.error('Failed to get service container state', { serviceId, error });
       return {
@@ -188,22 +179,14 @@ class ServiceStateManager extends BaseStateManager {
       }
 
       // Get actual port mappings after creation using label-based lookup
-      const containerState = await getContainerStateByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        serviceId,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      const containerState = await getServiceContainerState(serviceId);
 
       // Run post-install hook if defined
       const postInstallHook = POST_INSTALL_HOOKS[serviceId];
       if (postInstallHook) {
         try {
           // Ensure container is running before executing hook
-          const currentStatus = await getContainerStateByLabel(
-            LABEL_KEYS.SERVICE_ID,
-            serviceId,
-            RESOURCE_TYPES.SERVICE_CONTAINER
-          );
+          const currentStatus = await getServiceContainerState(serviceId);
 
           if (currentStatus?.exists && currentStatus.container_id && !currentStatus.running) {
             this.logger.info(`Starting container for post-install hook...`);
@@ -277,11 +260,7 @@ class ServiceStateManager extends BaseStateManager {
       }
 
       // Check if container exists in Docker using label-based lookup
-      const containerState = await getContainerStateByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        serviceId,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      const containerState = await getServiceContainerState(serviceId);
       if (!containerState?.exists) {
         return {
           success: false,
@@ -343,11 +322,7 @@ class ServiceStateManager extends BaseStateManager {
         };
       }
 
-      const containerState = await getContainerStateByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        serviceId,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      const containerState = await getServiceContainerState(serviceId);
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -405,11 +380,7 @@ class ServiceStateManager extends BaseStateManager {
         };
       }
 
-      const containerState = await getContainerStateByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        serviceId,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      const containerState = await getServiceContainerState(serviceId);
 
       if (!containerState?.exists || !containerState.container_id) {
         return {
@@ -457,11 +428,7 @@ class ServiceStateManager extends BaseStateManager {
         };
       }
 
-      const containerState = await getContainerStateByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        serviceId,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      const containerState = await getServiceContainerState(serviceId);
 
       if (!containerState?.exists || !containerState.container_id) {
         return {

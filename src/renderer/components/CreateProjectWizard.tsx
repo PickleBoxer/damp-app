@@ -312,7 +312,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={`[&>button:hover]:!bg-destructive/10 [&>button:hover]:!text-destructive max-w-2xl select-none sm:max-w-lg [&>button]:size-8 ${showTerminal ? 'gap-0 p-0 [&>button]:top-1' : ''}`}
+        className={`[&>button:hover]:!bg-destructive/10 [&>button:hover]:!text-destructive max-w-2xl select-none sm:max-w-lg [&>button]:size-8 ${showTerminal ? 'gap-0 p-0 [&>button]:top-0 [&>button]:right-0' : ''}`}
         onEscapeKeyDown={e => isCreating && e.preventDefault()}
         onInteractOutside={e => e.preventDefault()}
       >

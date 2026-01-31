@@ -52,7 +52,6 @@ export const RESOURCE_TYPES = {
   SERVICE_VOLUME: 'service-volume',
   PROJECT_CONTAINER: 'project-container',
   PROJECT_VOLUME: 'project-volume',
-  BUNDLED_SERVICE_CONTAINER: 'bundled-service',
   HELPER_CONTAINER: 'helper-container',
   NGROK_TUNNEL: 'ngrok-tunnel',
   NETWORK: 'network',
@@ -149,6 +148,7 @@ export function buildProjectVolumeLabels(
 
 /**
  * Build labels for bundled service containers (embedded in project docker-compose)
+ * Uses same SERVICE_CONTAINER type as standalone services, but includes PROJECT_ID
  */
 export function buildBundledServiceContainerLabels(
   projectId: string,
@@ -167,7 +167,7 @@ export function buildBundledServiceContainerLabels(
 
   return {
     [LABEL_KEYS.MANAGED]: 'true',
-    [LABEL_KEYS.TYPE]: RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER,
+    [LABEL_KEYS.TYPE]: RESOURCE_TYPES.SERVICE_CONTAINER,
     [LABEL_KEYS.PROJECT_ID]: projectId,
     [LABEL_KEYS.PROJECT_NAME]: projectName,
     [LABEL_KEYS.SERVICE_ID]: serviceId,

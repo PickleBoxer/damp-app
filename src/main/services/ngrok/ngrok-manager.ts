@@ -6,7 +6,6 @@
 import {
   docker,
   ensureNetworkExists,
-  findContainerByLabel,
   getContainerHostPort,
   isContainerRunning,
   isDockerAvailable,
@@ -14,6 +13,7 @@ import {
   removeContainersByLabels,
   stopAndRemoveContainer,
 } from '@main/core/docker';
+import { findProjectContainer } from '@main/domains/projects/container';
 import { createLogger } from '@main/utils/logger';
 import { buildNgrokLabels, LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import type { Project } from '@shared/types/project';
@@ -112,11 +112,7 @@ class NgrokManager {
       ]);
 
       // Find project container by label to get network address
-      const projectContainer = await findContainerByLabel(
-        LABEL_KEYS.PROJECT_ID,
-        project.id,
-        RESOURCE_TYPES.PROJECT_CONTAINER
-      );
+      const projectContainer = await findProjectContainer(project.id);
 
       if (!projectContainer) {
         return {

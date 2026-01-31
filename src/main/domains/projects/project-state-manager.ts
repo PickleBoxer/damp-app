@@ -7,7 +7,6 @@ import { BaseStateManager } from '@main/core/base-state-manager';
 import {
   copyToVolume,
   createProjectVolume,
-  getContainerStateByLabel,
   removeContainersByLabels,
   removeVolume as removeDockerVolume,
 } from '@main/core/docker';
@@ -15,7 +14,7 @@ import { docker } from '@main/core/docker/docker';
 import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
 import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
 import { projectStorage } from '@main/core/storage/project-storage';
-import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import { LABEL_KEYS } from '@shared/constants/labels';
 import { FORWARDED_PORT } from '@shared/constants/ports';
 import type { ContainerState } from '@shared/types/container';
 import type {
@@ -39,6 +38,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import semver from 'semver';
 import { getServiceDefinition } from '../services/service-definitions';
+import { getProjectContainerState } from './container';
 import { installLaravelToVolume } from './laravel-installer';
 import {
   generateIndexPhp,
@@ -1198,11 +1198,7 @@ class ProjectStateManager extends BaseStateManager {
     }
 
     try {
-      return await getContainerStateByLabel(
-        LABEL_KEYS.PROJECT_ID,
-        projectId,
-        RESOURCE_TYPES.PROJECT_CONTAINER
-      );
+      return await getProjectContainerState(projectId);
     } catch (error) {
       this.logger.error('Failed to get project container state', { projectId, error });
       return {

@@ -39,14 +39,18 @@ export function exposeServicesContext(): void {
 
     downloadCaddyCertificate: () => ipcRenderer.invoke(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT),
 
-    listDatabases: (serviceId: ServiceId) =>
-      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_LIST_DBS, serviceId),
+    listDatabases: (serviceId: ServiceId, projectId?: string) =>
+      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_LIST_DBS, { serviceId, projectId }),
 
-    dumpDatabase: (serviceId: ServiceId, databaseName: string) =>
-      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_DUMP, serviceId, databaseName),
+    dumpDatabase: (serviceId: ServiceId, databaseName: string, projectId?: string) =>
+      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_DUMP, { serviceId, databaseName, projectId }),
 
-    restoreDatabase: (serviceId: ServiceId, databaseName: string) =>
-      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_RESTORE, serviceId, databaseName),
+    restoreDatabase: (serviceId: ServiceId, databaseName: string, projectId?: string) =>
+      ipcRenderer.invoke(CHANNELS.SERVICES_DATABASE_RESTORE, {
+        serviceId,
+        databaseName,
+        projectId,
+      }),
 
     onInstallProgress: callback => {
       const listener = (_event: unknown, serviceId: ServiceId, progress: PullProgress) => {

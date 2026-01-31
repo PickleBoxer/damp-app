@@ -6,14 +6,20 @@
 import { getBundleableServicesByType } from '@main/domains/services/service-definitions';
 import { serviceStateManager } from '@main/domains/services/service-state-manager';
 import { createLogger } from '@main/utils/logger';
-import type { InstallOptions, ServiceId } from '@shared/types/service';
+import type { InstallOptions } from '@shared/types/service';
+import { ServiceId } from '@shared/types/service';
 import { BrowserWindow, ipcMain } from 'electron';
 import { z } from 'zod';
 import * as CHANNELS from './services-channels';
 
 const logger = createLogger('services-ipc');
 
+// UUID regex pattern for validation
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Validation schemas
+const projectIdSchema = z.string().regex(UUID_REGEX, 'Invalid UUID format');
+const serviceIdSchema = z.nativeEnum(ServiceId, 'Invalid service ID');
 const databaseNameSchema = z.string().min(1, 'Database name cannot be empty');
 
 // Prevent duplicate listener registration
@@ -21,32 +27,45 @@ let listenersAdded = false;
 
 /**
  * Validates that a service supports database operations and is ready to perform them
+ * Works for both standalone services and bundled services
+ * @param serviceId - The service ID to validate
+ * @param projectId - Optional project ID for bundled services
  * @throws Error if validation fails
  */
-async function validateDatabaseOperation(serviceId: ServiceId) {
-  // Verify service exists and is a database type
-  const service = await serviceStateManager.getService(serviceId);
-  if (!service) {
-    throw new Error(`Service ${serviceId} not found`);
+async function validateDatabaseOperation(serviceId: ServiceId, projectId?: string) {
+  // Check if service supports database operations
+  const { SERVICE_DEFINITIONS } = await import('@main/domains/services/service-definitions');
+  const serviceDefinition = SERVICE_DEFINITIONS[serviceId];
+
+  if (!serviceDefinition) {
+    throw new Error(`Service ${serviceId} not found in definitions`);
   }
-  if (!service.databaseConfig) {
+
+  if (!serviceDefinition.databaseConfig) {
     throw new Error(`Service ${serviceId} does not support database operations`);
   }
 
-  // Check if container is running
-  const containerState = await serviceStateManager.getServiceContainerState(serviceId);
-  if (!containerState?.running) {
+  // Get container state using unified function (works for both standalone and bundled)
+  const { getServiceContainerState } = await import('@main/domains/services/container');
+  const containerState = await getServiceContainerState(serviceId, projectId);
+
+  // Validate container exists
+  if (!containerState.exists) {
+    const context = projectId ? `in project ${projectId}` : 'standalone';
+    throw new Error(`Service container for ${serviceId} ${context} not found`);
+  }
+
+  // Validate container is running
+  if (!containerState.running) {
     throw new Error('Container must be running to perform database operations');
   }
 
-  // Check if container is healthy (for services with healthchecks)
+  // Validate container is healthy (for services with healthchecks)
   if (containerState.health_status !== 'none' && containerState.health_status !== 'healthy') {
     throw new Error(
       `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
     );
   }
-
-  return service;
 }
 
 /**
@@ -200,17 +219,16 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT, async () => {
     try {
       const { dialog } = await import('electron');
-      const { findContainerByLabel, getFileFromContainer } = await import('@main/core/docker');
+      const { findContainerByLabels, getFileFromContainer } = await import('@main/core/docker');
       const { writeFileSync } = await import('node:fs');
       const { LABEL_KEYS, RESOURCE_TYPES } = await import('@shared/constants/labels');
       const { ServiceId } = await import('@shared/types/service');
 
-      // Find Caddy container by label instead of hardcoded name
-      const caddyContainer = await findContainerByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        ServiceId.Caddy,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      // Find Caddy container by labels
+      const caddyContainer = await findContainerByLabels([
+        `${LABEL_KEYS.SERVICE_ID}=${ServiceId.Caddy}`,
+        `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`,
+      ]);
 
       if (!caddyContainer) {
         throw new Error('Caddy container not found. Please ensure Caddy is installed and running.');
@@ -243,33 +261,47 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * List databases for a service
+   * List databases for a service (standalone or bundled)
    */
-  ipcMain.handle(CHANNELS.SERVICES_DATABASE_LIST_DBS, async (_event, serviceId: ServiceId) => {
-    try {
-      await ensureInitialized();
-      await validateDatabaseOperation(serviceId);
+  ipcMain.handle(
+    CHANNELS.SERVICES_DATABASE_LIST_DBS,
+    async (_event, { serviceId, projectId }: { serviceId: ServiceId; projectId?: string }) => {
+      try {
+        const validatedServiceId = serviceIdSchema.parse(serviceId);
+        const validatedProjectId = projectId ? projectIdSchema.parse(projectId) : undefined;
 
-      const { listDatabases } = await import('@main/domains/services/database-operations');
-      return await listDatabases(serviceId);
-    } catch (error) {
-      logger.error('Failed to list databases', { serviceId, error });
-      throw error;
+        await ensureInitialized();
+        await validateDatabaseOperation(validatedServiceId, validatedProjectId);
+
+        const { listDatabases } = await import('@main/domains/services/database-operations');
+        return await listDatabases(validatedServiceId, validatedProjectId);
+      } catch (error) {
+        logger.error('Failed to list databases', { serviceId, projectId, error });
+        throw error;
+      }
     }
-  });
+  );
 
   /**
-   * Dump database to file
+   * Dump database to file (standalone or bundled)
    */
   ipcMain.handle(
     CHANNELS.SERVICES_DATABASE_DUMP,
-    async (_event, serviceId: ServiceId, databaseName: string) => {
+    async (
+      _event,
+      {
+        serviceId,
+        databaseName,
+        projectId,
+      }: { serviceId: ServiceId; databaseName: string; projectId?: string }
+    ) => {
       try {
-        // Validate database name
-        databaseNameSchema.parse(databaseName);
+        const validatedServiceId = serviceIdSchema.parse(serviceId);
+        const validatedDatabaseName = databaseNameSchema.parse(databaseName);
+        const validatedProjectId = projectId ? projectIdSchema.parse(projectId) : undefined;
 
         await ensureInitialized();
-        await validateDatabaseOperation(serviceId);
+        await validateDatabaseOperation(validatedServiceId, validatedProjectId);
 
         const { dialog } = await import('electron');
         const { writeFileSync } = await import('node:fs');
@@ -277,16 +309,20 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
           await import('@main/domains/services/database-operations');
 
         // Create dump
-        const dumpBuffer = await dumpDatabase(serviceId, databaseName);
+        const dumpBuffer = await dumpDatabase(
+          validatedServiceId,
+          validatedDatabaseName,
+          validatedProjectId
+        );
 
         // Show save dialog
         const timestamp = new Date().toISOString().replaceAll(/[:.]/g, '-').slice(0, -5);
-        const extension = getDumpFileExtension(serviceId);
-        const filter = getDumpFileFilter(serviceId);
+        const extension = getDumpFileExtension(validatedServiceId);
+        const filter = getDumpFileFilter(validatedServiceId);
 
         const result = await dialog.showSaveDialog(mainWindow, {
           title: 'Save Database Dump',
-          defaultPath: `${databaseName}-${timestamp}.${extension}`,
+          defaultPath: `${validatedDatabaseName}-${timestamp}.${extension}`,
           filters: [filter, { name: 'All Files', extensions: ['*'] }],
         });
 
@@ -297,7 +333,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
 
         return { success: false, error: 'Dump canceled' };
       } catch (error) {
-        logger.error('Failed to dump database', { serviceId, databaseName, error });
+        logger.error('Failed to dump database', { serviceId, databaseName, projectId, error });
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -307,24 +343,32 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   );
 
   /**
-   * Restore database from file
+   * Restore database from file (standalone or bundled)
    */
   ipcMain.handle(
     CHANNELS.SERVICES_DATABASE_RESTORE,
-    async (_event, serviceId: ServiceId, databaseName: string) => {
+    async (
+      _event,
+      {
+        serviceId,
+        databaseName,
+        projectId,
+      }: { serviceId: ServiceId; databaseName: string; projectId?: string }
+    ) => {
       try {
-        // Validate database name
-        databaseNameSchema.parse(databaseName);
+        const validatedServiceId = serviceIdSchema.parse(serviceId);
+        const validatedDatabaseName = databaseNameSchema.parse(databaseName);
+        const validatedProjectId = projectId ? projectIdSchema.parse(projectId) : undefined;
 
         await ensureInitialized();
-        await validateDatabaseOperation(serviceId);
+        await validateDatabaseOperation(validatedServiceId, validatedProjectId);
 
         const { dialog } = await import('electron');
         const { readFileSync } = await import('node:fs');
-        const { getDumpFileFilter, restoreDatabase } =
+        const { restoreDatabase, getDumpFileFilter } =
           await import('@main/domains/services/database-operations');
 
-        const filter = getDumpFileFilter(serviceId);
+        const filter = getDumpFileFilter(validatedServiceId);
 
         // Show open dialog
         const result = await dialog.showOpenDialog(mainWindow, {
@@ -338,14 +382,19 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
           const dumpData = readFileSync(filePath);
 
           // Restore database
-          await restoreDatabase(serviceId, databaseName, dumpData);
+          await restoreDatabase(
+            validatedServiceId,
+            validatedDatabaseName,
+            validatedProjectId,
+            dumpData
+          );
 
           return { success: true };
         }
 
         return { success: false, error: 'Restore canceled' };
       } catch (error) {
-        logger.error('Failed to restore database', { serviceId, databaseName, error });
+        logger.error('Failed to restore database', { serviceId, databaseName, projectId, error });
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Unknown error',
