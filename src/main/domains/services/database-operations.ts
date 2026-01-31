@@ -97,14 +97,14 @@ function getDumpCommand(serviceId: ServiceId, sanitizedDbName: string): string[]
       return [
         'sh',
         '-c',
-        `exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers ${sanitizedDbName}`,
+        `exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --set-gtid-purged=OFF ${sanitizedDbName}`,
       ];
 
     case ServiceId.MariaDB:
       return [
         'sh',
         '-c',
-        `exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction --routines --triggers ${sanitizedDbName}`,
+        `exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction --routines --triggers --set-gtid-purged=OFF ${sanitizedDbName}`,
       ];
 
     default:
