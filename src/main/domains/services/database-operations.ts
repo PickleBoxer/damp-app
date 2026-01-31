@@ -1,11 +1,6 @@
-import {
-  execCommand,
-  findContainerByLabel,
-  getFileFromContainer,
-  putFileToContainer,
-} from '@main/core/docker';
-import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import { execCommand, getFileFromContainer, putFileToContainer } from '@main/core/docker';
 import { ServiceId } from '@shared/types/service';
+import { findServiceContainer } from './container';
 
 /**
  * Temporary file path in container for database restore operations
@@ -25,45 +20,19 @@ function sanitizeDatabaseName(dbName: string): string {
   return sanitized;
 }
 
-async function getContainerIdOrName(serviceId: ServiceId): Promise<string> {
-  const containerInfo = await findContainerByLabel(
-    LABEL_KEYS.SERVICE_ID,
-    serviceId,
-    RESOURCE_TYPES.SERVICE_CONTAINER
-  );
+/**
+ * Get container ID for service (standalone or bundled)
+ * Unified function using labels - works for both cases
+ */
+async function getServiceContainerId(serviceId: ServiceId, projectId?: string): Promise<string> {
+  const containerInfo = await findServiceContainer(serviceId, projectId);
 
   if (!containerInfo) {
-    throw new Error(`Container for service ${serviceId} not found`);
+    const context = projectId ? `in project ${projectId}` : 'standalone';
+    throw new Error(`Service container for ${serviceId} ${context} not found`);
   }
 
   return containerInfo.Id;
-}
-
-async function getBundledServiceContainerIdOrName(
-  projectId: string,
-  serviceId: ServiceId
-): Promise<string> {
-  // For bundled services, search by all three labels to find the exact container
-  const { docker } = await import('@main/core/docker');
-
-  const containers = await docker.listContainers({
-    all: true,
-    filters: {
-      label: [
-        `${LABEL_KEYS.PROJECT_ID}=${projectId}`,
-        `${LABEL_KEYS.SERVICE_ID}=${serviceId}`,
-        `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER}`,
-      ],
-    },
-  });
-
-  if (containers.length === 0) {
-    throw new Error(
-      `Bundled service container for service ${serviceId} in project ${projectId} not found`
-    );
-  }
-
-  return containers[0].Id;
 }
 
 function parseDatabaseList(stdout: string): string[] {
@@ -110,9 +79,7 @@ function getListDatabasesCommand(serviceId: ServiceId): string[] {
 }
 
 export async function listDatabases(serviceId: ServiceId, projectId?: string): Promise<string[]> {
-  const containerId = projectId
-    ? await getBundledServiceContainerIdOrName(projectId, serviceId)
-    : await getContainerIdOrName(serviceId);
+  const containerId = await getServiceContainerId(serviceId, projectId);
   const cmd = getListDatabasesCommand(serviceId);
 
   const result = await execCommand(containerId, cmd);
@@ -176,9 +143,7 @@ export async function dumpDatabase(
   projectId?: string
 ): Promise<Buffer> {
   const sanitizedDbName = sanitizeDatabaseName(databaseName);
-  const containerId = projectId
-    ? await getBundledServiceContainerIdOrName(projectId, serviceId)
-    : await getContainerIdOrName(serviceId);
+  const containerId = await getServiceContainerId(serviceId, projectId);
 
   // PostgreSQL and MongoDB produce binary dumps - use temp file approach to avoid corruption
   if (serviceId === ServiceId.PostgreSQL || serviceId === ServiceId.MongoDB) {
@@ -262,9 +227,7 @@ export async function restoreDatabase(
   projectId?: string
 ): Promise<void> {
   const sanitizedDbName = sanitizeDatabaseName(databaseName);
-  const containerId = projectId
-    ? await getBundledServiceContainerIdOrName(projectId, serviceId)
-    : await getContainerIdOrName(serviceId);
+  const containerId = await getServiceContainerId(serviceId, projectId);
 
   // Upload dump file to container using Docker API (secure and efficient)
   await putFileToContainer(containerId, dumpData, TEMP_RESTORE_FILE_PATH);

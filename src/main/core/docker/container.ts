@@ -307,43 +307,35 @@ export async function getContainerState(containerNameOrId: string): Promise<Cont
 }
 
 /**
- * Generic method to find container by any label key-value pair
- * Works for projects, services, helpers, and ngrok tunnels
+ * Base function to find container by multiple label filters
+ * This is the foundational function for all label-based container lookups
+ * @param labels - Array of label filters in "key=value" format
+ * @returns Container info or null if not found
  */
-export async function findContainerByLabel(
-  labelKey: string,
-  labelValue: string,
-  resourceType?: string
+export async function findContainerByLabels(
+  labels: string[]
 ): Promise<Docker.ContainerInfo | null> {
   try {
-    const filters: string[] = [`${labelKey}=${labelValue}`];
-
-    if (resourceType) {
-      filters.push(`${LABEL_KEYS.TYPE}=${resourceType}`);
-    }
-
     const containers = await docker.listContainers({
       all: true,
-      filters: { label: filters },
+      filters: { label: labels },
     });
 
     return containers[0] || null;
   } catch (error) {
-    logger.error('Failed to find container by label', { labelKey, labelValue, error });
+    logger.error('Failed to find container by labels', { labels, error });
     return null;
   }
 }
 
 /**
- * Get container state by label (combines find + inspect in 1 operation)
- * More efficient than calling findContainerByLabel + getContainerState separately
+ * Get container state by labels (combines find + inspect in 1 operation)
+ * More efficient than calling findContainerByLabels + getContainerState separately
+ * @param labels - Array of label filters in "key=value" format
+ * @returns Container state
  */
-export async function getContainerStateByLabel(
-  labelKey: string,
-  labelValue: string,
-  resourceType?: string
-): Promise<ContainerState> {
-  const containerInfo = await findContainerByLabel(labelKey, labelValue, resourceType);
+export async function getContainerStateByLabels(labels: string[]): Promise<ContainerState> {
+  const containerInfo = await findContainerByLabels(labels);
 
   if (!containerInfo) {
     return {
@@ -437,7 +429,6 @@ export async function getContainerHostPort(
 export async function getAllManagedContainers(): Promise<{
   projects: Docker.ContainerInfo[];
   services: Docker.ContainerInfo[];
-  bundled: Docker.ContainerInfo[];
   helpers: Docker.ContainerInfo[];
   ngrok: Docker.ContainerInfo[];
 }> {
@@ -456,9 +447,6 @@ export async function getAllManagedContainers(): Promise<{
       services: containers.filter(
         c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.SERVICE_CONTAINER
       ),
-      bundled: containers.filter(
-        c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER
-      ),
       helpers: containers.filter(
         c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.HELPER_CONTAINER
       ),
@@ -466,7 +454,7 @@ export async function getAllManagedContainers(): Promise<{
     };
   } catch (error) {
     logger.error('Failed to get all managed containers', { error });
-    return { projects: [], services: [], bundled: [], helpers: [], ngrok: [] };
+    return { projects: [], services: [], helpers: [], ngrok: [] };
   }
 }
 

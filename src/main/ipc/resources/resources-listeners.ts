@@ -97,7 +97,6 @@ async function getAllResources(): Promise<DockerResource[]> {
     const allContainers = [
       ...containerGroups.projects,
       ...containerGroups.services,
-      ...containerGroups.bundled,
       ...containerGroups.helpers,
       ...containerGroups.ngrok,
     ];
@@ -127,7 +126,8 @@ async function getAllResources(): Promise<DockerResource[]> {
         if (!isOrphan) {
           needsUpdate = await hasServiceDefinitionChanged(serviceId, container.Id);
         }
-      } else if (type === RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER && projectId) {
+      } else if (type === RESOURCE_TYPES.SERVICE_CONTAINER && projectId) {
+        // Bundled service container (has PROJECT_ID)
         category = 'bundled';
         // Not orphan if project exists or is currently being created
         isOrphan =

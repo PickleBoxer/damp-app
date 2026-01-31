@@ -2,13 +2,13 @@
  * IPC listeners for project log streaming
  */
 
-import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { z } from 'zod';
-import { LOGS_START_CHANNEL, LOGS_STOP_CHANNEL, LOGS_LINE_CHANNEL } from './logs-channels';
-import { findContainerByLabel, streamContainerLogs } from '@main/core/docker';
-import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
+import { streamContainerLogs } from '@main/core/docker';
+import { findProjectContainer } from '@main/domains/projects/container';
 import { projectStateManager } from '@main/domains/projects/project-state-manager';
 import { createLogger } from '@main/utils/logger';
+import { ipcMain, IpcMainInvokeEvent } from 'electron';
+import { z } from 'zod';
+import { LOGS_LINE_CHANNEL, LOGS_START_CHANNEL, LOGS_STOP_CHANNEL } from './logs-channels';
 
 const logger = createLogger('logs-ipc');
 
@@ -49,11 +49,7 @@ async function handleStartLogs(
     }
 
     // Find container by project ID label
-    const containerInfo = await findContainerByLabel(
-      LABEL_KEYS.PROJECT_ID,
-      projectId,
-      RESOURCE_TYPES.PROJECT_CONTAINER
-    );
+    const containerInfo = await findProjectContainer(projectId);
     if (!containerInfo) {
       return {
         success: false,

@@ -3,10 +3,11 @@
  * Handles Caddyfile generation and synchronization for project reverse proxy
  */
 
-import { execCommand, findContainerByLabel } from '@main/core/docker';
+import { execCommand } from '@main/core/docker';
+import { findProjectContainer } from '@main/domains/projects/container';
+import { findServiceContainer } from '@main/domains/services/container';
 import { getServiceDefinition } from '@main/domains/services/service-definitions';
 import { createLogger } from '@main/utils/logger';
-import { LABEL_KEYS, RESOURCE_TYPES } from '@shared/constants/labels';
 import type { Project } from '@shared/types/project';
 import { ServiceId } from '@shared/types/service';
 import { hashProjectContainers, hasStateChanged, updateSyncedState } from './caddy-sync-state';
@@ -40,11 +41,7 @@ async function generateCaddyfile(projects: Project[]): Promise<string> {
     const internalPort = project.forwardedPort;
 
     // Find project container by label to get Docker-generated name/ID
-    const projectContainer = await findContainerByLabel(
-      LABEL_KEYS.PROJECT_ID,
-      project.id,
-      RESOURCE_TYPES.PROJECT_CONTAINER
-    );
+    const projectContainer = await findProjectContainer(project.id);
 
     if (!projectContainer) {
       logger.warn(`Project container not found for ${project.name}, skipping Caddy config`);
@@ -101,11 +98,7 @@ export async function syncProjectsToCaddy(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Find Caddy container by label instead of hardcoded name
-    const caddyContainer = await findContainerByLabel(
-      LABEL_KEYS.SERVICE_ID,
-      ServiceId.Caddy,
-      RESOURCE_TYPES.SERVICE_CONTAINER
-    );
+    const caddyContainer = await findServiceContainer(ServiceId.Caddy);
 
     if (!caddyContainer) {
       logger.info('Skipping - Caddy container not found');
@@ -127,11 +120,7 @@ export async function syncProjectsToCaddy(
     // Build project-to-container mapping and check if state changed
     const projectContainerMap = new Map<string, string>();
     for (const project of projects) {
-      const projectContainer = await findContainerByLabel(
-        LABEL_KEYS.PROJECT_ID,
-        project.id,
-        RESOURCE_TYPES.PROJECT_CONTAINER
-      );
+      const projectContainer = await findProjectContainer(project.id);
 
       if (projectContainer) {
         // Use first 12 chars of container ID (same as what goes in Caddyfile)
@@ -196,11 +185,7 @@ export async function syncProjectsToCaddy(
  */
 export async function isCaddyReady(): Promise<boolean> {
   try {
-    const caddyContainer = await findContainerByLabel(
-      LABEL_KEYS.SERVICE_ID,
-      ServiceId.Caddy,
-      RESOURCE_TYPES.SERVICE_CONTAINER
-    );
+    const caddyContainer = await findServiceContainer(ServiceId.Caddy);
     return caddyContainer?.State === 'running';
   } catch {
     return false;

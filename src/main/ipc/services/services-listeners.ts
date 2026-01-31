@@ -33,7 +33,7 @@ let listenersAdded = false;
  * @throws Error if validation fails
  */
 async function validateDatabaseOperation(serviceId: ServiceId, projectId?: string) {
-  // Import service definitions to check databaseConfig (works for both standalone and bundled)
+  // Check if service supports database operations
   const { SERVICE_DEFINITIONS } = await import('@main/domains/services/service-definitions');
   const serviceDefinition = SERVICE_DEFINITIONS[serviceId];
 
@@ -45,45 +45,22 @@ async function validateDatabaseOperation(serviceId: ServiceId, projectId?: strin
     throw new Error(`Service ${serviceId} does not support database operations`);
   }
 
-  // Get container state differently based on whether it's bundled or standalone
-  let containerState;
+  // Get container state using unified function (works for both standalone and bundled)
+  const { getServiceContainerState } = await import('@main/domains/services/container');
+  const containerState = await getServiceContainerState(serviceId, projectId);
 
-  if (projectId) {
-    // Bundled service: find container by labels
-    const { getContainerState } = await import('@main/core/docker');
-    const { LABEL_KEYS, RESOURCE_TYPES } = await import('@shared/constants/labels');
-    const { docker } = await import('@main/core/docker');
-
-    // Find bundled service container using all three labels for precise match
-    const containers = await docker.listContainers({
-      all: true,
-      filters: {
-        label: [
-          `${LABEL_KEYS.PROJECT_ID}=${projectId}`,
-          `${LABEL_KEYS.SERVICE_ID}=${serviceId}`,
-          `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER}`,
-        ],
-      },
-    });
-
-    if (containers.length === 0) {
-      throw new Error(
-        `Bundled service container for ${serviceId} in project ${projectId} not found`
-      );
-    }
-
-    containerState = await getContainerState(containers[0].Id);
-  } else {
-    // Standalone service: use service state manager
-    containerState = await serviceStateManager.getServiceContainerState(serviceId);
+  // Validate container exists
+  if (!containerState.exists) {
+    const context = projectId ? `in project ${projectId}` : 'standalone';
+    throw new Error(`Service container for ${serviceId} ${context} not found`);
   }
 
-  // Validate container state
-  if (!containerState?.running) {
+  // Validate container is running
+  if (!containerState.running) {
     throw new Error('Container must be running to perform database operations');
   }
 
-  // Check if container is healthy (for services with healthchecks)
+  // Validate container is healthy (for services with healthchecks)
   if (containerState.health_status !== 'none' && containerState.health_status !== 'healthy') {
     throw new Error(
       `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
@@ -242,17 +219,16 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   ipcMain.handle(CHANNELS.SERVICES_CADDY_DOWNLOAD_CERT, async () => {
     try {
       const { dialog } = await import('electron');
-      const { findContainerByLabel, getFileFromContainer } = await import('@main/core/docker');
+      const { findContainerByLabels, getFileFromContainer } = await import('@main/core/docker');
       const { writeFileSync } = await import('node:fs');
       const { LABEL_KEYS, RESOURCE_TYPES } = await import('@shared/constants/labels');
       const { ServiceId } = await import('@shared/types/service');
 
-      // Find Caddy container by label instead of hardcoded name
-      const caddyContainer = await findContainerByLabel(
-        LABEL_KEYS.SERVICE_ID,
-        ServiceId.Caddy,
-        RESOURCE_TYPES.SERVICE_CONTAINER
-      );
+      // Find Caddy container by labels
+      const caddyContainer = await findContainerByLabels([
+        `${LABEL_KEYS.SERVICE_ID}=${ServiceId.Caddy}`,
+        `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`,
+      ]);
 
       if (!caddyContainer) {
         throw new Error('Caddy container not found. Please ensure Caddy is installed and running.');
