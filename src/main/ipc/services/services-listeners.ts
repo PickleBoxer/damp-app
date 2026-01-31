@@ -27,20 +27,58 @@ let listenersAdded = false;
 
 /**
  * Validates that a service supports database operations and is ready to perform them
+ * Works for both standalone services and bundled services
+ * @param serviceId - The service ID to validate
+ * @param projectId - Optional project ID for bundled services
  * @throws Error if validation fails
  */
-async function validateDatabaseOperation(serviceId: ServiceId) {
-  // Verify service exists and is a database type
-  const service = await serviceStateManager.getService(serviceId);
-  if (!service) {
-    throw new Error(`Service ${serviceId} not found`);
+async function validateDatabaseOperation(serviceId: ServiceId, projectId?: string) {
+  // Import service definitions to check databaseConfig (works for both standalone and bundled)
+  const { SERVICE_DEFINITIONS } = await import('@main/domains/services/service-definitions');
+  const serviceDefinition = SERVICE_DEFINITIONS[serviceId];
+
+  if (!serviceDefinition) {
+    throw new Error(`Service ${serviceId} not found in definitions`);
   }
-  if (!service.databaseConfig) {
+
+  if (!serviceDefinition.databaseConfig) {
     throw new Error(`Service ${serviceId} does not support database operations`);
   }
 
-  // Check if container is running
-  const containerState = await serviceStateManager.getServiceContainerState(serviceId);
+  // Get container state differently based on whether it's bundled or standalone
+  let containerState;
+
+  if (projectId) {
+    // Bundled service: find container by labels
+    const { getContainerState } = await import('@main/core/docker');
+    const { LABEL_KEYS, RESOURCE_TYPES } = await import('@shared/constants/labels');
+    const { docker } = await import('@main/core/docker');
+
+    // Find bundled service container using all three labels for precise match
+    const containers = await docker.listContainers({
+      all: true,
+      filters: {
+        label: [
+          `${LABEL_KEYS.PROJECT_ID}=${projectId}`,
+          `${LABEL_KEYS.SERVICE_ID}=${serviceId}`,
+          `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER}`,
+        ],
+      },
+    });
+
+    if (containers.length === 0) {
+      throw new Error(
+        `Bundled service container for ${serviceId} in project ${projectId} not found`
+      );
+    }
+
+    containerState = await getContainerState(containers[0].Id);
+  } else {
+    // Standalone service: use service state manager
+    containerState = await serviceStateManager.getServiceContainerState(serviceId);
+  }
+
+  // Validate container state
   if (!containerState?.running) {
     throw new Error('Container must be running to perform database operations');
   }
@@ -51,8 +89,6 @@ async function validateDatabaseOperation(serviceId: ServiceId) {
       `Container must be healthy to perform database operations (current status: ${containerState.health_status})`
     );
   }
-
-  return service;
 }
 
 /**
@@ -259,9 +295,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
         const validatedProjectId = projectId ? projectIdSchema.parse(projectId) : undefined;
 
         await ensureInitialized();
-        if (!projectId) {
-          await validateDatabaseOperation(validatedServiceId);
-        }
+        await validateDatabaseOperation(validatedServiceId, validatedProjectId);
 
         const { listDatabases } = await import('@main/domains/services/database-operations');
         return await listDatabases(validatedServiceId, validatedProjectId);
@@ -291,9 +325,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
         const validatedProjectId = projectId ? projectIdSchema.parse(projectId) : undefined;
 
         await ensureInitialized();
-        if (!projectId) {
-          await validateDatabaseOperation(validatedServiceId);
-        }
+        await validateDatabaseOperation(validatedServiceId, validatedProjectId);
 
         const { dialog } = await import('electron');
         const { writeFileSync } = await import('node:fs');
@@ -353,9 +385,7 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
         const validatedProjectId = projectId ? projectIdSchema.parse(projectId) : undefined;
 
         await ensureInitialized();
-        if (!projectId) {
-          await validateDatabaseOperation(validatedServiceId);
-        }
+        await validateDatabaseOperation(validatedServiceId, validatedProjectId);
 
         const { dialog } = await import('electron');
         const { readFileSync } = await import('node:fs');

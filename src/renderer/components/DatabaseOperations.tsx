@@ -73,7 +73,7 @@ export function DatabaseOperations({
   // Check if service supports database operations
   const hasDbConfig = service?.databaseConfig || (serviceId && isDatabaseService(serviceId));
 
-  if (!hasDbConfig) return null;
+  if (!hasDbConfig || !currentServiceId) return null;
 
   const servicesApi = (globalThis as unknown as Window).services;
   const isDisabled = !isRunning || (healthStatus !== 'healthy' && healthStatus !== 'none');
