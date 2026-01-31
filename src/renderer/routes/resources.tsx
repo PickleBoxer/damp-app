@@ -13,6 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@renderer/components/ui/dropdown-menu';
 import { Input } from '@renderer/components/ui/input';
 import { ScrollArea, ScrollBar } from '@renderer/components/ui/scroll-area';
 import {
@@ -39,6 +45,13 @@ import {
   resourcesQueryOptions,
 } from '@renderer/resources';
 import type { DockerResource } from '@shared/types/resource';
+import {
+  IconChevronLeft,
+  IconChevronLeftPipe,
+  IconChevronRight,
+  IconChevronRightPipe,
+  IconDotsVertical,
+} from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
@@ -56,16 +69,7 @@ import {
   type GroupingState,
   type SortingState,
 } from '@tanstack/react-table';
-import {
-  AlertTriangle,
-  ChevronDown,
-  ChevronRight,
-  Container,
-  Database,
-  Info,
-  RefreshCw,
-  Trash2,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Container, Database, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -238,15 +242,7 @@ function ResourcesPage() {
       enableGrouping: false,
       cell: ({ row }) => {
         if (row.getIsGrouped()) return null;
-
-        const Icon = row.original.type === 'volume' ? Database : Container;
-
-        return (
-          <div className="flex items-center gap-2">
-            <Icon className="text-muted-foreground h-4 w-4" />
-            <span className="font-mono text-sm">{row.original.name}</span>
-          </div>
-        );
+        return <span className="font-mono text-sm">{row.original.name}</span>;
       },
     },
     {
@@ -255,8 +251,10 @@ function ResourcesPage() {
       filterFn: 'equals',
       cell: ({ row }) => {
         if (row.getIsGrouped()) return null;
+        const Icon = row.original.type === 'volume' ? Database : Container;
         return (
-          <Badge variant="outline" className="capitalize">
+          <Badge variant="outline" className="flex w-fit items-center gap-1.5 capitalize">
+            <Icon className="h-3 w-3" />
             {row.original.type}
           </Badge>
         );
@@ -276,64 +274,45 @@ function ResourcesPage() {
       },
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }) => {
-        if (row.getIsGrouped()) return null;
-        const { status, isOrphan, needsUpdate } = row.original;
-        return (
-          <div className="flex items-center gap-2">
-            <span className="text-sm capitalize">{status}</span>
-            {isOrphan && (
-              <Badge variant="destructive" className="flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Orphan
-              </Badge>
-            )}
-            {needsUpdate && (
-              <Badge variant="default" className="flex items-center gap-1">
-                <Info className="h-3 w-3" />
-                Update Available
-              </Badge>
-            )}
-          </div>
-        );
-      },
-    },
-    {
       id: 'actions',
-      header: 'Actions',
+      header: () => null,
       cell: ({ row }) => {
         if (row.getIsGrouped()) return null;
-
         const resource = row.original;
         return (
-          <div className="flex items-center gap-2">
-            {resource.needsUpdate && resource.type === 'container' && (
-              <Button
-                variant="outline"
-                size="sm"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-xs">
+                <IconDotsVertical className="h-5 w-5" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {resource.needsUpdate && resource.type === 'container' && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSelectedResource(resource);
+                    setUpdateDialogOpen(true);
+                  }}
+                  disabled={updateServiceMutation.isPending}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Update
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                variant="destructive"
                 onClick={() => {
                   setSelectedResource(resource);
-                  setUpdateDialogOpen(true);
+                  setDeleteDialogOpen(true);
                 }}
-                disabled={updateServiceMutation.isPending}
+                disabled={deleteResourceMutation.isPending}
               >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedResource(resource);
-                setDeleteDialogOpen(true);
-              }}
-              disabled={deleteResourceMutation.isPending}
-            >
-              <Trash2 className="text-destructive h-4 w-4" />
-            </Button>
-          </div>
+                <Trash2 className="h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
       },
     },
@@ -379,17 +358,10 @@ function ResourcesPage() {
   const orphanCount = getOrphanCount(resources);
   const updateCount = getUpdateCount(resources);
 
-  // Calculate actual resource count (excluding group rows)
+  // Calculate total resource count (excluding group rows)
   const totalResourceCount = table
     .getFilteredRowModel()
     .rows.filter(row => !row.getIsGrouped()).length;
-  // Number of actual resources on the current page (excluding group header rows)
-  const currentPageResourceCount = table
-    .getPaginationRowModel()
-    .rows.filter(row => !row.getIsGrouped()).length;
-  const startRow =
-    totalResourceCount === 0 ? 0 : table.getState().pagination.pageIndex * pageSize + 1;
-  const endRow = Math.min(startRow + currentPageResourceCount - 1, totalResourceCount);
 
   if (isLoading) {
     return (
@@ -466,16 +438,6 @@ function ResourcesPage() {
             <SelectItem value="ngrok">Ngrok</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={pageSize.toString()} onValueChange={value => setPageSize(Number(value))}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Rows per page" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="25">25 per page</SelectItem>
-            <SelectItem value="50">50 per page</SelectItem>
-            <SelectItem value="100">100 per page</SelectItem>
-          </SelectContent>
-        </Select>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching}>
           <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
         </Button>
@@ -504,10 +466,10 @@ function ResourcesPage() {
                   const firstResource = row.subRows[0]?.original;
                   const displayName =
                     firstResource?.ownerDisplayName || (row.groupingValue as string);
-                  const groupOrphanCount = row.subRows.filter(r => r.original.isOrphan).length;
+                  const ownerCategory = firstResource?.category;
 
                   return (
-                    <TableRow key={row.id} className="bg-muted/50">
+                    <TableRow key={row.id}>
                       <TableCell colSpan={row.getVisibleCells().length} className="py-2">
                         <div className="flex items-center gap-2 font-semibold">
                           <button
@@ -522,17 +484,13 @@ function ResourcesPage() {
                               <ChevronRight className="h-4 w-4" />
                             )}
                           </button>
+                          <Badge variant="outline" className="px-1.5 py-0 text-[10px] capitalize">
+                            {ownerCategory}
+                          </Badge>
                           <span>{displayName}</span>
                           <span className="text-muted-foreground text-xs font-normal">
-                            ({row.subRows.length} resource{row.subRows.length !== 1 ? 's' : ''})
+                            ({row.subRows.length} resource{row.subRows.length === 1 ? '' : 's'})
                           </span>
-                          {groupOrphanCount > 0 && (
-                            <span
-                              title={`${groupOrphanCount} orphan${groupOrphanCount !== 1 ? 's' : ''}`}
-                            >
-                              <AlertTriangle className="text-destructive h-3 w-3" />
-                            </span>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -562,26 +520,63 @@ function ResourcesPage() {
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <div className="text-muted-foreground text-sm">
-          Showing {startRow} to {endRow} of {totalResourceCount} resources
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+        <div className="text-muted-foreground text-sm">{totalResourceCount} row(s) total.</div>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Rows per page</span>
+            <Select value={pageSize.toString()} onValueChange={value => setPageSize(Number(value))}>
+              <SelectTrigger className="h-8 w-18">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-sm">
+            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => table.firstPage()}
+              disabled={!table.getCanPreviousPage()}
+              aria-label="Go to first page"
+            >
+              <IconChevronLeftPipe className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              aria-label="Go to previous page"
+            >
+              <IconChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              aria-label="Go to next page"
+            >
+              <IconChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-xs"
+              onClick={() => table.lastPage()}
+              disabled={!table.getCanNextPage()}
+              aria-label="Go to last page"
+            >
+              <IconChevronRightPipe className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
