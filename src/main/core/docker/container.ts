@@ -438,6 +438,7 @@ export async function getContainerHostPort(
 export async function getAllManagedContainers(): Promise<{
   projects: Docker.ContainerInfo[];
   services: Docker.ContainerInfo[];
+  bundledServices: Docker.ContainerInfo[];
   helpers: Docker.ContainerInfo[];
   ngrok: Docker.ContainerInfo[];
 }> {
@@ -456,6 +457,9 @@ export async function getAllManagedContainers(): Promise<{
       services: containers.filter(
         c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.SERVICE_CONTAINER
       ),
+      bundledServices: containers.filter(
+        c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER
+      ),
       helpers: containers.filter(
         c => c.Labels[LABEL_KEYS.TYPE] === RESOURCE_TYPES.HELPER_CONTAINER
       ),
@@ -463,7 +467,7 @@ export async function getAllManagedContainers(): Promise<{
     };
   } catch (error) {
     logger.error('Failed to get all managed containers', { error });
-    return { projects: [], services: [], helpers: [], ngrok: [] };
+    return { projects: [], services: [], bundledServices: [], helpers: [], ngrok: [] };
   }
 }
 

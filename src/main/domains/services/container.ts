@@ -19,14 +19,16 @@ export async function findServiceContainer(
   serviceId: string,
   projectId?: string
 ): Promise<Docker.ContainerInfo | null> {
-  const labels: string[] = [
-    `${LABEL_KEYS.SERVICE_ID}=${serviceId}`,
-    `${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`,
-  ];
+  const labels: string[] = [`${LABEL_KEYS.SERVICE_ID}=${serviceId}`];
 
-  // Add project filter for bundled services
+  // Use different resource type based on whether looking for bundled or global service
   if (projectId) {
+    // Bundled service - has project ID and uses BUNDLED_SERVICE_CONTAINER type
+    labels.push(`${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER}`);
     labels.push(`${LABEL_KEYS.PROJECT_ID}=${projectId}`);
+  } else {
+    // Global (standalone) service - uses SERVICE_CONTAINER type
+    labels.push(`${LABEL_KEYS.TYPE}=${RESOURCE_TYPES.SERVICE_CONTAINER}`);
   }
 
   return findContainerByLabels(labels);

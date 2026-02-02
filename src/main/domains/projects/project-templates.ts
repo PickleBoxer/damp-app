@@ -5,6 +5,7 @@
 
 import {
   buildBundledServiceContainerLabels,
+  buildBundledServiceVolumeLabels,
   buildProjectContainerLabels,
   LABEL_KEYS,
 } from '@shared/constants/labels';
@@ -584,11 +585,25 @@ volumes:
   ${context.volumeName}:
     external: true`);
 
-  // Add project-scoped volumes for bundled services
+  // Add project-scoped volumes for bundled services with labels
   for (const bundledService of bundledServices) {
     const def = getServiceDefinition(bundledService.serviceId);
     if (def?.default_config.data_volume) {
-      lines.push(`  ${context.projectName}_${def.name}_data:`);
+      const volumeName = `${context.projectName}_${def.name}_data`;
+      const volumeLabels = buildBundledServiceVolumeLabels(
+        context.projectId,
+        context.projectName,
+        def.id,
+        volumeName
+      );
+      lines.push(`  ${volumeName}:
+    labels:
+      ${LABEL_KEYS.MANAGED}: "${volumeLabels[LABEL_KEYS.MANAGED]}"
+      ${LABEL_KEYS.TYPE}: "${volumeLabels[LABEL_KEYS.TYPE]}"
+      ${LABEL_KEYS.PROJECT_ID}: "${volumeLabels[LABEL_KEYS.PROJECT_ID]}"
+      ${LABEL_KEYS.PROJECT_NAME}: "${volumeLabels[LABEL_KEYS.PROJECT_NAME]}"
+      ${LABEL_KEYS.SERVICE_ID}: "${volumeLabels[LABEL_KEYS.SERVICE_ID]}"
+      ${LABEL_KEYS.VOLUME}: "${volumeLabels[LABEL_KEYS.VOLUME]}"`);
     }
   }
 
@@ -640,11 +655,12 @@ function generateServiceEnvVars(
       if (creds?.password) replaceEnvVar(envVars, 'MONGO_INITDB_ROOT_PASSWORD', creds.password);
       break;
     case ServiceId.PhpMyAdmin: {
-      // Always set PMA_HOST to project-specific container name
+      // For bundled phpMyAdmin, set specific host and disable arbitrary mode
       const linkedDb = findLinkedDatabase(bundledServices, def);
       if (linkedDb) {
         const containerName = `${projectName}-${linkedDb.name}`;
         replaceEnvVar(envVars, 'PMA_HOST', containerName);
+        replaceEnvVar(envVars, 'PMA_ARBITRARY', '0');
       }
       break;
     }
