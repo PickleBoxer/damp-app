@@ -1,5 +1,5 @@
-import * as React from "react"
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
+import * as React from "react"
 
 import { cn } from "@renderer/components/lib/utils"
 import { IconCheck, IconChevronRight } from "@tabler/icons-react"
@@ -96,12 +96,12 @@ function DropdownMenuCheckboxItem({
       {...props}
     >
       <span
-        className="pointer-events-none absolute right-2 flex items-center justify-center pointer-events-none"
+        className="pointer-events-none absolute right-2 flex size-4 items-center justify-center rounded-sm border border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
         data-slot="dropdown-menu-checkbox-item-indicator"
+        data-state={checked ? "checked" : "unchecked"}
       >
         <DropdownMenuPrimitive.ItemIndicator>
-          <IconCheck
-          />
+          <IconCheck className="size-3.5" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -235,19 +235,11 @@ function DropdownMenuSubContent({
 }
 
 export {
-  DropdownMenu,
-  DropdownMenuPortal,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuItem,
-  DropdownMenuCheckboxItem,
-  DropdownMenuRadioGroup,
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
+  DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuPortal, DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
+  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger
 }
+

@@ -29,6 +29,7 @@ import {
 } from '@renderer/components/ui/collapsible';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -156,9 +157,10 @@ function ProjectDetailPage() {
     if (ngrokStatus === 'error' && ngrokStatusData?.error) {
       toast.error('Tunnel Error', {
         description: ngrokStatusData.error,
+        id: `ngrok-error-${projectId}`,
       });
     }
-  }, [ngrokStatus, ngrokStatusData?.error]);
+  }, [ngrokStatus, ngrokStatusData?.error, projectId]);
 
   const handleOpenVSCode = async () => {
     const settings = await getSettings();
@@ -453,6 +455,7 @@ function ProjectDetailPage() {
                     size="icon"
                     variant="outline"
                     className="hover:bg-accent [&:hover>svg]:text-foreground relative h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
+                    aria-label="More actions"
                   >
                     {syncStatus ? (
                       <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
@@ -475,22 +478,20 @@ function ProjectDetailPage() {
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent className="w-52">
                       <DropdownMenuLabel>Options</DropdownMenuLabel>
-                      <DropdownMenuItem
+                      <DropdownMenuCheckboxItem
+                        checked={includeNodeModules}
+                        onCheckedChange={setIncludeNodeModules}
                         onSelect={e => e.preventDefault()}
-                        onClick={() => setIncludeNodeModules(!includeNodeModules)}
-                        className="gap-2"
                       >
-                        <Checkbox checked={includeNodeModules} />
                         <span className="font-mono text-xs">node_modules</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={includeVendor}
+                        onCheckedChange={setIncludeVendor}
                         onSelect={e => e.preventDefault()}
-                        onClick={() => setIncludeVendor(!includeVendor)}
-                        className="gap-2"
                       >
-                        <Checkbox checked={includeVendor} />
                         <span className="font-mono text-xs">vendor</span>
-                      </DropdownMenuItem>
+                      </DropdownMenuCheckboxItem>
                       <DropdownMenuSeparator />
                       {syncStatus ? (
                         <DropdownMenuItem
@@ -530,10 +531,10 @@ function ProjectDetailPage() {
                       <Globe className="mr-2 h-4 w-4" />
                       <span>Share Online</span>
                       {ngrokStatus === 'active' && (
-                        <span className="ml-auto h-2 w-2 rounded-full bg-green-500" />
+                        <span className="ml-auto text-xs text-green-500">Online</span>
                       )}
                       {ngrokStatus === 'error' && (
-                        <AlertTriangle className="text-destructive ml-auto h-3 w-3" />
+                        <span className="text-destructive ml-auto text-xs">Error</span>
                       )}
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent className="w-56">
