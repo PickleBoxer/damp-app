@@ -9,7 +9,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@renderer/components/ui/accordion';
-import { Alert, AlertDescription, AlertTitle } from '@renderer/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,14 +23,23 @@ import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@renderer/components/ui/dialog';
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@renderer/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@renderer/components/ui/dropdown-menu';
 import { Input } from '@renderer/components/ui/input';
-import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/components/ui/item';
 import { Label } from '@renderer/components/ui/label';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
@@ -59,7 +67,9 @@ import {
   type ErrorComponentProps,
 } from '@tanstack/react-router';
 import {
+  AlertTriangle,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Copy,
   Database,
@@ -67,19 +77,20 @@ import {
   ExternalLink,
   FolderOpen,
   Globe,
+  HardDrive,
   Loader2,
-  Package,
+  MoreVertical,
+  Play,
   Sparkles,
+  Square,
   Terminal,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { IoInformationCircle, IoWarning } from 'react-icons/io5';
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
-import { TbWorld } from 'react-icons/tb';
-import { VscDebugStart, VscDebugStop, VscTerminal, VscVscode } from 'react-icons/vsc';
+import { VscTerminal, VscVscode } from 'react-icons/vsc';
 import { toast } from 'sonner';
 
 export const Route = createFileRoute('/projects/$projectId')({
@@ -108,7 +119,7 @@ function ProjectDetailPage() {
   const [consoleExpanded, setConsoleExpanded] = useState(false);
   const [includeNodeModules, setIncludeNodeModules] = useState(false);
   const [includeVendor, setIncludeVendor] = useState(false);
-  const [selectedService, setSelectedService] = useState<ServiceId | null>(null);
+  const [expandedServices, setExpandedServices] = useState<Set<ServiceId>>(new Set());
   const projectLogsRef = useRef<ProjectLogsRef>(null);
 
   // Close console and clear logs when navigating to a different project
@@ -140,6 +151,16 @@ function ProjectDetailPage() {
   const isHealthy =
     containerState?.health_status === 'healthy' || containerState?.health_status === 'none';
   const isReady = isRunning && isHealthy;
+
+  // Show toast notification when ngrok error occurs
+  useEffect(() => {
+    if (ngrokStatus === 'error' && ngrokStatusData?.error) {
+      toast.error('Tunnel Error', {
+        description: ngrokStatusData.error,
+        id: `ngrok-error-${projectId}`,
+      });
+    }
+  }, [ngrokStatus, ngrokStatusData?.error, projectId]);
 
   const handleOpenVSCode = async () => {
     const settings = await getSettings();
@@ -207,6 +228,26 @@ function ProjectDetailPage() {
       [ServiceId.RustFS]: 'RustFS',
     };
     return names[serviceId] || serviceId;
+  };
+
+  // Helper to check if a service is a database service
+  const isDatabaseService = (serviceId: ServiceId): boolean => {
+    return [ServiceId.MySQL, ServiceId.MariaDB, ServiceId.PostgreSQL, ServiceId.MongoDB].includes(
+      serviceId
+    );
+  };
+
+  // Toggle expanded state for a service
+  const toggleServiceExpanded = (serviceId: ServiceId) => {
+    setExpandedServices(prev => {
+      const next = new Set(prev);
+      if (next.has(serviceId)) {
+        next.delete(serviceId);
+      } else {
+        next.add(serviceId);
+      }
+      return next;
+    });
   };
 
   const databaseAdminTool = getDatabaseAdminTool();
@@ -372,7 +413,7 @@ function ProjectDetailPage() {
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-8.5 w-8.5 shrink-0"
+                    className="hover:bg-accent [&:hover>svg]:text-foreground h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
                     onClick={handleOpenBrowser}
                   >
                     <Globe className="text-muted-foreground h-4 w-4" />
@@ -386,7 +427,7 @@ function ProjectDetailPage() {
                     <Button
                       size="icon"
                       variant="outline"
-                      className="h-8.5 w-8.5 shrink-0"
+                      className="hover:bg-accent [&:hover>svg]:text-foreground h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
                       onClick={handleOpenDatabaseAdmin}
                     >
                       <Database className="text-muted-foreground h-4 w-4" />
@@ -400,7 +441,7 @@ function ProjectDetailPage() {
                   <Button
                     size="icon"
                     variant="outline"
-                    className="h-8.5 w-8.5 shrink-0"
+                    className="hover:bg-accent [&:hover>svg]:text-foreground h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
                     onClick={handleOpenFolder}
                   >
                     <FolderOpen className="text-muted-foreground h-4 w-4" />
@@ -408,19 +449,195 @@ function ProjectDetailPage() {
                 </TooltipTrigger>
                 <TooltipContent>Open site folder</TooltipContent>
               </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
                     size="icon"
                     variant="outline"
-                    className="border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground h-8.5 w-8.5 shrink-0"
-                    onClick={() => setShowDeleteDialog(true)}
+                    className="hover:bg-accent [&:hover>svg]:text-foreground relative h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
+                    aria-label="More actions"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {syncStatus ? (
+                      <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                    ) : (
+                      <MoreVertical className="text-muted-foreground h-4 w-4" />
+                    )}
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>Delete project</TooltipContent>
-              </Tooltip>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {/* Volume Sync Sub-menu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <HardDrive className="mr-2 h-4 w-4" />
+                      <span>Volume Sync</span>
+                      {syncStatus && (
+                        <span className="text-muted-foreground ml-auto text-xs">
+                          {syncStatus.percentage ?? 0}%
+                        </span>
+                      )}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-52">
+                      <DropdownMenuLabel>Options</DropdownMenuLabel>
+                      <DropdownMenuCheckboxItem
+                        checked={includeNodeModules}
+                        onCheckedChange={setIncludeNodeModules}
+                        onSelect={e => e.preventDefault()}
+                      >
+                        <span className="font-mono text-xs">node_modules</span>
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuCheckboxItem
+                        checked={includeVendor}
+                        onCheckedChange={setIncludeVendor}
+                        onSelect={e => e.preventDefault()}
+                      >
+                        <span className="font-mono text-xs">vendor</span>
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuSeparator />
+                      {syncStatus ? (
+                        <DropdownMenuItem
+                          onClick={() => cancelSyncMutation.mutate(projectId)}
+                          disabled={cancelSyncMutation.isPending}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Cancel Sync
+                          <span className="text-muted-foreground ml-auto text-xs">
+                            {syncStatus.percentage ?? 0}%
+                          </span>
+                        </DropdownMenuItem>
+                      ) : (
+                        <>
+                          <DropdownMenuItem
+                            onClick={handleSyncFromVolume}
+                            disabled={!isDockerRunning || !!syncStatus}
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Sync From Volume
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={handleSyncToVolume}
+                            disabled={!isDockerRunning || !!syncStatus}
+                          >
+                            <Upload className="mr-2 h-4 w-4" />
+                            Sync To Volume
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  {/* Share Online Sub-menu */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Globe className="mr-2 h-4 w-4" />
+                      <span>Share Online</span>
+                      {ngrokStatus === 'active' && (
+                        <span className="ml-auto text-xs text-green-500">Online</span>
+                      )}
+                      {ngrokStatus === 'error' && (
+                        <span className="text-destructive ml-auto text-xs">Error</span>
+                      )}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-56">
+                      {ngrokStatus === 'active' && ngrokPublicUrl && (
+                        <>
+                          <DropdownMenuItem disabled className="font-mono text-xs opacity-100">
+                            {ngrokPublicUrl.length > 35
+                              ? `${ngrokPublicUrl.substring(0, 35)}...`
+                              : ngrokPublicUrl}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={handleCopyUrl}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy URL
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleOpenPublicUrl}>
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            Open in Browser
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={handleStopNgrok}
+                            disabled={stopNgrokMutation.isPending}
+                          >
+                            {stopNgrokMutation.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Square className="mr-2 h-4 w-4" />
+                            )}
+                            Stop Sharing
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {ngrokStatus === 'error' && ngrokStatusData?.error && (
+                        <>
+                          <DropdownMenuItem disabled className="text-destructive">
+                            <AlertTriangle className="mr-2 h-4 w-4" />
+                            {ngrokStatusData.error.length > 30
+                              ? `${ngrokStatusData.error.substring(0, 30)}...`
+                              : ngrokStatusData.error}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={handleStartNgrok}
+                            disabled={
+                              !isDockerRunning ||
+                              !isRunning ||
+                              startNgrokMutation.isPending ||
+                              !hasNgrokToken
+                            }
+                          >
+                            <Play className="mr-2 h-4 w-4" />
+                            Retry
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {(ngrokStatus === 'stopped' || ngrokStatus === 'starting') && (
+                        <DropdownMenuItem
+                          onClick={handleStartNgrok}
+                          disabled={
+                            !isDockerRunning ||
+                            !isRunning ||
+                            ngrokStatus === 'starting' ||
+                            startNgrokMutation.isPending ||
+                            !hasNgrokToken
+                          }
+                        >
+                          {startNgrokMutation.isPending || ngrokStatus === 'starting' ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Play className="mr-2 h-4 w-4" />
+                          )}
+                          Start Sharing
+                        </DropdownMenuItem>
+                      )}
+                      {!hasNgrokToken && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                            Configure ngrok token in Settings
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {!isRunning && hasNgrokToken && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                            Start project to enable sharing
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  <DropdownMenuSeparator />
+
+                  {/* Delete Project */}
+                  <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Project
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -436,8 +653,9 @@ function ProjectDetailPage() {
               <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-0.75">
                 <TabsTrigger value="actions">Actions</TabsTrigger>
                 <TabsTrigger value="environment">Environment</TabsTrigger>
-                <TabsTrigger value="volumes">Volume Sync</TabsTrigger>
-                <TabsTrigger value="ngrok">Share Online</TabsTrigger>
+                {project.bundledServices && project.bundledServices.length > 0 && (
+                  <TabsTrigger value="services">Services</TabsTrigger>
+                )}
               </TabsList>
 
               {/* Actions Tab */}
@@ -523,55 +741,6 @@ function ProjectDetailPage() {
                   </div>
                 </div>
 
-                {/* Bundled Services Section */}
-                {project.bundledServices && project.bundledServices.length > 0 && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Package className="text-muted-foreground h-4 w-4" />
-                      <h3 className="text-sm font-medium">Bundled Services</h3>
-                    </div>
-                    <div className="space-y-2">
-                      {project.bundledServices.map(service => (
-                        <button
-                          key={service.serviceId}
-                          onClick={() => setSelectedService(service.serviceId)}
-                          className="hover:bg-accent flex w-full items-center justify-between border p-3 text-left transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <ServiceIcon serviceId={service.serviceId} className="h-6 w-6" />
-                            <div>
-                              <p className="text-foreground text-sm font-medium">
-                                {getServiceDisplayName(service.serviceId)}
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                Click to view credentials
-                              </p>
-                            </div>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            Configured
-                          </Badge>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Database Operations for Bundled Database Services */}
-                {project.bundledServices && project.bundledServices.length > 0 && (
-                  <>
-                    {project.bundledServices.map(service => (
-                      <DatabaseOperations
-                        key={service.serviceId}
-                        serviceId={service.serviceId}
-                        projectId={project.id}
-                        isRunning={isRunning}
-                        healthStatus={containerState?.health_status || 'none'}
-                      />
-                    ))}
-                  </>
-                )}
-
                 {/* Configuration and PHP Extensions */}
                 <Accordion key={project.id} type="single" collapsible>
                   {/* Configuration Section */}
@@ -649,366 +818,64 @@ function ProjectDetailPage() {
                 </Accordion>
               </TabsContent>
 
-              {/* Volume Sync Tab */}
-              <TabsContent value="volumes" className="flex flex-col gap-4">
-                <Tabs defaultValue="from-volume" className="flex w-full flex-col gap-4">
-                  <TabsList className="bg-muted text-muted-foreground inline-flex h-8 w-full items-center justify-center rounded-lg p-0.75">
-                    <TabsTrigger value="from-volume">From Volume</TabsTrigger>
-                    <TabsTrigger value="to-volume">To Volume</TabsTrigger>
-                  </TabsList>
+              {/* Services Tab - Only shown when project has bundled services */}
+              {project.bundledServices && project.bundledServices.length > 0 && (
+                <TabsContent value="services" className="flex flex-col gap-2">
+                  {/* Bundled Services List with Collapsible */}
+                  {project.bundledServices.map(service => {
+                    const isExpanded = expandedServices.has(service.serviceId);
+                    const isDatabase = isDatabaseService(service.serviceId);
 
-                  {/* From Volume Tab */}
-                  <TabsContent value="from-volume" className="flex flex-col gap-4">
-                    <Item variant="outline" size="sm">
-                      <ItemMedia>
-                        <Download className="h-4 w-4" />
-                      </ItemMedia>
-                      <ItemContent>
-                        <ItemTitle>Sync from Volume</ItemTitle>
-                        <p className="text-muted-foreground text-xs">
-                          Copy files from Docker volume to your local folder
-                        </p>
-                      </ItemContent>
-                      <ItemActions>
-                        {syncStatus?.direction === 'from' ? (
-                          <div className="flex items-center gap-2">
-                            {syncStatus.percentage !== undefined && (
-                              <span className="text-muted-foreground text-xs">
-                                {syncStatus.percentage}%
-                              </span>
-                            )}
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => cancelSyncMutation.mutate(projectId)}
-                              disabled={cancelSyncMutation.isPending}
-                            >
-                              <X className="mr-2 h-4 w-4" />
-                              Cancel
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleSyncFromVolume}
-                            disabled={!isDockerRunning || !!syncStatus}
-                          >
-                            {syncStatus ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    return (
+                      <Collapsible
+                        key={service.serviceId}
+                        open={isExpanded}
+                        onOpenChange={() => toggleServiceExpanded(service.serviceId)}
+                      >
+                        <CollapsibleTrigger asChild>
+                          <button className="hover:bg-accent flex w-full items-center justify-between border p-3 text-left transition-colors">
+                            <div className="flex items-center gap-3">
+                              <ServiceIcon serviceId={service.serviceId} className="h-6 w-6" />
+                              <div>
+                                <p className="text-foreground text-sm font-medium">
+                                  {getServiceDisplayName(service.serviceId)}
+                                </p>
+                                <p className="text-muted-foreground text-xs">
+                                  {isDatabase ? 'Database service' : 'View credentials'}
+                                </p>
+                              </div>
+                            </div>
+                            {isExpanded ? (
+                              <ChevronDown className="text-muted-foreground h-4 w-4 transition-transform" />
                             ) : (
-                              <Download className="mr-2 h-4 w-4" />
+                              <ChevronRight className="text-muted-foreground h-4 w-4 transition-transform" />
                             )}
-                            Sync Now
-                          </Button>
-                        )}
-                      </ItemActions>
-                    </Item>
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="border-x border-b px-4 py-3">
+                          {/* Service Credentials */}
+                          <ServiceCredentialsView
+                            projectId={project.id}
+                            serviceId={service.serviceId}
+                          />
 
-                    <div className="space-y-3 rounded-lg border p-4">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Options</p>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              aria-label="Sync node_modules"
-                              id="sync-node-modules-from"
-                              checked={includeNodeModules}
-                              onCheckedChange={(checked: boolean) =>
-                                setIncludeNodeModules(checked === true)
-                              }
-                            />
-                            <label
-                              htmlFor="sync-node-modules-from"
-                              className="cursor-pointer text-xs select-none"
-                            >
-                              Include <code className="text-xs">node_modules</code>
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              aria-label="Sync vendor"
-                              id="sync-vendor-from"
-                              checked={includeVendor}
-                              onCheckedChange={(checked: boolean) =>
-                                setIncludeVendor(checked === true)
-                              }
-                            />
-                            <label
-                              htmlFor="sync-vendor-from"
-                              className="cursor-pointer text-xs select-none"
-                            >
-                              Include <code className="text-xs">vendor</code>
-                            </label>
-                          </div>
-                        </div>
-                        <p className="text-muted-foreground text-xs">
-                          *Large folders may slow down sync
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-medium">Volume Name</p>
-                        <code className="bg-muted text-muted-foreground block rounded border px-2 py-1.5 text-xs">
-                          {project.volumeName}
-                        </code>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  {/* To Volume Tab */}
-                  <TabsContent value="to-volume" className="flex flex-col gap-4">
-                    <Item variant="outline" size="sm">
-                      <ItemMedia>
-                        <Upload className="h-4 w-4" />
-                      </ItemMedia>
-                      <ItemContent>
-                        <ItemTitle>Sync to Volume</ItemTitle>
-                        <p className="text-muted-foreground text-xs">
-                          Copy files from your local folder to Docker volume
-                        </p>
-                      </ItemContent>
-                      <ItemActions>
-                        {syncStatus?.direction === 'to' ? (
-                          <div className="flex items-center gap-2">
-                            {syncStatus.percentage !== undefined && (
-                              <span className="text-muted-foreground text-xs">
-                                {syncStatus.percentage}%
-                              </span>
-                            )}
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => cancelSyncMutation.mutate(projectId)}
-                              disabled={cancelSyncMutation.isPending}
-                            >
-                              <X className="mr-2 h-4 w-4" />
-                              Cancel
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleSyncToVolume}
-                            disabled={!isDockerRunning || !!syncStatus}
-                          >
-                            {syncStatus ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Upload className="mr-2 h-4 w-4" />
-                            )}
-                            Sync Now
-                          </Button>
-                        )}
-                      </ItemActions>
-                    </Item>
-
-                    <div className="space-y-3 rounded-lg border p-4">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Options</p>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              aria-label="Sync node_modules"
-                              id="sync-node-modules-to"
-                              checked={includeNodeModules}
-                              onCheckedChange={(checked: boolean) =>
-                                setIncludeNodeModules(checked === true)
-                              }
-                            />
-                            <label
-                              htmlFor="sync-node-modules-to"
-                              className="cursor-pointer text-xs select-none"
-                            >
-                              Include <code className="text-xs">node_modules</code>
-                            </label>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              aria-label="Sync vendor"
-                              id="sync-vendor-to"
-                              checked={includeVendor}
-                              onCheckedChange={(checked: boolean) =>
-                                setIncludeVendor(checked === true)
-                              }
-                            />
-                            <label
-                              htmlFor="sync-vendor-to"
-                              className="cursor-pointer text-xs select-none"
-                            >
-                              Include <code className="text-xs">vendor</code>
-                            </label>
-                          </div>
-                        </div>
-                        <p className="text-muted-foreground text-xs">
-                          *Large folders may slow down sync
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-medium">Volume Name</p>
-                        <code className="bg-muted text-muted-foreground block rounded border px-2 py-1.5 text-xs">
-                          {project.volumeName}
-                        </code>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
-
-              {/* Share Online Tab (Ngrok) */}
-              <TabsContent value="ngrok" className="flex flex-col gap-4">
-                {/* Tunnel Control Item */}
-                <Item variant="outline" size="sm">
-                  <ItemMedia>
-                    <TbWorld className="h-4 w-4" />
-                  </ItemMedia>
-                  <ItemContent>
-                    <ItemTitle>Ngrok Tunnel</ItemTitle>
-                    <p className="text-muted-foreground text-xs">
-                      Share your project online securely
-                    </p>
-                  </ItemContent>
-                  <ItemActions>
-                    <Badge
-                      variant={
-                        ngrokStatus === 'active'
-                          ? 'default'
-                          : ngrokStatus === 'error'
-                            ? 'destructive'
-                            : 'secondary'
-                      }
-                      className="capitalize"
-                    >
-                      {ngrokStatus}
-                    </Badge>
-                  </ItemActions>
-                </Item>
-
-                {/* Active Tunnel Info */}
-                {ngrokStatus === 'active' && ngrokPublicUrl && (
-                  <div className="space-y-3 rounded-lg border bg-green-50/50 p-4 dark:bg-green-950/20">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-                      <p className="text-sm font-medium">Tunnel Active</p>
-                    </div>
-                    <div className="space-y-1.5">
-                      <p className="text-xs font-medium">Public URL</p>
-                      <div className="flex gap-2">
-                        <Input
-                          value={ngrokPublicUrl}
-                          readOnly
-                          className="flex-1 font-mono text-xs"
-                        />
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="icon" variant="outline" onClick={handleCopyUrl}>
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Copy URL</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="icon" variant="outline" onClick={handleOpenPublicUrl}>
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Open in browser</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Error Display */}
-                {ngrokStatus === 'error' && ngrokStatusData?.error && (
-                  <Alert variant="destructive">
-                    <IoWarning className="h-4 w-4" />
-                    <AlertTitle>Tunnel Error</AlertTitle>
-                    <AlertDescription>{ngrokStatusData.error}</AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Control Actions */}
-                <div className="space-y-3 rounded-lg border p-4">
-                  <p className="text-sm font-medium">Tunnel Controls</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleStartNgrok}
-                      disabled={
-                        !isDockerRunning ||
-                        !isRunning ||
-                        ngrokStatus === 'starting' ||
-                        ngrokStatus === 'active' ||
-                        startNgrokMutation.isPending ||
-                        !hasNgrokToken
-                      }
-                    >
-                      {startNgrokMutation.isPending || ngrokStatus === 'starting' ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <VscDebugStart className="mr-2 h-4 w-4" />
-                      )}
-                      Start
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleStopNgrok}
-                      disabled={
-                        ngrokStatus === 'stopped' ||
-                        ngrokStatus === 'error' ||
-                        stopNgrokMutation.isPending
-                      }
-                    >
-                      {stopNgrokMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <VscDebugStop className="mr-2 h-4 w-4" />
-                      )}
-                      Stop
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Info/Warning Messages */}
-                <div className="space-y-2">
-                  {!hasNgrokToken && (
-                    <Alert>
-                      <IoInformationCircle className="h-4 w-4" />
-                      <AlertTitle>Configuration Required</AlertTitle>
-                      <AlertDescription>
-                        Please configure your ngrok auth token in Settings to use this feature.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {!isRunning && (
-                    <Alert>
-                      <IoInformationCircle className="h-4 w-4" />
-                      <AlertTitle>Project Not Running</AlertTitle>
-                      <AlertDescription>
-                        The project container must be running to start an ngrok tunnel.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  {ngrokStatus === 'stopped' && hasNgrokToken && isRunning && isDockerRunning && (
-                    <div className="text-muted-foreground rounded-lg border p-3 text-xs">
-                      <p className="mb-2 font-medium">About ngrok tunnels:</p>
-                      <ul className="ml-4 list-disc space-y-1">
-                        <li>Creates a secure public URL to your local project</li>
-                        <li>Useful for testing webhooks or sharing with clients</li>
-                        <li>URL changes each time you restart the tunnel</li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
+                          {/* Database Operations - Only for database services */}
+                          {isDatabase && (
+                            <div className="mt-4 border-t pt-4">
+                              <DatabaseOperations
+                                serviceId={service.serviceId}
+                                projectId={project.id}
+                                isRunning={isRunning}
+                                healthStatus={containerState?.health_status || 'none'}
+                              />
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })}
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         </div>
@@ -1078,24 +945,6 @@ function ProjectDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Bundled Service Credentials Dialog */}
-      <Dialog
-        open={selectedService !== null}
-        onOpenChange={open => !open && setSelectedService(null)}
-      >
-        <DialogContent className="max-w-md select-none">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedService && getServiceDisplayName(selectedService)} Credentials
-            </DialogTitle>
-            <DialogDescription>Connection details for this bundled service</DialogDescription>
-          </DialogHeader>
-          {selectedService && (
-            <ServiceCredentialsView projectId={project.id} serviceId={selectedService} />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -1110,10 +959,12 @@ function ServiceCredentialsView({
 }>) {
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCredentials = async () => {
       setLoading(true);
+      setError(null);
       try {
         const envVars = await window.projects.getBundledServiceEnv(projectId, serviceId);
         const project = await window.projects.getProject(projectId);
@@ -1164,9 +1015,9 @@ function ServiceCredentialsView({
         }
 
         setCredentials(creds);
-      } catch (error) {
-        console.error('Failed to fetch service credentials:', error);
-        toast.error('Failed to fetch service credentials');
+      } catch (err) {
+        console.error('Failed to fetch service credentials:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch service credentials');
       } finally {
         setLoading(false);
       }
@@ -1177,9 +1028,17 @@ function ServiceCredentialsView({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <p className="text-muted-foreground py-2 text-xs">
+        Service must be running to view credentials.
+      </p>
     );
   }
 
@@ -1198,8 +1057,8 @@ function ServiceCredentialsView({
                 try {
                   await navigator.clipboard.writeText(value);
                   toast.success(`${key} copied to clipboard`);
-                } catch (error) {
-                  console.error('Failed to copy to clipboard', error);
+                } catch (copyError) {
+                  console.error('Failed to copy to clipboard', copyError);
                   toast.error('Failed to copy to clipboard');
                 }
               }}
