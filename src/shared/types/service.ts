@@ -31,7 +31,15 @@ export enum ServiceId {
 /**
  * Service category types
  */
-export type ServiceType = 'web' | 'database' | 'email' | 'cache' | 'storage' | 'search' | 'queue';
+export type ServiceType =
+  | 'web'
+  | 'database'
+  | 'email'
+  | 'cache'
+  | 'storage'
+  | 'search'
+  | 'queue'
+  | 'admin-tools';
 
 /**
  * Health check configuration for Docker containers

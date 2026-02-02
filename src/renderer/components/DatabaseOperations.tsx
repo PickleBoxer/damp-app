@@ -37,13 +37,6 @@ function getDisabledMessage(
   return `Service is ${healthStatus}. Wait for healthy status.`;
 }
 
-// Helper to check if a service ID represents a database service
-function isDatabaseService(serviceId: ServiceId): boolean {
-  return [ServiceId.MySQL, ServiceId.MariaDB, ServiceId.PostgreSQL, ServiceId.MongoDB].includes(
-    serviceId
-  );
-}
-
 export function DatabaseOperations({
   service,
   serviceId,
@@ -71,10 +64,8 @@ export function DatabaseOperations({
     setIsExpanded(false);
   }, [currentServiceId, projectId]);
 
-  // Check if service supports database operations
-  const hasDbConfig = service?.databaseConfig || (serviceId && isDatabaseService(serviceId));
-
-  if (!hasDbConfig || !currentServiceId) return null;
+  // Early return if no serviceId provided
+  if (!currentServiceId) return null;
 
   const servicesApi = (globalThis as unknown as Window).services;
   const isDisabled = !isRunning || (healthStatus !== 'healthy' && healthStatus !== 'none');

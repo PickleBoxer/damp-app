@@ -97,6 +97,7 @@ async function getAllResources(): Promise<DockerResource[]> {
     const allContainers = [
       ...containerGroups.projects,
       ...containerGroups.services,
+      ...containerGroups.bundledServices,
       ...containerGroups.helpers,
       ...containerGroups.ngrok,
     ];
@@ -117,22 +118,24 @@ async function getAllResources(): Promise<DockerResource[]> {
         isOrphan =
           !projects.some(p => p.id === projectId) &&
           !projectStateManager.isPendingProject(projectId);
-      } else if (type === RESOURCE_TYPES.SERVICE_CONTAINER && serviceId) {
-        category = 'service';
-        // Service is orphan if there's no valid service definition for this ID
-        isOrphan = !validServiceIds.has(serviceId);
-
-        // Check if service definition has changed
-        if (!isOrphan) {
-          needsUpdate = await hasServiceDefinitionChanged(serviceId, container.Id);
-        }
-      } else if (type === RESOURCE_TYPES.SERVICE_CONTAINER && projectId) {
-        // Bundled service container (has PROJECT_ID)
+      } else if (type === RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER && projectId) {
+        // Bundled service container (embedded in project's docker-compose)
         category = 'bundled';
         // Not orphan if project exists or is currently being created
         isOrphan =
           !projects.some(p => p.id === projectId) &&
           !projectStateManager.isPendingProject(projectId);
+        // Note: bundled services do NOT get needsUpdate checks - they're managed by project
+      } else if (type === RESOURCE_TYPES.SERVICE_CONTAINER && serviceId) {
+        // Global (standalone) service container
+        category = 'service';
+        // Service is orphan if there's no valid service definition for this ID
+        isOrphan = !validServiceIds.has(serviceId);
+
+        // Check if service definition has changed (only for global services)
+        if (!isOrphan) {
+          needsUpdate = await hasServiceDefinitionChanged(serviceId, container.Id);
+        }
       } else if (type === RESOURCE_TYPES.HELPER_CONTAINER) {
         category = 'helper';
       } else if (type === RESOURCE_TYPES.NGROK_TUNNEL) {

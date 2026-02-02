@@ -1,4 +1,5 @@
 import { DatabaseOperations } from '@renderer/components/DatabaseOperations';
+import { cn } from '@renderer/components/lib/utils';
 import { ProjectIcon } from '@renderer/components/ProjectIcon';
 import { ProjectLogs, type ProjectLogsRef } from '@renderer/components/ProjectLogs';
 import { ProjectPreview } from '@renderer/components/ProjectPreview';
@@ -55,6 +56,7 @@ import {
   useSyncToVolume,
 } from '@renderer/hooks/use-sync';
 import { projectContainerStateQueryOptions, projectQueryOptions } from '@renderer/projects';
+import { servicesQueryOptions } from '@renderer/services';
 import { getSettings } from '@renderer/utils/settings';
 import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
 import { ServiceId } from '@shared/types/service';
@@ -69,7 +71,6 @@ import {
 import {
   AlertTriangle,
   ChevronDown,
-  ChevronRight,
   ChevronUp,
   Copy,
   Database,
@@ -106,6 +107,10 @@ function ProjectDetailPage() {
 
   // Use suspense query - data is guaranteed by loader
   const { data: project } = useSuspenseQuery(projectQueryOptions(projectId));
+
+  // Fetch all service definitions using TanStack Query (non-blocking, cached)
+  const { data: allServices } = useSuspenseQuery(servicesQueryOptions());
+  const serviceDefinitions = new Map(allServices.map(s => [s.id, s]));
 
   const deleteProjectMutation = useDeleteProject();
   const syncFromVolumeMutation = useSyncFromVolume();
@@ -228,13 +233,6 @@ function ProjectDetailPage() {
       [ServiceId.RustFS]: 'RustFS',
     };
     return names[serviceId] || serviceId;
-  };
-
-  // Helper to check if a service is a database service
-  const isDatabaseService = (serviceId: ServiceId): boolean => {
-    return [ServiceId.MySQL, ServiceId.MariaDB, ServiceId.PostgreSQL, ServiceId.MongoDB].includes(
-      serviceId
-    );
   };
 
   // Toggle expanded state for a service
@@ -824,7 +822,8 @@ function ProjectDetailPage() {
                   {/* Bundled Services List with Collapsible */}
                   {project.bundledServices.map(service => {
                     const isExpanded = expandedServices.has(service.serviceId);
-                    const isDatabase = isDatabaseService(service.serviceId);
+                    const serviceDef = serviceDefinitions.get(service.serviceId);
+                    const isDatabase = serviceDef?.service_type === 'database';
 
                     return (
                       <Collapsible
@@ -845,11 +844,12 @@ function ProjectDetailPage() {
                                 </p>
                               </div>
                             </div>
-                            {isExpanded ? (
-                              <ChevronDown className="text-muted-foreground h-4 w-4 transition-transform" />
-                            ) : (
-                              <ChevronRight className="text-muted-foreground h-4 w-4 transition-transform" />
-                            )}
+                            <ChevronDown
+                              className={cn(
+                                'text-muted-foreground h-4 w-4 transition-transform',
+                                !isExpanded && '-rotate-90'
+                              )}
+                            />
                           </button>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="border-x border-b px-4 py-3">

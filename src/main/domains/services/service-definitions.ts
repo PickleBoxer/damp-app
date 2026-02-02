@@ -445,7 +445,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     name: 'phpmyadmin',
     display_name: 'phpMyAdmin',
     description: 'Web-based MySQL/MariaDB database administration tool',
-    service_type: 'database',
+    service_type: 'admin-tools',
     required: false,
     bundleable: true,
     proxySubdomain: 'phpmyadmin',
@@ -455,11 +455,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
       image: 'phpmyadmin:latest',
       ports: [], // No host ports for bundled services
       volumes: [],
-      environment_vars: [
-        'PMA_HOST=mysql', // Will be overridden based on linked database
-        'PMA_ARBITRARY=1',
-        'UPLOAD_LIMIT=100M',
-      ],
+      environment_vars: ['PMA_HOST=mysql', 'PMA_ARBITRARY=1', 'UPLOAD_LIMIT=100M'],
       data_volume: null,
       volume_bindings: [],
     },
@@ -472,7 +468,7 @@ export const SERVICE_DEFINITIONS: Record<ServiceId, ServiceDefinition> = {
     name: 'adminer',
     display_name: 'Adminer',
     description: 'Lightweight database management tool (supports MySQL, PostgreSQL, MongoDB)',
-    service_type: 'database',
+    service_type: 'admin-tools',
     required: false,
     bundleable: true,
     proxySubdomain: 'adminer',

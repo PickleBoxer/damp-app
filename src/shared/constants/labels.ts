@@ -49,7 +49,9 @@ export type HelperOperation = (typeof HELPER_OPERATIONS)[keyof typeof HELPER_OPE
  */
 export const RESOURCE_TYPES = {
   SERVICE_CONTAINER: 'service-container',
+  BUNDLED_SERVICE_CONTAINER: 'bundled-service-container',
   SERVICE_VOLUME: 'service-volume',
+  BUNDLED_SERVICE_VOLUME: 'bundled-service-volume',
   PROJECT_CONTAINER: 'project-container',
   PROJECT_VOLUME: 'project-volume',
   HELPER_CONTAINER: 'helper-container',
@@ -147,8 +149,41 @@ export function buildProjectVolumeLabels(
 }
 
 /**
+ * Build labels for bundled service volumes (embedded in project docker-compose)
+ * Uses distinct BUNDLED_SERVICE_VOLUME type to differentiate from global service volumes
+ */
+export function buildBundledServiceVolumeLabels(
+  projectId: string,
+  projectName: string,
+  serviceId: ServiceId,
+  volumeName: string
+): Record<string, string> {
+  if (!projectId || typeof projectId !== 'string') {
+    throw new Error('Project ID is required and must be a non-empty string');
+  }
+  if (!projectName || typeof projectName !== 'string') {
+    throw new Error('Project name is required and must be a non-empty string');
+  }
+  if (!serviceId || typeof serviceId !== 'string') {
+    throw new Error('Service ID is required and must be a non-empty string');
+  }
+  if (!volumeName || typeof volumeName !== 'string') {
+    throw new Error('Volume name is required and must be a non-empty string');
+  }
+
+  return {
+    [LABEL_KEYS.MANAGED]: 'true',
+    [LABEL_KEYS.TYPE]: RESOURCE_TYPES.BUNDLED_SERVICE_VOLUME,
+    [LABEL_KEYS.PROJECT_ID]: projectId,
+    [LABEL_KEYS.PROJECT_NAME]: projectName,
+    [LABEL_KEYS.SERVICE_ID]: serviceId,
+    [LABEL_KEYS.VOLUME]: volumeName,
+  };
+}
+
+/**
  * Build labels for bundled service containers (embedded in project docker-compose)
- * Uses same SERVICE_CONTAINER type as standalone services, but includes PROJECT_ID
+ * Uses distinct BUNDLED_SERVICE_CONTAINER type to differentiate from global services
  */
 export function buildBundledServiceContainerLabels(
   projectId: string,
@@ -167,7 +202,7 @@ export function buildBundledServiceContainerLabels(
 
   return {
     [LABEL_KEYS.MANAGED]: 'true',
-    [LABEL_KEYS.TYPE]: RESOURCE_TYPES.SERVICE_CONTAINER,
+    [LABEL_KEYS.TYPE]: RESOURCE_TYPES.BUNDLED_SERVICE_CONTAINER,
     [LABEL_KEYS.PROJECT_ID]: projectId,
     [LABEL_KEYS.PROJECT_NAME]: projectName,
     [LABEL_KEYS.SERVICE_ID]: serviceId,
