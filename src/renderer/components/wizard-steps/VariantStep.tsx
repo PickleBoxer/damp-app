@@ -21,7 +21,7 @@ import {
   PREINSTALLED_PHP_EXTENSIONS,
 } from '@shared/constants/php-extensions';
 import type { PhpVariant } from '@shared/types/project';
-import { ChevronDown, Info } from 'lucide-react';
+import { IconChevronDown, IconInfoCircle } from '@tabler/icons-react';
 import { useState } from 'react';
 import { SiPhp } from 'react-icons/si';
 import type { WizardStepProps } from './types';
@@ -119,7 +119,7 @@ export function VariantStep({ formData, setFormData }: Readonly<WizardStepProps>
           <CollapsibleTrigger className="flex w-full items-start justify-between text-sm">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10">
-                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <IconInfoCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="text-left">
                 <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
@@ -132,7 +132,7 @@ export function VariantStep({ formData, setFormData }: Readonly<WizardStepProps>
                 </p>
               </div>
             </div>
-            <ChevronDown
+            <IconChevronDown
               className={`text-muted-foreground mt-1 h-4 w-4 shrink-0 transition-transform duration-200 ${
                 extensionsExpanded ? 'rotate-180' : ''
               }`}

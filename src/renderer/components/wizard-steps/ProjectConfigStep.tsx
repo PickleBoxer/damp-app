@@ -22,10 +22,9 @@ import {
 } from '@renderer/components/ui/tooltip';
 import type { FolderSelectionResult, NodeVersion, PhpVersion } from '@shared/types/project';
 import { ProjectType } from '@shared/types/project';
-import { AlertTriangle, FolderOpen, Info } from 'lucide-react';
+import { IconAlertTriangle, IconFolderOpen, IconInfoCircle, IconWorld } from '@tabler/icons-react';
 import { useState } from 'react';
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
-import { TbWorld } from 'react-icons/tb';
 import type { WizardStepProps } from './types';
 
 const PHP_VERSIONS: PhpVersion[] = ['7.4', '8.1', '8.2', '8.3', '8.4'];
@@ -85,7 +84,7 @@ export function ProjectConfigStep({ formData, setFormData }: Readonly<WizardStep
     if (formData.name) {
       return (
         <span className="flex items-center gap-1">
-          <TbWorld className="h-3 w-3" />
+          <IconWorld className="h-3 w-3" />
           <span className="font-mono">{sanitizeProjectName(formData.name)}.local</span>
         </span>
       );
@@ -115,7 +114,7 @@ export function ProjectConfigStep({ formData, setFormData }: Readonly<WizardStep
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="text-muted-foreground h-3.5 w-3.5 cursor-help" />
+                  <IconInfoCircle className="text-muted-foreground h-3.5 w-3.5 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs">This will become the domain and folder name</p>
@@ -151,7 +150,7 @@ export function ProjectConfigStep({ formData, setFormData }: Readonly<WizardStep
                     className="h-12 w-12 shrink-0"
                     onClick={handleSelectFolder}
                   >
-                    <FolderOpen className="h-5 w-5" />
+                    <IconFolderOpen className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
@@ -172,7 +171,7 @@ export function ProjectConfigStep({ formData, setFormData }: Readonly<WizardStep
           )}
           {folderWarning && (
             <div className="mt-2 flex items-center gap-2 rounded-md bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <IconAlertTriangle className="h-4 w-4 shrink-0" />
               <p className="text-xs">{folderWarning}</p>
             </div>
           )}

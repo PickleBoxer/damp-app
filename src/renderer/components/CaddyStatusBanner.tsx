@@ -3,14 +3,14 @@
  * Shows warning when Docker or Caddy service is not running
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@renderer/components/ui/button';
-import { AlertTriangle, Loader2, Download, Play } from 'lucide-react';
-import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { dockerStatusQueryOptions } from '@renderer/docker';
-import { serviceQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
 import { useInstallService, useStartService } from '@renderer/hooks/use-services';
+import { serviceContainerStateQueryOptions, serviceQueryOptions } from '@renderer/services';
 import { ServiceId } from '@shared/types/service';
+import { IconAlertTriangle, IconDownload, IconLoader2, IconPlayerPlay } from '@tabler/icons-react';
+import { toast } from 'sonner';
 
 export default function CaddyStatusBanner() {
   const queryClient = useQueryClient();
@@ -72,7 +72,7 @@ export default function CaddyStatusBanner() {
     return (
       <div className="sticky top-0 z-50 flex items-center justify-between gap-3 border-b border-amber-500/20 bg-amber-500/10 px-4 py-1.5 backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+          <IconAlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
           <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
             Docker is not running
           </span>
@@ -85,7 +85,7 @@ export default function CaddyStatusBanner() {
   return (
     <div className="sticky top-0 z-50 flex items-center justify-between gap-3 border-b border-amber-500/20 bg-amber-500/10 px-4 py-1.5 backdrop-blur-sm">
       <div className="flex items-center gap-2">
-        <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+        <IconAlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
         <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
           Web server not running
         </span>
@@ -101,12 +101,12 @@ export default function CaddyStatusBanner() {
           {startMutation.isPending ? (
             <>
               Starting
-              <Loader2 className="ml-1 h-2.5 w-2.5 animate-spin" />
+              <IconLoader2 className="ml-1 h-2.5 w-2.5 animate-spin" />
             </>
           ) : (
             <>
               Start
-              <Play className="ml-1 h-2.5 w-2.5" />
+              <IconPlayerPlay className="ml-1 h-2.5 w-2.5" />
             </>
           )}
         </Button>
@@ -121,12 +121,12 @@ export default function CaddyStatusBanner() {
           {installMutation.isPending ? (
             <>
               Installing
-              <Loader2 className="ml-1 h-2.5 w-2.5 animate-spin" />
+              <IconLoader2 className="ml-1 h-2.5 w-2.5 animate-spin" />
             </>
           ) : (
             <>
               Install
-              <Download className="ml-1 h-2.5 w-2.5" />
+              <IconDownload className="ml-1 h-2.5 w-2.5" />
             </>
           )}
         </Button>

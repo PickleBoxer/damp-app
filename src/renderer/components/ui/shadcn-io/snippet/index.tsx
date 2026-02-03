@@ -1,16 +1,16 @@
 'use client';
 
-import { CheckIcon, CopyIcon } from 'lucide-react';
-import {
-  type ComponentProps,
-  cloneElement,
-  type HTMLAttributes,
-  type ReactElement,
-  useState,
-} from 'react';
+import { cn } from '@renderer/components/lib/utils';
 import { Button } from '@renderer/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { cn } from '@renderer/components/lib/utils';
+import { IconCheck, IconCopy } from '@tabler/icons-react';
+import {
+    cloneElement,
+    type ComponentProps,
+    type HTMLAttributes,
+    type ReactElement,
+    useState,
+} from 'react';
 
 export type SnippetProps = ComponentProps<typeof Tabs>;
 
@@ -71,7 +71,7 @@ export const SnippetCopyButton = ({
     });
   }
 
-  const icon = isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />;
+  const icon = isCopied ? <IconCheck size={14} /> : <IconCopy size={14} />;
 
   return (
     <Button

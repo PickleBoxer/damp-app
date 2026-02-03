@@ -28,19 +28,19 @@ import { useDashboardData, type DashboardService } from '@renderer/hooks/use-das
 import { useInstallService, useStartService, useStopService } from '@renderer/hooks/use-services';
 import { projectsQueryOptions } from '@renderer/projects';
 import { servicesQueryOptions } from '@renderer/services';
+import {
+  IconAlertCircle,
+  IconArrowLeft,
+  IconArrowRight,
+  IconArrowUpRight,
+  IconDownload,
+  IconLoader2,
+  IconPlayerPlay,
+  IconSettings,
+  IconSquare,
+} from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUpRight,
-  Download,
-  Loader2,
-  Play,
-  Settings,
-  Square,
-} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -219,9 +219,9 @@ function DashboardPage() {
                         onClick={handleStartAll}
                       >
                         {startMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+                          <IconLoader2 className="h-4 w-4 animate-spin text-emerald-500" />
                         ) : (
-                          <Play className="h-4 w-4 text-emerald-500" />
+                          <IconPlayerPlay className="h-4 w-4 text-emerald-500" />
                         )}
                       </Button>
                     </TooltipTrigger>
@@ -243,9 +243,9 @@ function DashboardPage() {
                         onClick={handleStopAll}
                       >
                         {stopMutation.isPending ? (
-                          <Loader2 className="text-destructive h-4 w-4 animate-spin" />
+                          <IconLoader2 className="text-destructive h-4 w-4 animate-spin" />
                         ) : (
-                          <Square className="text-destructive h-4 w-4" />
+                          <IconSquare className="text-destructive h-4 w-4" />
                         )}
                       </Button>
                     </TooltipTrigger>
@@ -266,7 +266,7 @@ function DashboardPage() {
                         asChild
                       >
                         <Link to="/services">
-                          <Settings className="h-4 w-4" />
+                          <IconSettings className="h-4 w-4" />
                         </Link>
                       </Button>
                     </TooltipTrigger>
@@ -321,7 +321,7 @@ function DashboardPage() {
                 disabled={!canScrollPrev}
                 className="h-10 w-10"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <IconArrowLeft className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
@@ -330,7 +330,7 @@ function DashboardPage() {
                 disabled={!canScrollNext}
                 className="h-10 w-10"
               >
-                <ArrowRight className="h-4 w-4" />
+                <IconArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -343,7 +343,7 @@ function DashboardPage() {
                 <EmptyContent>
                   <Button variant="outline" asChild className="text-muted-foreground" size="sm">
                     <Link to="/services">
-                      Browse Services <ArrowUpRight className="ml-2 h-4 w-4" />
+                      Browse Services <IconArrowUpRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 </EmptyContent>
@@ -416,7 +416,7 @@ function ServiceStatusCard({
           disabled={actionLoading}
           className="flex-1"
         >
-          <Download className="mr-1.5 h-3.5 w-3.5" />
+          <IconDownload className="mr-1.5 h-3.5 w-3.5" />
           Install
         </Button>
       );
@@ -431,7 +431,7 @@ function ServiceStatusCard({
           disabled={actionLoading}
           className="flex-1"
         >
-          <Square className="text-destructive mr-1.5 h-3.5 w-3.5" />
+          <IconSquare className="text-destructive mr-1.5 h-3.5 w-3.5" />
           Stop
         </Button>
       );
@@ -445,7 +445,7 @@ function ServiceStatusCard({
         disabled={actionLoading}
         className="flex-1"
       >
-        <Play className="mr-1.5 h-3.5 w-3.5" />
+        <IconPlayerPlay className="mr-1.5 h-3.5 w-3.5" />
         Start
       </Button>
     );
@@ -468,7 +468,7 @@ function ServiceStatusCard({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <IconAlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">Required service</p>
@@ -512,7 +512,7 @@ function ServiceStatusCard({
           {renderActionButton()}
           <Button variant="outline" size="sm" asChild className="px-2">
             <Link to="/services/$serviceId" params={{ serviceId: service.id }}>
-              <Settings className="h-3.5 w-3.5" />
+              <IconSettings className="h-3.5 w-3.5" />
             </Link>
           </Button>
         </div>

@@ -4,7 +4,7 @@
 
 import { Alert, AlertDescription } from '@renderer/components/ui/alert';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import { AlertCircle } from 'lucide-react';
+import { IconAlertCircle } from '@tabler/icons-react';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 interface LogLine {
@@ -151,7 +151,7 @@ export const ProjectLogs = forwardRef<ProjectLogsRef, ProjectLogsProps>(
         {/* Error Alert */}
         {error && (
           <Alert variant="destructive" className="w-full">
-            <AlertCircle />
+            <IconAlertCircle />
             <AlertDescription className="break-words">{error}</AlertDescription>
           </Alert>
         )}

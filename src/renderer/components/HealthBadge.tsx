@@ -3,7 +3,7 @@
  */
 
 import { cn } from '@renderer/components/lib/utils';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { IconCircleCheck, IconCircleX, IconLoader2 } from '@tabler/icons-react';
 
 interface HealthBadgeProps {
   status?: 'starting' | 'healthy' | 'unhealthy' | 'none';
@@ -23,21 +23,21 @@ export function HealthBadge({ status, className, variant = 'default' }: HealthBa
   const badges = {
     healthy: {
       text: 'Healthy',
-      icon: CheckCircle2,
+      icon: IconCircleCheck,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-50 dark:bg-emerald-950/50',
       border: 'border-emerald-200 dark:border-emerald-900',
     },
     unhealthy: {
       text: 'Unhealthy',
-      icon: XCircle,
+      icon: IconCircleX,
       color: 'text-red-600 dark:text-red-400',
       bg: 'bg-red-50 dark:bg-red-950/50',
       border: 'border-red-200 dark:border-red-900',
     },
     starting: {
       text: 'Starting',
-      icon: Loader2,
+      icon: IconLoader2,
       color: 'text-amber-600 dark:text-amber-400',
       bg: 'bg-amber-50 dark:bg-amber-950/50',
       border: 'border-amber-200 dark:border-amber-900',
@@ -81,9 +81,9 @@ export function HealthIcon({ status, className }: HealthBadgeProps) {
   }
 
   const icons = {
-    healthy: { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400' },
-    unhealthy: { Icon: XCircle, color: 'text-red-600 dark:text-red-400' },
-    starting: { Icon: Loader2, color: 'text-amber-600 dark:text-amber-400' },
+    healthy: { Icon: IconCircleCheck, color: 'text-emerald-600 dark:text-emerald-400' },
+    unhealthy: { Icon: IconCircleX, color: 'text-red-600 dark:text-red-400' },
+    starting: { Icon: IconLoader2, color: 'text-amber-600 dark:text-amber-400' },
   };
 
   const { Icon, color } = icons[status];

@@ -1,25 +1,25 @@
+import { ResizableHandleWithControls } from '@renderer/components/ResizableHandleWithControls';
+import { ResizablePanel, ResizablePanelGroup } from '@renderer/components/ui/resizable';
+import { ScrollArea } from '@renderer/components/ui/scroll-area';
+import { usePanelSizes } from '@renderer/hooks/use-panel-sizes';
+import { IconAlertCircle, IconLoader2, IconPackageOff } from '@tabler/icons-react';
 import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import { useState, useMemo } from 'react';
 import {
   createFileRoute,
-  Outlet,
-  Link,
-  useMatches,
   ErrorComponent,
+  Link,
+  Outlet,
+  useMatches,
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import { usePanelSizes } from '@renderer/hooks/use-panel-sizes';
-import { PackageOpen, Loader2, AlertCircle } from 'lucide-react';
-import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import { ResizablePanelGroup, ResizablePanel } from '@renderer/components/ui/resizable';
-import { ResizableHandleWithControls } from '@renderer/components/ResizableHandleWithControls';
+import { useMemo, useState } from 'react';
 
-import { servicesQueryOptions, serviceContainerStateQueryOptions } from '@renderer/services';
+import { serviceContainerStateQueryOptions, servicesQueryOptions } from '@renderer/services';
 // useQuery already imported above
-import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
-import type { ServiceType, ServiceId } from '@shared/types/service';
+import { ServiceIcon } from '@renderer/components/ServiceIcon';
+import { Button } from '@renderer/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -33,7 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
-import { Button } from '@renderer/components/ui/button';
+import type { ServiceId, ServiceType } from '@shared/types/service';
 
 export const Route = createFileRoute('/services')({
   loader: async ({ context: { queryClient } }) => {
@@ -95,7 +95,7 @@ function ServiceListItem({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <IconAlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">Required service</p>
@@ -176,7 +176,7 @@ function ServicesPage() {
               {/* Loading State */}
               {isLoading && (
                 <div className="flex flex-col items-center justify-center p-8 text-center">
-                  <Loader2 className="text-muted-foreground/40 mb-4 h-12 w-12 animate-spin" />
+                  <IconLoader2 className="text-muted-foreground/40 mb-4 h-12 w-12 animate-spin" />
                   <p className="text-muted-foreground text-sm">Loading services...</p>
                 </div>
               )}
@@ -213,7 +213,7 @@ function ServicesPage() {
                   className="flex flex-col items-center justify-center p-8 text-center"
                   role="status"
                 >
-                  <PackageOpen
+                  <IconPackageOff
                     className="text-muted-foreground/40 mb-4 h-12 w-12"
                     aria-hidden="true"
                   />

@@ -5,7 +5,7 @@
 
 import { Label } from '@renderer/components/ui/label';
 import { Switch } from '@renderer/components/ui/switch';
-import { TbBolt, TbCode, TbFlask, TbLock, TbShieldCheck } from 'react-icons/tb';
+import { IconBolt, IconCode, IconFlask, IconLock, IconShieldCheck } from '@tabler/icons-react';
 import type { WizardStepProps } from './types';
 
 export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStepProps>) {
@@ -56,7 +56,7 @@ export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStep
                 authentication === 'none' ? 'border-primary bg-primary/5' : 'border-border'
               }`}
             >
-              <TbCode
+              <IconCode
                 className={`h-5 w-5 ${authentication === 'none' ? 'text-primary' : 'text-muted-foreground'}`}
               />
               <span className="text-xs font-medium">None</span>
@@ -68,7 +68,7 @@ export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStep
                 authentication === 'workos' ? 'border-primary bg-primary/5' : 'border-border'
               }`}
             >
-              <TbShieldCheck
+              <IconShieldCheck
                 className={`h-5 w-5 ${authentication === 'workos' ? 'text-primary' : 'text-muted-foreground'}`}
               />
               <span className="text-xs font-medium">WorkOS</span>
@@ -80,7 +80,7 @@ export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStep
                 authentication === 'laravel' ? 'border-primary bg-primary/5' : 'border-border'
               }`}
             >
-              <TbLock
+              <IconLock
                 className={`h-5 w-5 ${authentication === 'laravel' ? 'text-primary' : 'text-muted-foreground'}`}
               />
               <span className="text-xs font-medium">Laravel&apos;s built-in</span>
@@ -100,7 +100,7 @@ export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStep
               className="hover:bg-primary/5 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <TbBolt className="text-muted-foreground h-4 w-4" />
+                <IconBolt className="text-muted-foreground h-4 w-4" />
                 <div>
                   <div className="text-sm font-medium">Volt Functional API</div>
                   <div className="text-muted-foreground text-xs">Use functional style</div>
@@ -137,7 +137,7 @@ export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStep
                   : 'border-border hover:border-primary/50'
               }`}
             >
-              <TbFlask
+              <IconFlask
                 className={`h-4 w-4 ${
                   (formData.laravelOptions?.testingFramework || 'pest') === 'pest'
                     ? 'text-primary'
@@ -158,7 +158,7 @@ export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStep
                   : 'border-border hover:border-primary/50'
               }`}
             >
-              <TbFlask
+              <IconFlask
                 className={`h-4 w-4 ${
                   formData.laravelOptions?.testingFramework === 'phpunit'
                     ? 'text-primary'
@@ -178,7 +178,7 @@ export function LaravelConfigStep({ formData, setFormData }: Readonly<WizardStep
             className="hover:bg-primary/5 flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <TbBolt className="text-muted-foreground h-4 w-4" />
+              <IconBolt className="text-muted-foreground h-4 w-4" />
               <div>
                 <div className="text-sm font-medium">Laravel Boost</div>
                 <div className="text-muted-foreground text-xs">Dev tools & enhancements</div>

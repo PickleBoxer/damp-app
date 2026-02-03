@@ -4,16 +4,16 @@
 
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
+import { IconCheck, IconCode, IconLink } from '@tabler/icons-react';
 import { SiLivewire, SiReact, SiVuedotjs } from 'react-icons/si';
-import { TbCheck, TbCode, TbLink } from 'react-icons/tb';
 import type { WizardStepProps } from './types';
 
 const STARTER_KITS = [
-  { value: 'none', label: 'None', icon: TbCode, desc: 'Blank Laravel application' },
+  { value: 'none', label: 'None', icon: IconCode, desc: 'Blank Laravel application' },
   { value: 'react', label: 'React', icon: SiReact, desc: 'React with Inertia.js' },
   { value: 'vue', label: 'Vue', icon: SiVuedotjs, desc: 'Vue with Inertia.js' },
   { value: 'livewire', label: 'Livewire', icon: SiLivewire, desc: 'Full-stack with Livewire' },
-  { value: 'custom', label: 'Custom', icon: TbLink, desc: 'Custom GitHub repository' },
+  { value: 'custom', label: 'Custom', icon: IconLink, desc: 'Custom GitHub repository' },
 ] as const;
 
 type StarterKitValue = (typeof STARTER_KITS)[number]['value'];
@@ -63,7 +63,7 @@ export function LaravelStarterStep({ formData, setFormData }: Readonly<WizardSte
                 </div>
                 {isSelected && (
                   <div className="absolute top-2 right-2">
-                    <TbCheck className="text-primary h-4 w-4" />
+                    <IconCheck className="text-primary h-4 w-4" />
                   </div>
                 )}
               </button>

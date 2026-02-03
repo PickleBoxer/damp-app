@@ -27,9 +27,8 @@ import {
 import { useCreateProject } from '@renderer/hooks/use-projects';
 import type { CreateProjectInput } from '@shared/types/project';
 import { ProjectType } from '@shared/types/project';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { IconArrowLeft, IconArrowRight, IconRocket } from '@tabler/icons-react';
 import { useCallback, useEffect, useState } from 'react';
-import { TbRocket } from 'react-icons/tb';
 
 interface CreateProjectWizardProps {
   open: boolean;
@@ -349,7 +348,7 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
               onClick={handleBack}
               disabled={createProjectMutation.isPending}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <IconArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
           )}
@@ -363,12 +362,12 @@ export function CreateProjectWizard({ open, onOpenChange }: Readonly<CreateProje
               {step === 'variant' ? (
                 <>
                   Launch Project
-                  <TbRocket className="h-5 w-5" />
+                  <IconRocket className="h-5 w-5" />
                 </>
               ) : (
                 <>
                   Next
-                  <ArrowRight className="h-4 w-4" />
+                  <IconArrowRight className="h-4 w-4" />
                 </>
               )}
             </Button>

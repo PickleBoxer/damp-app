@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { Globe } from 'lucide-react';
 import { Safari } from '@renderer/components/ui/safari';
 import type { Project } from '@shared/types/project';
+import { IconWorld } from '@tabler/icons-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface ProjectPreviewProps {
   project: Project;
@@ -66,7 +66,7 @@ export function ProjectPreview({
                   isReady ? 'pointer-events-none opacity-0' : 'opacity-100'
                 }`}
               >
-                <Globe className="h-8 w-8 opacity-50" />
+                <IconWorld className="h-8 w-8 opacity-50" />
                 <p className="text-xs">
                   {isRunning ? 'Starting web server...' : 'Project not running'}
                 </p>

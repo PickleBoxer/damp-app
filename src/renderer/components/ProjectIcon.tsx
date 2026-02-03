@@ -3,9 +3,9 @@
  * Displays appropriate icon based on project type
  */
 
-import { Code2 } from 'lucide-react';
-import { SiLaravel, SiPhp } from 'react-icons/si';
 import type { ProjectType } from '@shared/types/project';
+import { IconCode } from '@tabler/icons-react';
+import { SiLaravel, SiPhp } from 'react-icons/si';
 
 interface ProjectIconProps {
   projectType: ProjectType;
@@ -19,8 +19,8 @@ export function ProjectIcon({ projectType, className = 'h-6 w-6' }: Readonly<Pro
     case 'basic-php':
       return <SiPhp className={`${className} text-[#777BB4]`} />;
     case 'existing':
-      return <Code2 className={className} />;
+      return <IconCode className={className} />;
     default:
-      return <Code2 className={className} />;
+      return <IconCode className={className} />;
   }
 }

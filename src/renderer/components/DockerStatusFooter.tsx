@@ -9,17 +9,18 @@ import type { ActiveSync } from '@renderer/hooks/use-sync';
 import { projectKeys } from '@renderer/projects';
 import type { NgrokStatusData } from '@shared/types/ngrok';
 import { useNavigate } from '@tanstack/react-router';
+
 import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Cpu,
-  Globe,
-  MemoryStick,
-  Network,
-  RefreshCw,
-} from 'lucide-react';
+  IconArrowDown,
+  IconArrowUp,
+  IconBrandDocker,
+  IconChartBar,
+  IconCpu,
+  IconNetwork,
+  IconRefresh,
+  IconWorld,
+} from '@tabler/icons-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SiDocker } from 'react-icons/si';
 
 /**
  * Format bytes to MB or GB depending on size
@@ -227,7 +228,7 @@ export default function DockerStatusFooter() {
           >
             <div className={`flex items-center gap-1.5 rounded px-1 py-0.5`}>
               <div className="relative flex items-center justify-center">
-                <SiDocker color="#2496ED" className="size-3" />
+                <IconBrandDocker color="#2496ED" className="size-3" />
                 <div className="absolute -right-0.5 -bottom-0.5 h-1.5 w-1.5">
                   <span
                     className={`absolute inset-0 inline-flex h-full w-full animate-ping rounded-full opacity-75 ${dotColor}`}
@@ -252,7 +253,7 @@ export default function DockerStatusFooter() {
           <TooltipTrigger asChild>
             <div className="hover:bg-accent/50 flex h-full cursor-default items-center px-2 transition-colors">
               <div className="relative flex items-center justify-center">
-                <Network className="text-muted-foreground size-3" />
+                <IconNetwork className="text-muted-foreground size-3" />
                 <div className="absolute -right-0.5 -bottom-0.5 h-1.5 w-1.5">
                   <span
                     className={`absolute inset-0 inline-flex h-full w-full rounded-full ${
@@ -279,7 +280,7 @@ export default function DockerStatusFooter() {
             className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="Refresh Docker status"
           >
-            <RefreshCw
+            <IconRefresh
               className={`text-muted-foreground size-3 ${isRefreshing ? 'animate-spin' : ''}`}
             />
           </button>
@@ -293,7 +294,7 @@ export default function DockerStatusFooter() {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 px-2 transition-colors">
-                <Cpu className="text-muted-foreground size-3" />
+                <IconCpu className="text-muted-foreground size-3" />
                 <span className="text-muted-foreground font-mono text-xs">
                   {dockerInfo.cpuUsagePercent.toFixed(2)}%
                 </span>
@@ -308,7 +309,7 @@ export default function DockerStatusFooter() {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 px-2 transition-colors">
-                <MemoryStick className="text-muted-foreground size-3" />
+                <IconChartBar className="text-muted-foreground size-3" />
                 <span className="text-muted-foreground font-mono text-xs">
                   {formatMemory(dockerInfo.memUsed)} / {formatMemory(dockerInfo.memTotal)}
                 </span>
@@ -329,13 +330,13 @@ export default function DockerStatusFooter() {
               <div className="flex items-center gap-1">
                 {syncInfo.counts.from > 0 && (
                   <div className="flex items-center gap-0.5">
-                    <ArrowDownToLine className="size-3 animate-pulse text-blue-400" />
+                    <IconArrowDown className="size-3 animate-pulse text-blue-400" />
                     <span className="font-mono text-xs text-blue-400">{syncInfo.counts.from}</span>
                   </div>
                 )}
                 {syncInfo.counts.to > 0 && (
                   <div className="flex items-center gap-0.5">
-                    <ArrowUpFromLine className="size-3 animate-pulse text-blue-400" />
+                    <IconArrowUp className="size-3 animate-pulse text-blue-400" />
                     <span className="font-mono text-xs text-blue-400">{syncInfo.counts.to}</span>
                   </div>
                 )}
@@ -353,7 +354,7 @@ export default function DockerStatusFooter() {
                   className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
-                    <ArrowDownToLine className="size-3.5 shrink-0" />
+                    <IconArrowDown className="size-3.5 shrink-0" />
                     <span className="text-xs">{project.name}</span>
                   </div>
                   <span className="text-xs hover:underline">Open</span>
@@ -368,7 +369,7 @@ export default function DockerStatusFooter() {
                   className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
-                    <ArrowUpFromLine className="size-3.5 shrink-0" />
+                    <IconArrowUp className="size-3.5 shrink-0" />
                     <span className="text-xs">{project.name}</span>
                   </div>
                   <span className="text-xs hover:underline">Open</span>
@@ -385,7 +386,7 @@ export default function DockerStatusFooter() {
           <TooltipTrigger asChild>
             <div className="hover:bg-accent/50 flex h-full cursor-default items-center gap-1.5 px-2 transition-colors">
               <div className="flex items-center gap-1">
-                <Globe className="size-3 animate-pulse text-purple-400" />
+                <IconWorld className="size-3 animate-pulse text-purple-400" />
                 <span className="font-mono text-xs text-purple-400">{ngrokInfo.total}</span>
               </div>
             </div>
@@ -401,7 +402,7 @@ export default function DockerStatusFooter() {
                   className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left first:rounded-t-md last:rounded-b-md"
                 >
                   <div className="flex items-center gap-2">
-                    <Globe className="size-3.5 shrink-0" />
+                    <IconWorld className="size-3.5 shrink-0" />
                     <span className="text-xs">{tunnel.name}</span>
                   </div>
                   <span className="text-xs text-purple-500 hover:underline">Open</span>

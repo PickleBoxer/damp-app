@@ -17,6 +17,18 @@ import {
 } from '@renderer/services';
 import { getServiceUIUrl, hasServiceUI } from '@renderer/utils/services/ui';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
+import {
+  IconAlertTriangle,
+  IconCheck,
+  IconChevronDown,
+  IconChevronRight,
+  IconContainer,
+  IconCopy,
+  IconDeviceMobile,
+  IconDownload,
+  IconExternalLink,
+  IconShieldCheck,
+} from '@tabler/icons-react';
 import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -24,18 +36,6 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Container,
-  Copy,
-  Download,
-  ExternalLink,
-  MonitorSmartphone,
-  ShieldCheck,
-} from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -87,7 +87,7 @@ function CopyButton({ text, label }: { readonly text: string; readonly label: st
 
   return (
     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
-      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+      {copied ? <IconCheck className="h-4 w-4" /> : <IconCopy className="h-4 w-4" />}
     </Button>
   );
 }
@@ -202,11 +202,11 @@ function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) 
             className="flex w-full items-center justify-between gap-2 text-left transition-colors hover:opacity-80"
           >
             <div className="flex items-center gap-2">
-              <ShieldCheck className="text-primary h-4 w-4" />
+              <IconShieldCheck className="text-primary h-4 w-4" />
               <h3 className="text-foreground text-sm font-semibold">Authentication Credentials</h3>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <IconAlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                 </TooltipTrigger>
                 <TooltipContent side="top" className="max-w-xs">
                   <p className="text-xs">
@@ -216,9 +216,9 @@ function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) 
               </Tooltip>
             </div>
             {isExpanded ? (
-              <ChevronDown className="text-muted-foreground h-4 w-4" />
+              <IconChevronDown className="text-muted-foreground h-4 w-4" />
             ) : (
-              <ChevronRight className="text-muted-foreground h-4 w-4" />
+              <IconChevronRight className="text-muted-foreground h-4 w-4" />
             )}
           </button>
           {isExpanded && (
@@ -406,11 +406,11 @@ function ConnectionInfo({ service }: { readonly service: ServiceInfo }) {
         <Tabs defaultValue="devcontainer" className="w-full">
           <TabsList className="w-full">
             <TabsTrigger value="devcontainer" className="flex-1">
-              <Container className="mr-2 h-4 w-4" />
+              <IconContainer className="mr-2 h-4 w-4" />
               Inside Devcontainer
             </TabsTrigger>
             <TabsTrigger value="local" className="flex-1">
-              <MonitorSmartphone className="mr-2 h-4 w-4" />
+              <IconDeviceMobile className="mr-2 h-4 w-4" />
               Local Machine
             </TabsTrigger>
           </TabsList>
@@ -655,7 +655,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
                     <div className="space-y-4">
                       <Item variant="default" size="sm">
                         <ItemMedia>
-                          <ShieldCheck className="text-primary size-5" />
+                          <IconShieldCheck className="text-primary size-5" />
                         </ItemMedia>
                         <ItemContent>
                           <ItemTitle>SSL Certificate</ItemTitle>
@@ -710,7 +710,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
       <div className="flex flex-col gap-2 p-4">
         {showUIButton && (
           <Button variant="ghost" onClick={handleOpenUI} size="lg" className="border-border w-full">
-            <ExternalLink className="mr-2 h-4 w-4" />
+            <IconExternalLink className="mr-2 h-4 w-4" />
             Open Web UI
           </Button>
         )}
@@ -722,7 +722,7 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
             className="border-border w-full"
             size="lg"
           >
-            <Download className="mr-2 h-4 w-4" />
+            <IconDownload className="mr-2 h-4 w-4" />
             {isDownloading ? 'Downloading...' : 'Download Certificate'}
           </Button>
         )}

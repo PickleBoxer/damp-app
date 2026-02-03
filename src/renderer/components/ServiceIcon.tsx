@@ -2,7 +2,7 @@ import MailpitIcon from '@renderer/assets/mailpit';
 import MemcachedIcon from '@renderer/assets/memcached';
 import TypesenseIcon from '@renderer/assets/typesense';
 import ValkeyIcon from '@renderer/assets/valkey';
-import { Database } from 'lucide-react';
+import { IconDatabase } from '@tabler/icons-react';
 import React from 'react';
 import { FaQuestionCircle } from 'react-icons/fa';
 import {
@@ -76,7 +76,7 @@ export function ServiceIcon({ serviceId, className = 'w-10 h-10' }: Readonly<Ser
       IconComponent = MailpitIcon;
       break;
     case 'adminer':
-      IconComponent = Database;
+      IconComponent = IconDatabase;
       break;
     default:
       IconComponent = iconMap[serviceId] || FaQuestionCircle;

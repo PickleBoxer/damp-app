@@ -11,8 +11,7 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { ProjectType } from '@shared/types/project';
-import { Info } from 'lucide-react';
-import { TbCheck } from 'react-icons/tb';
+import { IconCheck, IconInfoCircle } from '@tabler/icons-react';
 import type { WizardStepProps } from './types';
 
 const PROJECT_TYPES: { value: ProjectType; label: string; description: string }[] = [
@@ -94,7 +93,7 @@ export function TypeStep({ formData, setFormData, onAutoAdvance }: Readonly<Wiza
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="text-muted-foreground h-3.5 w-3.5 cursor-help" />
+                    <IconInfoCircle className="text-muted-foreground h-3.5 w-3.5 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-xs">{type.description}</p>
@@ -105,7 +104,7 @@ export function TypeStep({ formData, setFormData, onAutoAdvance }: Readonly<Wiza
           </div>
           {formData.type === type.value && (
             <div className="absolute top-3 right-3">
-              <TbCheck className="text-primary h-5 w-5" />
+              <IconCheck className="text-primary h-5 w-5" />
             </div>
           )}
         </button>

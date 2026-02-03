@@ -35,18 +35,18 @@ import type {
 import { EDITOR_LABELS, NGROK_REGION_LABELS, TERMINAL_LABELS } from '@shared/types/settings';
 import type { ThemeMode } from '@shared/types/theme-mode';
 import type { UpdateState } from '@shared/types/updater';
-import { createFileRoute } from '@tanstack/react-router';
 import {
-  CheckCircle,
-  Download,
-  Eye,
-  EyeOff,
-  Monitor,
-  Moon,
-  RefreshCw,
-  Sun,
-  XCircle,
-} from 'lucide-react';
+  IconCircleCheck,
+  IconCircleX,
+  IconDeviceDesktop,
+  IconDownload,
+  IconEye,
+  IconEyeOff,
+  IconMoon,
+  IconRefresh,
+  IconSun,
+} from '@tabler/icons-react';
+import { createFileRoute } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -561,7 +561,7 @@ function SettingsPage() {
                     onClick={() => handleThemeChange('light')}
                     type="button"
                   >
-                    <Sun className="mr-2 h-4 w-4" />
+                    <IconSun className="mr-2 h-4 w-4" />
                     Light
                   </Button>
                   <Button
@@ -570,7 +570,7 @@ function SettingsPage() {
                     onClick={() => handleThemeChange('dark')}
                     type="button"
                   >
-                    <Moon className="mr-2 h-4 w-4" />
+                    <IconMoon className="mr-2 h-4 w-4" />
                     Dark
                   </Button>
                   <Button
@@ -579,7 +579,7 @@ function SettingsPage() {
                     onClick={() => handleThemeChange('system')}
                     type="button"
                   >
-                    <Monitor className="mr-2 h-4 w-4" />
+                    <IconDeviceDesktop className="mr-2 h-4 w-4" />
                     System
                   </Button>
                 </div>
@@ -630,12 +630,16 @@ function SettingsPage() {
                           className="text-muted-foreground hover:text-foreground transition-colors"
                           aria-label={showToken ? 'Hide token' : 'Show token'}
                         >
-                          {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showToken ? (
+                            <IconEyeOff className="h-4 w-4" />
+                          ) : (
+                            <IconEye className="h-4 w-4" />
+                          )}
                         </button>
                         {ngrokTokenValid ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <IconCircleCheck className="h-4 w-4 text-green-500" />
                         ) : (
-                          <XCircle className="h-4 w-4 text-red-500" />
+                          <IconCircleX className="h-4 w-4 text-red-500" />
                         )}
                       </>
                     )}
@@ -722,7 +726,7 @@ function SettingsPage() {
 
                 {updateState?.status === 'checking' && (
                   <Alert>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <IconRefresh className="h-4 w-4 animate-spin" />
                     <AlertTitle>Checking for updates...</AlertTitle>
                     <AlertDescription>Please wait while we check for new versions</AlertDescription>
                   </Alert>
@@ -730,7 +734,7 @@ function SettingsPage() {
 
                 {updateState?.status === 'downloading' && (
                   <Alert>
-                    <Download className="h-4 w-4" />
+                    <IconDownload className="h-4 w-4" />
                     <AlertTitle>Downloading update...</AlertTitle>
                     <AlertDescription>
                       {downloadProgress > 0 ? (
@@ -747,7 +751,7 @@ function SettingsPage() {
 
                 {updateState?.status === 'downloaded' && updateState.info && (
                   <Alert>
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <IconCircleCheck className="h-4 w-4 text-green-500" />
                     <AlertTitle>Update ready to install</AlertTitle>
                     <AlertDescription>
                       <div className="mt-2 space-y-3">
@@ -776,7 +780,7 @@ function SettingsPage() {
 
                 {updateState?.status === 'error' && updateState.error && (
                   <Alert variant="destructive">
-                    <XCircle className="h-4 w-4" />
+                    <IconCircleX className="h-4 w-4" />
                     <AlertTitle>Update error</AlertTitle>
                     <AlertDescription>
                       <div className="mt-2 space-y-2">
@@ -796,7 +800,7 @@ function SettingsPage() {
                     onClick={handleCheckForUpdates}
                     disabled={isCheckingUpdate}
                   >
-                    <RefreshCw
+                    <IconRefresh
                       className={`mr-2 h-4 w-4 ${isCheckingUpdate ? 'animate-spin' : ''}`}
                     />
                     Check for Updates

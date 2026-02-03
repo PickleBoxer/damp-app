@@ -1,39 +1,13 @@
 import {
-  createFileRoute,
-  Link,
-  Outlet,
-  useMatches,
-  ErrorComponent,
-  useRouter,
-  type ErrorComponentProps,
-} from '@tanstack/react-router';
-import { useState, useMemo } from 'react';
-import { usePanelSizes } from '@renderer/hooks/use-panel-sizes';
-import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
-import { Plus, GripVertical, Loader2 } from 'lucide-react';
-import { FaLink } from 'react-icons/fa6';
-import { Button } from '@renderer/components/ui/button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@renderer/components/ui/tooltip';
-import { ScrollArea } from '@renderer/components/ui/scroll-area';
-import { ResizablePanelGroup, ResizablePanel } from '@renderer/components/ui/resizable';
-import { ResizableHandleWithControls } from '@renderer/components/ResizableHandleWithControls';
-import { projectsQueryOptions, projectContainerStateQueryOptions } from '@renderer/projects';
-import { useReorderProjects } from '@renderer/hooks/use-projects';
-import { useProjectSyncStatus } from '@renderer/hooks/use-sync';
-import { ProjectIcon } from '@renderer/components/ProjectIcon';
-import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';
-import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
-import type { Project } from '@shared/types/project';
-import {
-  DndContext,
   closestCenter,
+  DndContext,
+  DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from '@dnd-kit/core';
-import { restrictToVerticalAxis, restrictToParentElement } from '@dnd-kit/modifiers';
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   arrayMove,
   SortableContext,
@@ -42,6 +16,32 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ContainerStateIndicator } from '@renderer/components/ContainerStateIndicator';
+import { CreateProjectWizard } from '@renderer/components/CreateProjectWizard';
+import { ProjectIcon } from '@renderer/components/ProjectIcon';
+import { ResizableHandleWithControls } from '@renderer/components/ResizableHandleWithControls';
+import { Button } from '@renderer/components/ui/button';
+import { ResizablePanel, ResizablePanelGroup } from '@renderer/components/ui/resizable';
+import { ScrollArea } from '@renderer/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { usePanelSizes } from '@renderer/hooks/use-panel-sizes';
+import { useReorderProjects } from '@renderer/hooks/use-projects';
+import { useProjectSyncStatus } from '@renderer/hooks/use-sync';
+import { projectContainerStateQueryOptions, projectsQueryOptions } from '@renderer/projects';
+import type { Project } from '@shared/types/project';
+import { IconGripVertical, IconLoader2, IconPlus } from '@tabler/icons-react';
+import { useQuery, useQueryErrorResetBoundary } from '@tanstack/react-query';
+import {
+  createFileRoute,
+  ErrorComponent,
+  Link,
+  Outlet,
+  useMatches,
+  useRouter,
+  type ErrorComponentProps,
+} from '@tanstack/react-router';
+import { useMemo, useState } from 'react';
+import { FaLink } from 'react-icons/fa6';
 
 export const Route = createFileRoute('/projects')({
   loader: async ({ context: { queryClient } }) => {
@@ -80,7 +80,11 @@ function SortableProjectItem({ project, isSelected }: Readonly<SortableProjectIt
       className={`group/project relative ${isSelected ? 'bg-primary/5' : ''}`}
     >
       <div className="bg-primary/5 absolute top-0 left-0 flex h-full w-0 cursor-grab items-center justify-center overflow-hidden opacity-0 transition-all duration-200 group-hover/project:w-8 group-hover/project:opacity-100 active:cursor-grabbing">
-        <GripVertical className="text-muted-foreground h-4 w-4" {...attributes} {...listeners} />
+        <IconGripVertical
+          className="text-muted-foreground h-4 w-4"
+          {...attributes}
+          {...listeners}
+        />
       </div>
       <div className="transition-all duration-200 group-hover/project:pl-8">
         <Link
@@ -98,7 +102,7 @@ function SortableProjectItem({ project, isSelected }: Readonly<SortableProjectIt
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="rounded-full p-0.5">
-                          <Loader2 className="text-primary h-3.5 w-3.5 animate-spin" />
+                          <IconLoader2 className="text-primary h-3.5 w-3.5 animate-spin" />
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -210,7 +214,7 @@ function ProjectsPage() {
                 <TooltipTrigger asChild>
                   <Button size="sm" variant="outline" onClick={handleAddProject} className="h-7">
                     Add
-                    <Plus className="h-4 w-4" />
+                    <IconPlus className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Add new project</TooltipContent>
@@ -222,7 +226,7 @@ function ProjectsPage() {
                 {/* Loading State */}
                 {isLoading && (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
-                    <Loader2 className="text-muted-foreground/40 mb-4 h-12 w-12 animate-spin" />
+                    <IconLoader2 className="text-muted-foreground/40 mb-4 h-12 w-12 animate-spin" />
                     <p className="text-muted-foreground text-sm">Loading projects...</p>
                   </div>
                 )}

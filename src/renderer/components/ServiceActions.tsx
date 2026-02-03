@@ -9,8 +9,8 @@ import {
 } from '@renderer/hooks/use-services';
 import { serviceContainerStateQueryOptions } from '@renderer/services';
 import type { ServiceInfo } from '@shared/types/service';
+import { IconLoader2 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -135,7 +135,7 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
           disabled={isActionDisabled}
           className="h-8.5 flex-1"
         >
-          {installMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {installMutation.isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
           Install
         </Button>
       )}
@@ -148,7 +148,7 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
             disabled={isActionDisabled}
             className="h-8.5 flex-1"
           >
-            {startMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {startMutation.isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
             Start
           </Button>
           <Button
@@ -158,7 +158,7 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
             variant="destructive"
             className="h-8.5"
           >
-            {uninstallMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {uninstallMutation.isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
             Uninstall
           </Button>
         </>
@@ -173,11 +173,11 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
             className="h-8.5 flex-1"
             size="lg"
           >
-            {stopMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {stopMutation.isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
             Stop
           </Button>
           <Button onClick={handleRestart} size="lg" disabled={isActionDisabled} className="h-8.5">
-            {restartMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {restartMutation.isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
             Restart
           </Button>
           <Button
@@ -187,7 +187,7 @@ export default function ServiceActions({ service }: Readonly<ServiceActionsProps
             variant="destructive"
             className="h-8.5"
           >
-            {uninstallMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {uninstallMutation.isPending && <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />}
             Uninstall
           </Button>
         </>

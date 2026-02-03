@@ -60,6 +60,27 @@ import { servicesQueryOptions } from '@renderer/services';
 import { getSettings } from '@renderer/utils/settings';
 import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
 import { ServiceId } from '@shared/types/service';
+import {
+  IconAlertTriangle,
+  IconChevronDown,
+  IconChevronUp,
+  IconCopy,
+  IconDatabase,
+  IconDotsVertical,
+  IconDownload,
+  IconExternalLink,
+  IconFolderCode,
+  IconFolderOpen,
+  IconLoader2,
+  IconPlayerPlay,
+  IconSparkles,
+  IconSquare,
+  IconTerminal,
+  IconTrash,
+  IconUpload,
+  IconWorld,
+  IconX,
+} from '@tabler/icons-react';
 import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -68,27 +89,6 @@ import {
   useRouter,
   type ErrorComponentProps,
 } from '@tanstack/react-router';
-import {
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Database,
-  Download,
-  ExternalLink,
-  FolderOpen,
-  Globe,
-  HardDrive,
-  Loader2,
-  MoreVertical,
-  Play,
-  Sparkles,
-  Square,
-  Terminal,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { SiClaude, SiNodedotjs, SiPhp } from 'react-icons/si';
 import { VscTerminal, VscVscode } from 'react-icons/vsc';
@@ -414,7 +414,7 @@ function ProjectDetailPage() {
                     className="hover:bg-accent [&:hover>svg]:text-foreground h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
                     onClick={handleOpenBrowser}
                   >
-                    <Globe className="text-muted-foreground h-4 w-4" />
+                    <IconWorld className="text-muted-foreground h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Open site in browser</TooltipContent>
@@ -428,7 +428,7 @@ function ProjectDetailPage() {
                       className="hover:bg-accent [&:hover>svg]:text-foreground h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
                       onClick={handleOpenDatabaseAdmin}
                     >
-                      <Database className="text-muted-foreground h-4 w-4" />
+                      <IconDatabase className="text-muted-foreground h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Open {databaseAdminTool.name}</TooltipContent>
@@ -442,7 +442,7 @@ function ProjectDetailPage() {
                     className="hover:bg-accent [&:hover>svg]:text-foreground h-8.5 w-8.5 shrink-0 transition-colors [&>svg]:transition-colors"
                     onClick={handleOpenFolder}
                   >
-                    <FolderOpen className="text-muted-foreground h-4 w-4" />
+                    <IconFolderOpen className="text-muted-foreground h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Open site folder</TooltipContent>
@@ -456,9 +456,9 @@ function ProjectDetailPage() {
                     aria-label="More actions"
                   >
                     {syncStatus ? (
-                      <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                      <IconLoader2 className="text-muted-foreground h-4 w-4 animate-spin" />
                     ) : (
-                      <MoreVertical className="text-muted-foreground h-4 w-4" />
+                      <IconDotsVertical className="text-muted-foreground h-4 w-4" />
                     )}
                   </Button>
                 </DropdownMenuTrigger>
@@ -466,7 +466,7 @@ function ProjectDetailPage() {
                   {/* Volume Sync Sub-menu */}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
-                      <HardDrive className="mr-2 h-4 w-4" />
+                      <IconFolderCode className="mr-2 h-4 w-4" />
                       <span>Volume Sync</span>
                       {syncStatus && (
                         <span className="text-muted-foreground ml-auto text-xs">
@@ -496,7 +496,7 @@ function ProjectDetailPage() {
                           onClick={() => cancelSyncMutation.mutate(projectId)}
                           disabled={cancelSyncMutation.isPending}
                         >
-                          <X className="mr-2 h-4 w-4" />
+                          <IconX className="mr-2 h-4 w-4" />
                           Cancel Sync
                           <span className="text-muted-foreground ml-auto text-xs">
                             {syncStatus.percentage ?? 0}%
@@ -508,14 +508,14 @@ function ProjectDetailPage() {
                             onClick={handleSyncFromVolume}
                             disabled={!isDockerRunning || !!syncStatus}
                           >
-                            <Download className="mr-2 h-4 w-4" />
+                            <IconDownload className="mr-2 h-4 w-4" />
                             Sync From Volume
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={handleSyncToVolume}
                             disabled={!isDockerRunning || !!syncStatus}
                           >
-                            <Upload className="mr-2 h-4 w-4" />
+                            <IconUpload className="mr-2 h-4 w-4" />
                             Sync To Volume
                           </DropdownMenuItem>
                         </>
@@ -526,7 +526,7 @@ function ProjectDetailPage() {
                   {/* Share Online Sub-menu */}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
-                      <Globe className="mr-2 h-4 w-4" />
+                      <IconWorld className="mr-2 h-4 w-4" />
                       <span>Share Online</span>
                       {ngrokStatus === 'active' && (
                         <span className="ml-auto text-xs text-green-500">Online</span>
@@ -545,11 +545,11 @@ function ProjectDetailPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={handleCopyUrl}>
-                            <Copy className="mr-2 h-4 w-4" />
+                            <IconCopy className="mr-2 h-4 w-4" />
                             Copy URL
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={handleOpenPublicUrl}>
-                            <ExternalLink className="mr-2 h-4 w-4" />
+                            <IconExternalLink className="mr-2 h-4 w-4" />
                             Open in Browser
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -558,9 +558,9 @@ function ProjectDetailPage() {
                             disabled={stopNgrokMutation.isPending}
                           >
                             {stopNgrokMutation.isPending ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
-                              <Square className="mr-2 h-4 w-4" />
+                              <IconSquare className="mr-2 h-4 w-4" />
                             )}
                             Stop Sharing
                           </DropdownMenuItem>
@@ -569,7 +569,7 @@ function ProjectDetailPage() {
                       {ngrokStatus === 'error' && ngrokStatusData?.error && (
                         <>
                           <DropdownMenuItem disabled className="text-destructive">
-                            <AlertTriangle className="mr-2 h-4 w-4" />
+                            <IconAlertTriangle className="mr-2 h-4 w-4" />
                             {ngrokStatusData.error.length > 30
                               ? `${ngrokStatusData.error.substring(0, 30)}...`
                               : ngrokStatusData.error}
@@ -584,7 +584,7 @@ function ProjectDetailPage() {
                               !hasNgrokToken
                             }
                           >
-                            <Play className="mr-2 h-4 w-4" />
+                            <IconPlayerPlay className="mr-2 h-4 w-4" />
                             Retry
                           </DropdownMenuItem>
                         </>
@@ -601,9 +601,9 @@ function ProjectDetailPage() {
                           }
                         >
                           {startNgrokMutation.isPending || ngrokStatus === 'starting' ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
-                            <Play className="mr-2 h-4 w-4" />
+                            <IconPlayerPlay className="mr-2 h-4 w-4" />
                           )}
                           Start Sharing
                         </DropdownMenuItem>
@@ -631,7 +631,7 @@ function ProjectDetailPage() {
 
                   {/* Delete Project */}
                   <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteDialog(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
+                    <IconTrash className="mr-2 h-4 w-4" />
                     Delete Project
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -666,11 +666,11 @@ function ProjectDetailPage() {
                       className="h-8.5 gap-1.5"
                       onClick={handleOpenTerminal}
                     >
-                      <Terminal className="mr-2 h-4 w-4" />
+                      <IconTerminal className="mr-2 h-4 w-4" />
                       Open Terminal
                     </Button>
                     <Button variant="outline" className="h-8.5 gap-1.5" onClick={handleOpenTinker}>
-                      <Sparkles className="mr-2 h-4 w-4" />
+                      <IconSparkles className="mr-2 h-4 w-4" />
                       Open Tinker
                     </Button>
                   </div>
@@ -844,7 +844,7 @@ function ProjectDetailPage() {
                                 </p>
                               </div>
                             </div>
-                            <ChevronDown
+                            <IconChevronDown
                               className={cn(
                                 'text-muted-foreground h-4 w-4 transition-transform',
                                 !isExpanded && '-rotate-90'
@@ -895,9 +895,9 @@ function ProjectDetailPage() {
             <span className="text-sm font-medium">Logs</span>
           </div>
           {consoleExpanded ? (
-            <ChevronDown className="h-4 w-4" />
+            <IconChevronDown className="h-4 w-4" />
           ) : (
-            <ChevronUp className="h-4 w-4" />
+            <IconChevronUp className="h-4 w-4" />
           )}
         </button>
 
@@ -1029,7 +1029,7 @@ function ServiceCredentialsView({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-4">
-        <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+        <IconLoader2 className="text-muted-foreground h-5 w-5 animate-spin" />
       </div>
     );
   }
@@ -1063,7 +1063,7 @@ function ServiceCredentialsView({
                 }
               }}
             >
-              <Copy className="h-4 w-4" />
+              <IconCopy className="h-4 w-4" />
             </Button>
           </div>
         </div>

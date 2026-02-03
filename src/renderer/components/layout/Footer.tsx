@@ -1,10 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Terminal, Info, Settings } from 'lucide-react';
 import DockerStatusFooter from '@renderer/components/DockerStatusFooter';
-import { getSettings } from '@renderer/utils/settings';
-import { toast } from 'sonner';
-import { Link } from '@tanstack/react-router';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -15,7 +9,18 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from '@renderer/components/ui/alert-dialog';
-import { IconAlertCircle, IconBox } from '@tabler/icons-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
+import { getSettings } from '@renderer/utils/settings';
+import {
+  IconAlertCircle,
+  IconBox,
+  IconInfoCircle,
+  IconSettings,
+  IconTerminal,
+} from '@tabler/icons-react';
+import { Link } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface AppInfo {
   appName: string;
@@ -71,7 +76,7 @@ export default function Footer() {
               className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors"
               aria-label="Settings"
             >
-              <Settings className="size-4" />
+              <IconSettings className="size-4" />
             </Link>
           </TooltipTrigger>
           <TooltipContent side="top">Settings</TooltipContent>
@@ -83,7 +88,7 @@ export default function Footer() {
               className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors"
               aria-label="About"
             >
-              <Info className="size-4" />
+              <IconInfoCircle className="size-4" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">About</TooltipContent>
@@ -95,7 +100,7 @@ export default function Footer() {
               className="hover:bg-accent/50 flex h-full items-center px-2 transition-colors"
               aria-label="Open Terminal"
             >
-              <Terminal className="size-4" />
+              <IconTerminal className="size-4" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="top">Open Terminal</TooltipContent>

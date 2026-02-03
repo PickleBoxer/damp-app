@@ -10,9 +10,9 @@ import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { projectsQueryOptions } from '@renderer/projects';
 import { servicesQueryOptions } from '@renderer/services';
 import { isMacOS } from '@shared/utils/platform';
+import { IconCommand, IconSearch } from '@tabler/icons-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Command, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 function getErrorMessage(error: unknown): string {
@@ -101,9 +101,9 @@ function ResultsList({
             }`}
           >
             <div className="bg-primary/5 flex h-8 w-8 shrink-0 items-center justify-center">
-              {item.type === 'project' && <Command className="text-primary h-4 w-4" />}
+              {item.type === 'project' && <IconCommand className="text-primary h-4 w-4" />}
               {item.type === 'service' && <div className="bg-primary h-2 w-2 rounded-full" />}
-              {item.type === 'page' && <Search className="text-muted-foreground h-4 w-4" />}
+              {item.type === 'page' && <IconSearch className="text-muted-foreground h-4 w-4" />}
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
               <div className="truncate text-sm font-medium">{item.title}</div>
@@ -267,7 +267,7 @@ export function QuickSearch() {
         onMouseEnter={handlePrefetch}
         className="bg-primary/5 border-border hover:bg-muted hover:border-ring/20 relative flex h-6.5 w-[320px] items-center justify-center gap-2 rounded border px-3 font-mono text-sm transition-all duration-100"
       >
-        <Search className="text-muted-foreground h-4 w-4" />
+        <IconSearch className="text-muted-foreground h-4 w-4" />
         <span className="text-muted-foreground text-xs">DAMP</span>
         <div className="absolute right-3 flex items-center gap-0.5">
           <Kbd className="bg-background">{modKey}</Kbd>
@@ -285,7 +285,7 @@ export function QuickSearch() {
 
           {/* Search input */}
           <div className="flex min-w-0 items-center border-b px-3 py-2">
-            <Search className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
+            <IconSearch className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
             <input
               autoFocus
               placeholder="Search projects, services, pages..."

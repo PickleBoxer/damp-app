@@ -15,7 +15,13 @@ import {
 } from '@renderer/components/ui/select';
 import type { ContainerState } from '@shared/types/container';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
-import { ChevronDown, ChevronRight, Download, RefreshCw, Upload } from 'lucide-react';
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconDownload,
+  IconRefresh,
+  IconUpload,
+} from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -165,9 +171,9 @@ export function DatabaseOperations({
                 `${databases.length} database${databases.length === 1 ? '' : 's'}`}
             </div>
             {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <IconChevronDown className="h-4 w-4" />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <IconChevronRight className="h-4 w-4" />
             )}
           </div>
         </div>
@@ -206,7 +212,7 @@ export function DatabaseOperations({
                     disabled={isLoading}
                     title="Fetch databases"
                   >
-                    <RefreshCw className={`size-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <IconRefresh className={`size-4 ${isLoading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
 
@@ -232,7 +238,7 @@ export function DatabaseOperations({
                     className="flex-1"
                     size="sm"
                   >
-                    <Download className="mr-2 size-4" />
+                    <IconDownload className="mr-2 size-4" />
                     {isDumping ? 'Dumping...' : 'Dump'}
                   </Button>
                   <Button
@@ -242,7 +248,7 @@ export function DatabaseOperations({
                     className="flex-1"
                     size="sm"
                   >
-                    <Upload className="mr-2 size-4" />
+                    <IconUpload className="mr-2 size-4" />
                     {isRestoring ? 'Restoring...' : 'Restore'}
                   </Button>
                 </div>

@@ -5,8 +5,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
+import { IconContainer, IconHome, IconServer, IconWorld } from '@tabler/icons-react';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Container, Globe, Home, Server } from 'lucide-react';
 import type { FC } from 'react';
 import { ResourcesBadge, ResourcesBadgeTooltip } from './ResourcesBadge';
 
@@ -30,22 +30,22 @@ export default function Sidebar() {
   const navItems: NavItem[] = [
     {
       to: '/',
-      icon: Home,
+      icon: IconHome,
       label: 'Dashboard',
     },
     {
       to: '/services',
-      icon: Server,
+      icon: IconServer,
       label: 'Services',
     },
     {
       to: '/projects',
-      icon: Globe,
+      icon: IconWorld,
       label: 'Projects',
     },
     {
       to: '/resources',
-      icon: Container,
+      icon: IconContainer,
       label: 'Resources',
       badge: ResourcesBadge,
       badgeTooltip: ResourcesBadgeTooltip,

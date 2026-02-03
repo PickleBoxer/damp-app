@@ -8,7 +8,7 @@ import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import type { BundledService, BundledServiceCredentials } from '@shared/types/project';
 import { ServiceId, type ServiceDefinition } from '@shared/types/service';
-import { ChevronRight, Database, Globe, Package } from 'lucide-react';
+import { IconChevronRight, IconDatabase, IconPackage, IconWorld } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
 
 interface BundledServicesStepProps {
@@ -168,12 +168,12 @@ export function BundledServicesStep({
               : 'border-border hover:border-primary/50 hover:bg-muted/50'
           }`}
         >
-          <Globe className="h-8 w-8 text-blue-500" />
+          <IconWorld className="h-8 w-8 text-blue-500" />
           <div>
             <p className="font-medium">Global Services</p>
             <p className="text-muted-foreground text-xs">Shared across projects</p>
           </div>
-          <ChevronRight className="text-muted-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100" />
+          <IconChevronRight className="text-muted-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
 
         <button
@@ -185,7 +185,7 @@ export function BundledServicesStep({
               : 'border-border hover:border-primary/50 hover:bg-muted/50'
           }`}
         >
-          <Package className="h-8 w-8 text-orange-500" />
+          <IconPackage className="h-8 w-8 text-orange-500" />
           <div>
             <p className="font-medium">Bundled Services</p>
             <p className="text-muted-foreground text-xs">Isolated per project</p>
@@ -249,7 +249,7 @@ export function BundledServicesStep({
                 onClick={() => setShowCredentials(!showCredentials)}
                 className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs"
               >
-                <Database className="h-3 w-3" />
+                <IconDatabase className="h-3 w-3" />
                 {showCredentials ? 'Hide' : 'Edit'} credentials
               </button>
 

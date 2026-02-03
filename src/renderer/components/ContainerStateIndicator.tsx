@@ -4,8 +4,8 @@
  * Shows running state and health status with color coding
  */
 
-import { HiOutlineStatusOnline } from 'react-icons/hi';
 import type { ContainerState } from '@shared/types/container';
+import { HiOutlineStatusOnline } from 'react-icons/hi';
 
 interface ContainerStateIndicatorProps {
   /** Container status object */

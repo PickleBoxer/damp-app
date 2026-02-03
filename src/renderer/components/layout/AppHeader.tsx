@@ -1,5 +1,5 @@
 import { isMacOS } from '@shared/utils/platform';
-import { Box } from 'lucide-react';
+import { IconBox } from '@tabler/icons-react';
 import { QuickSearch } from '../QuickSearch';
 
 export default function AppHeader() {
@@ -12,7 +12,7 @@ export default function AppHeader() {
         {/* Left section - App icon (draggable) */}
         {!isMacOS() && (
           <div className="bg-primary text-primary-foreground absolute left-0 ml-2 flex aspect-square items-center justify-center rounded-[5px] p-1">
-            <Box className="h-4 w-4" />
+            <IconBox className="h-4 w-4" />
           </div>
         )}
 

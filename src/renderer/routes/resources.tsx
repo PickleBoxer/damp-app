@@ -46,11 +46,16 @@ import {
 } from '@renderer/resources';
 import type { DockerResource } from '@shared/types/resource';
 import {
+  IconChevronDown,
   IconChevronLeft,
   IconChevronLeftPipe,
   IconChevronRight,
   IconChevronRightPipe,
+  IconContainer,
+  IconDatabase,
   IconDotsVertical,
+  IconRefresh,
+  IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
@@ -69,7 +74,6 @@ import {
   type GroupingState,
   type SortingState,
 } from '@tanstack/react-table';
-import { ChevronDown, ChevronRight, Container, Database, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -251,7 +255,7 @@ function ResourcesPage() {
       filterFn: 'equals',
       cell: ({ row }) => {
         if (row.getIsGrouped()) return null;
-        const Icon = row.original.type === 'volume' ? Database : Container;
+        const Icon = row.original.type === 'volume' ? IconDatabase : IconContainer;
         return (
           <Badge variant="outline" className="flex w-fit items-center gap-1.5 capitalize">
             <Icon className="h-3 w-3" />
@@ -296,7 +300,7 @@ function ResourcesPage() {
                   }}
                   disabled={updateServiceMutation.isPending}
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <IconRefresh className="h-4 w-4" />
                   Update
                 </DropdownMenuItem>
               )}
@@ -308,7 +312,7 @@ function ResourcesPage() {
                 }}
                 disabled={deleteResourceMutation.isPending}
               >
-                <Trash2 className="h-4 w-4" />
+                <IconTrash className="h-4 w-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -318,7 +322,6 @@ function ResourcesPage() {
     },
   ];
 
-  // eslint-disable-next-line react-hooks/incompatible-library -- File uses 'use no memo' directive
   const table = useReactTable({
     data: resources,
     columns,
@@ -384,13 +387,13 @@ function ResourcesPage() {
         <div className="flex items-center gap-2">
           {orphanCount > 0 && (
             <Button variant="destructive" onClick={handlePruneOrphans}>
-              <Trash2 className="mr-2 h-4 w-4" />
+              <IconTrash className="mr-2 h-4 w-4" />
               Delete Orphans ({orphanCount})
             </Button>
           )}
           {updateCount > 0 && (
             <Button variant="default" onClick={handleUpdateAllServices}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <IconRefresh className="mr-2 h-4 w-4" />
               Update Services ({updateCount})
             </Button>
           )}
@@ -439,7 +442,7 @@ function ResourcesPage() {
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isRefetching}>
-          <RefreshCw className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
+          <IconRefresh className={`h-4 w-4 ${isRefetching ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
@@ -479,9 +482,9 @@ function ResourcesPage() {
                             aria-label={`${row.getIsExpanded() ? 'Collapse' : 'Expand'} ${displayName} group`}
                           >
                             {row.getIsExpanded() ? (
-                              <ChevronDown className="h-4 w-4" />
+                              <IconChevronDown className="h-4 w-4" />
                             ) : (
-                              <ChevronRight className="h-4 w-4" />
+                              <IconChevronRight className="h-4 w-4" />
                             )}
                           </button>
                           <Badge variant="outline" className="px-1.5 py-0 text-[10px] capitalize">
