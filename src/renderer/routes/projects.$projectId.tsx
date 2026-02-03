@@ -22,6 +22,7 @@ import {
 } from '@renderer/components/ui/alert-dialog';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
+import { Card, CardContent } from '@renderer/components/ui/card';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import {
   Collapsible,
@@ -40,7 +41,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@renderer/components/ui/dropdown-menu';
-import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
@@ -62,7 +62,9 @@ import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
 import { ServiceId } from '@shared/types/service';
 import {
   IconAlertTriangle,
+  IconCheck,
   IconChevronDown,
+  IconChevronRight,
   IconChevronUp,
   IconCopy,
   IconDatabase,
@@ -73,6 +75,7 @@ import {
   IconFolderOpen,
   IconLoader2,
   IconPlayerPlay,
+  IconShieldCheck,
   IconSparkles,
   IconSquare,
   IconTerminal,
@@ -852,7 +855,7 @@ function ProjectDetailPage() {
                             />
                           </button>
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="border-x border-b px-4 py-3">
+                        <CollapsibleContent className="space-y-4 border-x border-b px-4 py-3">
                           {/* Service Credentials */}
                           <ServiceCredentialsView
                             projectId={project.id}
@@ -861,14 +864,12 @@ function ProjectDetailPage() {
 
                           {/* Database Operations - Only for database services */}
                           {isDatabase && (
-                            <div className="mt-4 border-t pt-4">
-                              <DatabaseOperations
-                                serviceId={service.serviceId}
-                                projectId={project.id}
-                                isRunning={isRunning}
-                                healthStatus={containerState?.health_status || 'none'}
-                              />
-                            </div>
+                            <DatabaseOperations
+                              serviceId={service.serviceId}
+                              projectId={project.id}
+                              isRunning={isRunning}
+                              healthStatus={containerState?.health_status || 'none'}
+                            />
                           )}
                         </CollapsibleContent>
                       </Collapsible>
@@ -949,6 +950,55 @@ function ProjectDetailPage() {
   );
 }
 
+// Copy button component for credentials
+function CopyButton({
+  text,
+  label,
+}: Readonly<{
+  text: string;
+  label: string;
+}>) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success(`${label} copied`);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={handleCopy}>
+      {copied ? (
+        <IconCheck className="h-3.5 w-3.5 text-green-500" />
+      ) : (
+        <IconCopy className="text-muted-foreground h-3.5 w-3.5" />
+      )}
+    </Button>
+  );
+}
+
+// Credential row component
+function CredentialRow({
+  label,
+  value,
+  copyLabel,
+}: Readonly<{
+  label: string;
+  value: string;
+  copyLabel: string;
+}>) {
+  return (
+    <div className="border-border/50 flex items-center justify-between border-b py-2 last:border-0">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-muted-foreground text-[10px] tracking-wide uppercase">{label}</span>
+        <code className="text-foreground font-mono text-xs">{value}</code>
+      </div>
+      <CopyButton text={value} label={copyLabel} />
+    </div>
+  );
+}
+
 // Component to fetch and display service credentials
 function ServiceCredentialsView({
   projectId,
@@ -957,9 +1007,13 @@ function ServiceCredentialsView({
   projectId: string;
   serviceId: ServiceId;
 }>) {
-  const [credentials, setCredentials] = useState<Record<string, string>>({});
+  const [credentials, setCredentials] = useState<
+    { label: string; value: string; copyLabel: string }[]
+  >([]);
+  const [adminUrl, setAdminUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const fetchCredentials = async () => {
@@ -970,51 +1024,89 @@ function ServiceCredentialsView({
         const project = await window.projects.getProject(projectId);
         if (!project) return;
 
-        const creds: Record<string, string> = {};
+        const creds: { label: string; value: string; copyLabel: string }[] = [];
+        let url: string | null = null;
 
         // Database services
         if ([ServiceId.MySQL, ServiceId.MariaDB].includes(serviceId)) {
-          creds.host = `${project.name}-${serviceId}`;
-          creds.port = envVars.MYSQL_TCP_PORT || '3306';
-          creds.database = envVars.MYSQL_DATABASE || 'development';
-          creds.username = envVars.MYSQL_USER || 'developer';
-          creds.password = envVars.MYSQL_PASSWORD || 'developer';
-          creds.rootPassword = envVars.MYSQL_ROOT_PASSWORD || 'root';
+          creds.push(
+            { label: 'Host', value: `${project.name}-${serviceId}`, copyLabel: 'Host' },
+            { label: 'Port', value: envVars.MYSQL_TCP_PORT || '3306', copyLabel: 'Port' },
+            {
+              label: 'Database',
+              value: envVars.MYSQL_DATABASE || 'development',
+              copyLabel: 'Database',
+            },
+            { label: 'Username', value: envVars.MYSQL_USER || 'developer', copyLabel: 'Username' },
+            {
+              label: 'Password',
+              value: envVars.MYSQL_PASSWORD || 'developer',
+              copyLabel: 'Password',
+            },
+            {
+              label: 'Root Password',
+              value: envVars.MYSQL_ROOT_PASSWORD || 'root',
+              copyLabel: 'Root password',
+            }
+          );
         } else if (serviceId === ServiceId.PostgreSQL) {
-          creds.host = `${project.name}-postgresql`;
-          creds.port = envVars.PGPORT || '5432';
-          creds.database = envVars.POSTGRES_DB || 'postgres';
-          creds.username = envVars.POSTGRES_USER || 'postgres';
-          creds.password = envVars.POSTGRES_PASSWORD || 'postgres';
+          creds.push(
+            { label: 'Host', value: `${project.name}-postgresql`, copyLabel: 'Host' },
+            { label: 'Port', value: envVars.PGPORT || '5432', copyLabel: 'Port' },
+            { label: 'Database', value: envVars.POSTGRES_DB || 'postgres', copyLabel: 'Database' },
+            {
+              label: 'Username',
+              value: envVars.POSTGRES_USER || 'postgres',
+              copyLabel: 'Username',
+            },
+            {
+              label: 'Password',
+              value: envVars.POSTGRES_PASSWORD || 'postgres',
+              copyLabel: 'Password',
+            }
+          );
         } else if (serviceId === ServiceId.MongoDB) {
-          creds.host = `${project.name}-mongodb`;
-          creds.port = '27017';
-          creds.username = envVars.MONGO_INITDB_ROOT_USERNAME || 'root';
-          creds.password = envVars.MONGO_INITDB_ROOT_PASSWORD || 'root';
+          creds.push(
+            { label: 'Host', value: `${project.name}-mongodb`, copyLabel: 'Host' },
+            { label: 'Port', value: '27017', copyLabel: 'Port' },
+            {
+              label: 'Username',
+              value: envVars.MONGO_INITDB_ROOT_USERNAME || 'root',
+              copyLabel: 'Username',
+            },
+            {
+              label: 'Password',
+              value: envVars.MONGO_INITDB_ROOT_PASSWORD || 'root',
+              copyLabel: 'Password',
+            }
+          );
         } else if (serviceId === ServiceId.Redis) {
-          creds.host = `${project.name}-redis`;
-          creds.port = '6379';
+          creds.push(
+            { label: 'Host', value: `${project.name}-redis`, copyLabel: 'Host' },
+            { label: 'Port', value: '6379', copyLabel: 'Port' }
+          );
         } else if (serviceId === ServiceId.PhpMyAdmin) {
-          creds.url = `http://phpmyadmin.${project.domain.replace(/^https?:\/\//, '')}`;
+          url = `http://phpmyadmin.${project.domain.replace(/^https?:\/\//, '')}`;
         } else if (serviceId === ServiceId.Adminer) {
-          creds.url = `http://adminer.${project.domain.replace(/^https?:\/\//, '')}`;
+          url = `http://adminer.${project.domain.replace(/^https?:\/\//, '')}`;
         } else if (serviceId === ServiceId.Mailpit) {
-          creds.smtp = `${project.name}-mailpit:1025`;
-          creds.webUI = `http://mailpit.${project.domain.replace(/^https?:\/\//, '')}`;
+          creds.push({
+            label: 'SMTP Host',
+            value: `${project.name}-mailpit:1025`,
+            copyLabel: 'SMTP host',
+          });
+          url = `http://mailpit.${project.domain.replace(/^https?:\/\//, '')}`;
         } else {
-          // Fallback for services without explicit credential mapping:
-          // expose raw env vars so the dialog is not empty.
+          // Fallback for services without explicit credential mapping
           Object.entries(envVars).forEach(([key, value]) => {
             if (typeof value === 'string') {
-              creds[key] = value;
+              creds.push({ label: key, value, copyLabel: key });
             }
           });
-          if (Object.keys(creds).length === 0) {
-            creds.message = 'Credentials not available for this service yet.';
-          }
         }
 
         setCredentials(creds);
+        setAdminUrl(url);
       } catch (err) {
         console.error('Failed to fetch service credentials:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch service credentials');
@@ -1026,6 +1118,17 @@ function ServiceCredentialsView({
     fetchCredentials();
   }, [projectId, serviceId]);
 
+  const handleOpenUrl = async () => {
+    if (adminUrl) {
+      try {
+        await window.electronWindow.openExternal(adminUrl);
+        toast.success('Opening in browser...');
+      } catch {
+        toast.error('Failed to open URL');
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-4">
@@ -1036,39 +1139,100 @@ function ServiceCredentialsView({
 
   if (error) {
     return (
+      <div className="bg-muted/50 flex items-center gap-2 rounded-lg p-3">
+        <IconAlertTriangle className="text-muted-foreground h-4 w-4 shrink-0" />
+        <p className="text-muted-foreground text-xs">
+          Service must be running to view credentials.
+        </p>
+      </div>
+    );
+  }
+
+  // Admin tool UI (phpMyAdmin, Adminer)
+  if (adminUrl && credentials.length === 0) {
+    return (
+      <button
+        onClick={handleOpenUrl}
+        className="bg-muted/30 hover:bg-muted/50 group flex w-full items-center justify-between rounded-lg border p-3 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <IconExternalLink className="text-muted-foreground h-4 w-4" />
+          <span className="text-foreground text-sm font-medium">Open in Browser</span>
+        </div>
+        <span className="text-muted-foreground max-w-[180px] truncate text-xs">{adminUrl}</span>
+      </button>
+    );
+  }
+
+  // No credentials available
+  if (credentials.length === 0) {
+    return (
       <p className="text-muted-foreground py-2 text-xs">
-        Service must be running to view credentials.
+        No credentials available for this service.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {Object.entries(credentials).map(([key, value]) => (
-        <div key={key} className="space-y-1.5">
-          <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, ' $1')}</Label>
-          <div className="flex gap-2">
-            <Input value={value} readOnly className="h-9 font-mono text-xs" />
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-9 w-9 shrink-0"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(value);
-                  toast.success(`${key} copied to clipboard`);
-                } catch (copyError) {
-                  console.error('Failed to copy to clipboard', copyError);
-                  toast.error('Failed to copy to clipboard');
-                }
-              }}
-            >
-              <IconCopy className="h-4 w-4" />
-            </Button>
-          </div>
+    <Card size="sm" className="w-full">
+      <CardContent>
+        <div className="space-y-3">
+          {/* Credentials Section */}
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex w-full items-center justify-between gap-2 text-left transition-colors hover:opacity-80"
+          >
+            <div className="flex items-center gap-2">
+              <IconShieldCheck className="text-primary h-4 w-4" />
+              <h3 className="text-foreground text-sm font-semibold">Authentication Credentials</h3>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <IconAlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="text-xs">
+                    ⚠️ Local Development Only - These credentials are not secure for production use
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            {isExpanded ? (
+              <IconChevronDown className="text-muted-foreground h-4 w-4" />
+            ) : (
+              <IconChevronRight className="text-muted-foreground h-4 w-4" />
+            )}
+          </button>
+
+          {isExpanded && (
+            <div className="space-y-0">
+              {credentials.map(cred => (
+                <CredentialRow
+                  key={`${cred.label}-${cred.value}`}
+                  label={cred.label}
+                  value={cred.value}
+                  copyLabel={cred.copyLabel}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Admin URL Section (for Mailpit, etc.) */}
+          {adminUrl && (
+            <div className="border-t pt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full justify-start gap-2 px-0"
+                onClick={handleOpenUrl}
+              >
+                <IconExternalLink className="h-4 w-4" />
+                <span className="text-xs">Open Web UI</span>
+              </Button>
+            </div>
+          )}
         </div>
-      ))}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
