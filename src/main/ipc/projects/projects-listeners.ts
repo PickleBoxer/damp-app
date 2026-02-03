@@ -10,7 +10,6 @@ import type {
   UpdateProjectInput,
   VolumeCopyProgress,
 } from '@shared/types/project';
-import { ServiceId } from '@shared/types/service';
 import { BrowserWindow, ipcMain } from 'electron';
 import { z } from 'zod';
 import * as CHANNELS from './projects-channels';
@@ -23,7 +22,6 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 // Validation schemas
 const projectIdSchema = z.string().regex(UUID_REGEX, 'Invalid UUID format');
 const projectIdsSchema = z.array(z.string().regex(UUID_REGEX, 'Invalid UUID format'));
-const serviceIdSchema = z.nativeEnum(ServiceId, 'Invalid service ID');
 
 // Prevent duplicate listener registration
 let listenersAdded = false;
@@ -169,28 +167,4 @@ export function addProjectsListeners(mainWindow: BrowserWindow): void {
       throw error;
     }
   });
-
-  /**
-   * Get bundled service environment variables
-   */
-  ipcMain.handle(
-    CHANNELS.PROJECTS_GET_BUNDLED_SERVICE_ENV,
-    async (_event, projectId: string, serviceId: string) => {
-      try {
-        await ensureInitialized();
-        // Validate projectId and serviceId
-        projectIdSchema.parse(projectId);
-        serviceIdSchema.parse(serviceId);
-        return await projectStateManager.getBundledServiceEnv(projectId, serviceId);
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          const errorMessage = error.issues.map(issue => issue.message).join(', ');
-          logger.error('Invalid parameters for bundled service env', { error: errorMessage });
-          throw new Error(`Invalid parameters: ${errorMessage}`);
-        }
-        logger.error('Failed to get bundled service env', { projectId, serviceId, error });
-        throw error;
-      }
-    }
-  );
 }

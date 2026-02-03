@@ -12,6 +12,8 @@ export const servicesKeys = {
   detail: (id: ServiceId) => ['services', id] as const,
   states: () => ['services', 'states'] as const,
   containerState: (id: ServiceId) => ['services', 'states', id] as const,
+  bundledContainerState: (projectId: string, serviceId: ServiceId) =>
+    ['services', 'states', serviceId, projectId] as const,
 };
 
 /** Query options for all services - use in loaders */
@@ -37,6 +39,15 @@ export const serviceContainerStateQueryOptions = (serviceId: ServiceId) =>
   queryOptions({
     queryKey: servicesKeys.containerState(serviceId),
     queryFn: () => servicesApi.getServiceContainerState(serviceId),
+    staleTime: Infinity, // Pure event-driven - Docker events handle updates
+    refetchInterval: false, // No polling - Docker events provide real-time updates
+  });
+
+/** Query options for a bundled service's container state (project-scoped) */
+export const bundledServiceContainerStateQueryOptions = (projectId: string, serviceId: ServiceId) =>
+  queryOptions({
+    queryKey: servicesKeys.bundledContainerState(projectId, serviceId),
+    queryFn: () => servicesApi.getServiceContainerState(serviceId, projectId),
     staleTime: Infinity, // Pure event-driven - Docker events handle updates
     refetchInterval: false, // No polling - Docker events provide real-time updates
   });

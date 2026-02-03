@@ -119,15 +119,28 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   /**
    * Get container status for a specific service
    */
-  ipcMain.handle(CHANNELS.SERVICES_GET_CONTAINER_STATE, async (_event, serviceId: ServiceId) => {
-    try {
-      await ensureInitialized();
-      return await serviceStateManager.getServiceContainerState(serviceId);
-    } catch (error) {
-      logger.error('Failed to get service container state', { serviceId, error });
-      throw error;
+  ipcMain.handle(
+    CHANNELS.SERVICES_GET_CONTAINER_STATE,
+    async (_event, { serviceId, projectId }: { serviceId: ServiceId; projectId?: string }) => {
+      try {
+        await ensureInitialized();
+        // Validate inputs
+        serviceIdSchema.parse(serviceId);
+        if (projectId) {
+          projectIdSchema.parse(projectId);
+        }
+        return await serviceStateManager.getServiceContainerState(serviceId, projectId);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const errorMessage = error.issues.map(issue => issue.message).join(', ');
+          logger.error('Invalid parameters for service container state', { error: errorMessage });
+          throw new Error(`Invalid parameters: ${errorMessage}`);
+        }
+        logger.error('Failed to get service container state', { serviceId, projectId, error });
+        throw error;
+      }
     }
-  });
+  );
 
   /**
    * Install a service

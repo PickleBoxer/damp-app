@@ -103,7 +103,10 @@ export interface ServicesContext {
   getAllServices: () => Promise<ServiceDefinition[]>;
   getBundleableServices: () => Promise<Record<string, ServiceDefinition[]>>;
   getService: (serviceId: ServiceId) => Promise<ServiceInfo>;
-  getServiceContainerState: (serviceId: ServiceId) => Promise<ContainerState | null>;
+  getServiceContainerState: (
+    serviceId: ServiceId,
+    projectId?: string
+  ) => Promise<ContainerState | null>;
   installService: (
     serviceId: ServiceId,
     options?: InstallOptions
@@ -151,10 +154,6 @@ export interface ProjectsContext {
   reorderProjects: (projectIds: string[]) => Promise<Result<void>>;
   selectFolder: (defaultPath?: string) => Promise<FolderSelectionResult>;
   getProjectContainerState: (projectId: string) => Promise<ContainerState | null>;
-  getBundledServiceEnv: (
-    projectId: string,
-    serviceId: ServiceId
-  ) => Promise<Record<string, string>>;
   onCopyProgress: (
     callback: (projectId: string, progress: VolumeCopyProgress) => void
   ) => () => void;

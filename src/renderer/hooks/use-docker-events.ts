@@ -73,6 +73,13 @@ export function useDockerEvents() {
         queryClient.invalidateQueries({
           queryKey: servicesKeys.containerState(serviceId),
         });
+
+        // ✅ Bundled services: Also invalidate bundled service state if projectId present
+        if (event.projectId) {
+          queryClient.invalidateQueries({
+            queryKey: servicesKeys.bundledContainerState(event.projectId, serviceId),
+          });
+        }
       }
 
       // Invalidate resources query

@@ -60,8 +60,13 @@ class ServiceStateManager extends BaseStateManager {
 
   /**
    * Get container status for a specific service using label-based lookup
+   * @param serviceId - The service ID
+   * @param projectId - Optional project ID for bundled services
    */
-  async getServiceContainerState(serviceId: ServiceId): Promise<ContainerState | null> {
+  async getServiceContainerState(
+    serviceId: ServiceId,
+    projectId?: string
+  ): Promise<ContainerState | null> {
     this.ensureInitialized();
 
     const definition = getServiceDefinition(serviceId);
@@ -70,9 +75,9 @@ class ServiceStateManager extends BaseStateManager {
     }
 
     try {
-      return await getServiceContainerState(serviceId);
+      return await getServiceContainerState(serviceId, projectId);
     } catch (error) {
-      this.logger.error('Failed to get service container state', { serviceId, error });
+      this.logger.error('Failed to get service container state', { serviceId, projectId, error });
       return {
         running: false,
         exists: false,
