@@ -9,6 +9,7 @@ import {
   createProjectVolume,
   removeContainersByLabels,
   removeVolume as removeDockerVolume,
+  removeVolumesByLabels,
 } from '@main/core/docker';
 import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
 import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
@@ -1129,6 +1130,9 @@ class ProjectStateManager extends BaseStateManager {
       // Remove Docker volume if requested
       if (removeVolume) {
         await removeDockerVolume(project.volumeName);
+
+        // Remove all bundled service volumes (if any) by label
+        await removeVolumesByLabels([`${LABEL_KEYS.PROJECT_ID}=${projectId}`]);
       }
 
       // Remove project folder if requested

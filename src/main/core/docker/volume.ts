@@ -98,8 +98,36 @@ export async function removeVolume(volumeName: string): Promise<void> {
     ) {
       throw new Error(`Cannot remove volume ${volumeName}: volume is in use by a container`);
     } else {
-      throw new Error(`Failed to remove volume ${volumeName}: ${error}`);
+      logger.error(`Failed to remove volume ${volumeName}`, { error });
+      throw error;
     }
+  }
+}
+
+/**
+ * Remove volumes matching the specified labels
+ */
+export async function removeVolumesByLabels(labels: string[]): Promise<void> {
+  try {
+    const volumeList = await docker.listVolumes({
+      filters: { label: labels },
+    });
+
+    const volumes = volumeList.Volumes || [];
+
+    for (const volumeInfo of volumes) {
+      try {
+        const volume = docker.getVolume(volumeInfo.Name);
+        await volume.remove();
+        logger.info(`Removed volume: ${volumeInfo.Name}`);
+      } catch (error) {
+        // Ignore individual volume removal failures (e.g., if in use or already removed)
+        logger.debug('Failed to remove volume', { volumeName: volumeInfo.Name, error });
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to remove volumes by labels', { labels, error });
+    throw error;
   }
 }
 

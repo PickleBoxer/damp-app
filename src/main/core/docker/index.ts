@@ -44,6 +44,7 @@ export {
   removeServiceVolumes,
   removeServiceVolumesByLabel,
   removeVolume,
+  removeVolumesByLabels,
   syncFromVolume,
   syncToVolume,
   volumeExists,
