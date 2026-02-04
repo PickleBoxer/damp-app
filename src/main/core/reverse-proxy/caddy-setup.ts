@@ -122,9 +122,11 @@ export async function verifyCaddyCertInstalled(): Promise<boolean> {
  */
 async function verifyCertificateWindows(certPath: string): Promise<boolean> {
   return new Promise(resolve => {
+    // Escape single quotes by doubling them for PowerShell
+    const escapedPath = certPath.replace(/'/g, "''");
     const psCommand = String.raw`
       try {
-        $fileCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2("${certPath}")
+        $fileCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2('${escapedPath}')
         $thumbprint = $fileCert.Thumbprint
         $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root", "LocalMachine")
         $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
@@ -203,7 +205,7 @@ async function verifyCertificateMacOS(certPath: string): Promise<boolean> {
       });
 
       checkProc.on('close', () => {
-        resolve(checkStdout.includes(fingerprint));
+        resolve(checkStdout.toUpperCase().includes(fingerprint.toUpperCase()));
       });
 
       checkProc.on('error', err => {
@@ -496,8 +498,9 @@ async function installCertificateWindows(
   const tryElevated = (): Promise<{ success: boolean; error?: string }> =>
     new Promise(resolve => {
       // Use PowerShell to trigger UAC prompt and run certutil elevated
-      // The -ArgumentList is provided as comma-separated quoted strings
-      const psCommand = `Start-Process -FilePath 'certutil.exe' -ArgumentList '-addstore','-f','ROOT','${certPath}' -Verb RunAs -Wait`;
+      // Escape single quotes by doubling them for PowerShell
+      const escapedPath = certPath.replace(/'/g, "''");
+      const psCommand = `Start-Process -FilePath 'certutil.exe' -ArgumentList '-addstore','-f','ROOT','${escapedPath}' -Verb RunAs -Wait`;
 
       const elevated = spawn('powershell', ['-NoProfile', '-Command', psCommand], {
         stdio: 'ignore', // Ignore stdio to prevent terminal corruption from UAC prompt

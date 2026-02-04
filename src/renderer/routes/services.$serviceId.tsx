@@ -422,17 +422,11 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefreshCertStatus = async () => {
+    if (isRefreshing || isRefetching) return;
     setIsRefreshing(true);
-    try {
-      await queryClient.invalidateQueries({ queryKey: ['services', 'caddy', 'certInstalled'] });
-      toast.success('Certificate status refreshed');
-    } catch (error) {
-      toast.error('Failed to refresh certificate status', {
-        description: error instanceof Error ? error.message : 'An unknown error occurred',
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
+    await queryClient.invalidateQueries({ queryKey: ['services', 'caddy', 'certInstalled'] });
+    toast.success('Certificate status refreshed');
+    setIsRefreshing(false);
   };
 
   const handleDownloadCertificate = async () => {
@@ -546,15 +540,11 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
                         </p>
                         <ol className="text-muted-foreground ml-4 list-decimal space-y-1">
                           <li>Click &quot;Download Certificate&quot; button below</li>
-                          <li>Double-click the downloaded .crt file</li>
-                          <li>Click &quot;Install Certificate...&quot;</li>
-                          <li>Select &quot;Local Machine&quot; and click Next (requires admin)</li>
-                          <li>Choose &quot;Place all certificates in the following store&quot;</li>
+                          <li>Open the downloaded .crt file</li>
                           <li>
-                            Click &quot;Browse&quot; and select &quot;Trusted Root Certification
-                            Authorities&quot;
+                            Install it to your system&apos;s trusted root certificate store
+                            (requires admin/sudo privileges)
                           </li>
-                          <li>Click OK, then Next, and Finish</li>
                         </ol>
                         <p className="text-muted-foreground italic">
                           Note: You may need to restart your browser after installation.
