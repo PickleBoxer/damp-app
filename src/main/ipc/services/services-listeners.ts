@@ -214,12 +214,12 @@ export function addServicesListeners(mainWindow: BrowserWindow): void {
   });
 
   /**
-   * Get Caddy SSL certificate installed status
+   * Get Caddy SSL certificate installed status (real-time verification)
    */
   ipcMain.handle(CHANNELS.SERVICES_CADDY_GET_CERT_STATUS, async () => {
     try {
       await ensureInitialized();
-      return serviceStateManager.getCaddyCertInstalled();
+      return await serviceStateManager.getCaddyCertInstalled();
     } catch (error) {
       logger.error('Failed to get Caddy cert status', { error });
       return false;

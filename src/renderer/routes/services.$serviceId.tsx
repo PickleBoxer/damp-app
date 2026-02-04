@@ -27,7 +27,12 @@ import {
   IconExternalLink,
   IconShieldCheck,
 } from '@tabler/icons-react';
-import { useQuery, useQueryErrorResetBoundary, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  useQuery,
+  useQueryClient,
+  useQueryErrorResetBoundary,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import {
   createFileRoute,
   ErrorComponent,
@@ -407,12 +412,28 @@ function ServiceInfoCard({ service }: { readonly service: ServiceInfo }) {
 
 // Service details component
 function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
+  const queryClient = useQueryClient();
   const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
-  const { data: caddyCertInstalled = false } = useQuery({
+  const { data: caddyCertInstalled = false, isRefetching } = useQuery({
     ...caddyCertStatusQueryOptions(),
     enabled: service.id === ServiceId.Caddy,
   });
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshCertStatus = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['services', 'caddy', 'certInstalled'] });
+      toast.success('Certificate status refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh certificate status', {
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleDownloadCertificate = async () => {
     setIsDownloading(true);
@@ -429,6 +450,8 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
         toast.success('Certificate downloaded successfully', {
           description: result.path ? `Saved to: ${result.path}` : 'Certificate has been saved',
         });
+        // Refresh certificate status after download
+        await queryClient.invalidateQueries({ queryKey: ['services', 'caddy', 'certInstalled'] });
       } else {
         toast.error('Failed to download certificate', {
           description: result.error || 'An unknown error occurred',
@@ -513,11 +536,28 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
 
                       <Separator />
 
-                      <div className="bg-primary/5 space-y-1 p-3 text-xs">
+                      <div className="space-y-3 p-3 text-xs">
+                        <p className="text-foreground font-medium">
+                          Certificate is auto-installed during Caddy setup
+                        </p>
                         <p className="text-muted-foreground">
-                          If you experience any connection issues with HTTPS, you can manually
-                          download and install the root certificate to your system&apos;s trusted
-                          store using the button below.
+                          If you experience HTTPS connection issues, manually install the
+                          certificate:
+                        </p>
+                        <ol className="text-muted-foreground ml-4 list-decimal space-y-1">
+                          <li>Click &quot;Download Certificate&quot; button below</li>
+                          <li>Double-click the downloaded .crt file</li>
+                          <li>Click &quot;Install Certificate...&quot;</li>
+                          <li>Select &quot;Local Machine&quot; and click Next (requires admin)</li>
+                          <li>Choose &quot;Place all certificates in the following store&quot;</li>
+                          <li>
+                            Click &quot;Browse&quot; and select &quot;Trusted Root Certification
+                            Authorities&quot;
+                          </li>
+                          <li>Click OK, then Next, and Finish</li>
+                        </ol>
+                        <p className="text-muted-foreground italic">
+                          Note: You may need to restart your browser after installation.
                         </p>
                       </div>
                     </div>
@@ -552,16 +592,28 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
           </Button>
         )}
         {isCaddy && state?.exists && (
-          <Button
-            variant="ghost"
-            onClick={handleDownloadCertificate}
-            disabled={isDownloading}
-            className="border-border w-full"
-            size="lg"
-          >
-            <IconDownload className="mr-2 h-4 w-4" />
-            {isDownloading ? 'Downloading...' : 'Download Certificate'}
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              onClick={handleRefreshCertStatus}
+              disabled={isRefreshing || isRefetching}
+              className="border-border w-full"
+              size="lg"
+            >
+              <IconShieldCheck className="mr-2 h-4 w-4" />
+              {isRefreshing || isRefetching ? 'Checking...' : 'Refresh Certificate Status'}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleDownloadCertificate}
+              disabled={isDownloading}
+              className="border-border w-full"
+              size="lg"
+            >
+              <IconDownload className="mr-2 h-4 w-4" />
+              {isDownloading ? 'Downloading...' : 'Download Certificate'}
+            </Button>
+          </>
         )}
         <ServiceActions service={service} />
       </div>
