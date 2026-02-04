@@ -56,9 +56,11 @@ import {
   useSyncToVolume,
 } from '@renderer/hooks/use-sync';
 import { projectContainerStateQueryOptions, projectQueryOptions } from '@renderer/projects';
-import { servicesQueryOptions } from '@renderer/services';
+import { bundledServiceContainerStateQueryOptions, servicesQueryOptions } from '@renderer/services';
+import { parseEnvVars } from '@renderer/utils/container';
 import { getSettings } from '@renderer/utils/settings';
 import { PREINSTALLED_PHP_EXTENSIONS } from '@shared/constants/php-extensions';
+import type { Project } from '@shared/types/project';
 import { ServiceId } from '@shared/types/service';
 import {
   IconAlertTriangle,
@@ -857,10 +859,7 @@ function ProjectDetailPage() {
                         </CollapsibleTrigger>
                         <CollapsibleContent className="space-y-4 border-x border-b px-4 py-3">
                           {/* Service Credentials */}
-                          <ServiceCredentialsView
-                            projectId={project.id}
-                            serviceId={service.serviceId}
-                          />
+                          <ServiceCredentialsView serviceId={service.serviceId} project={project} />
 
                           {/* Database Operations - Only for database services */}
                           {isDatabase && (
@@ -1001,122 +1000,113 @@ function CredentialRow({
 
 // Component to fetch and display service credentials
 function ServiceCredentialsView({
-  projectId,
   serviceId,
+  project,
 }: Readonly<{
-  projectId: string;
   serviceId: ServiceId;
+  project: Project;
 }>) {
-  const [credentials, setCredentials] = useState<
-    { label: string; value: string; copyLabel: string }[]
-  >([]);
-  const [adminUrl, setAdminUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  useEffect(() => {
-    const fetchCredentials = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const envVars = await window.projects.getBundledServiceEnv(projectId, serviceId);
-        const project = await window.projects.getProject(projectId);
-        if (!project) return;
+  // Fetch container state using TanStack Query
+  const {
+    data: containerState,
+    isLoading,
+    isError,
+  } = useQuery(bundledServiceContainerStateQueryOptions(project.id, serviceId));
 
-        const creds: { label: string; value: string; copyLabel: string }[] = [];
-        let url: string | null = null;
+  // Derive credentials from container state (memoized by React Compiler)
+  const { credentials, adminUrl } = (() => {
+    if (!containerState || !containerState.exists || !containerState.running) {
+      return { credentials: [], adminUrl: null };
+    }
 
-        // Database services
-        if ([ServiceId.MySQL, ServiceId.MariaDB].includes(serviceId)) {
-          creds.push(
-            { label: 'Host', value: `${project.name}-${serviceId}`, copyLabel: 'Host' },
-            { label: 'Port', value: envVars.MYSQL_TCP_PORT || '3306', copyLabel: 'Port' },
-            {
-              label: 'Database',
-              value: envVars.MYSQL_DATABASE || 'development',
-              copyLabel: 'Database',
-            },
-            { label: 'Username', value: envVars.MYSQL_USER || 'developer', copyLabel: 'Username' },
-            {
-              label: 'Password',
-              value: envVars.MYSQL_PASSWORD || 'developer',
-              copyLabel: 'Password',
-            },
-            {
-              label: 'Root Password',
-              value: envVars.MYSQL_ROOT_PASSWORD || 'root',
-              copyLabel: 'Root password',
-            }
-          );
-        } else if (serviceId === ServiceId.PostgreSQL) {
-          creds.push(
-            { label: 'Host', value: `${project.name}-postgresql`, copyLabel: 'Host' },
-            { label: 'Port', value: envVars.PGPORT || '5432', copyLabel: 'Port' },
-            { label: 'Database', value: envVars.POSTGRES_DB || 'postgres', copyLabel: 'Database' },
-            {
-              label: 'Username',
-              value: envVars.POSTGRES_USER || 'postgres',
-              copyLabel: 'Username',
-            },
-            {
-              label: 'Password',
-              value: envVars.POSTGRES_PASSWORD || 'postgres',
-              copyLabel: 'Password',
-            }
-          );
-        } else if (serviceId === ServiceId.MongoDB) {
-          creds.push(
-            { label: 'Host', value: `${project.name}-mongodb`, copyLabel: 'Host' },
-            { label: 'Port', value: '27017', copyLabel: 'Port' },
-            {
-              label: 'Username',
-              value: envVars.MONGO_INITDB_ROOT_USERNAME || 'root',
-              copyLabel: 'Username',
-            },
-            {
-              label: 'Password',
-              value: envVars.MONGO_INITDB_ROOT_PASSWORD || 'root',
-              copyLabel: 'Password',
-            }
-          );
-        } else if (serviceId === ServiceId.Redis) {
-          creds.push(
-            { label: 'Host', value: `${project.name}-redis`, copyLabel: 'Host' },
-            { label: 'Port', value: '6379', copyLabel: 'Port' }
-          );
-        } else if (serviceId === ServiceId.PhpMyAdmin) {
-          url = `http://phpmyadmin.${project.domain.replace(/^https?:\/\//, '')}`;
-        } else if (serviceId === ServiceId.Adminer) {
-          url = `http://adminer.${project.domain.replace(/^https?:\/\//, '')}`;
-        } else if (serviceId === ServiceId.Mailpit) {
-          creds.push({
-            label: 'SMTP Host',
-            value: `${project.name}-mailpit:1025`,
-            copyLabel: 'SMTP host',
-          });
-          url = `http://mailpit.${project.domain.replace(/^https?:\/\//, '')}`;
-        } else {
-          // Fallback for services without explicit credential mapping
-          Object.entries(envVars).forEach(([key, value]) => {
-            if (typeof value === 'string') {
-              creds.push({ label: key, value, copyLabel: key });
-            }
-          });
+    // Parse environment variables from container
+    const envVars = parseEnvVars(containerState.environment_vars);
+
+    const creds: { label: string; value: string; copyLabel: string }[] = [];
+    let url: string | null = null;
+
+    // Database services
+    if ([ServiceId.MySQL, ServiceId.MariaDB].includes(serviceId)) {
+      creds.push(
+        { label: 'Host', value: `${project.name}-${serviceId}`, copyLabel: 'Host' },
+        { label: 'Port', value: envVars.MYSQL_TCP_PORT || '3306', copyLabel: 'Port' },
+        {
+          label: 'Database',
+          value: envVars.MYSQL_DATABASE || 'development',
+          copyLabel: 'Database',
+        },
+        { label: 'Username', value: envVars.MYSQL_USER || 'developer', copyLabel: 'Username' },
+        {
+          label: 'Password',
+          value: envVars.MYSQL_PASSWORD || 'developer',
+          copyLabel: 'Password',
+        },
+        {
+          label: 'Root Password',
+          value: envVars.MYSQL_ROOT_PASSWORD || 'root',
+          copyLabel: 'Root password',
         }
+      );
+    } else if (serviceId === ServiceId.PostgreSQL) {
+      creds.push(
+        { label: 'Host', value: `${project.name}-postgresql`, copyLabel: 'Host' },
+        { label: 'Port', value: envVars.PGPORT || '5432', copyLabel: 'Port' },
+        { label: 'Database', value: envVars.POSTGRES_DB || 'postgres', copyLabel: 'Database' },
+        {
+          label: 'Username',
+          value: envVars.POSTGRES_USER || 'postgres',
+          copyLabel: 'Username',
+        },
+        {
+          label: 'Password',
+          value: envVars.POSTGRES_PASSWORD || 'postgres',
+          copyLabel: 'Password',
+        }
+      );
+    } else if (serviceId === ServiceId.MongoDB) {
+      creds.push(
+        { label: 'Host', value: `${project.name}-mongodb`, copyLabel: 'Host' },
+        { label: 'Port', value: '27017', copyLabel: 'Port' },
+        {
+          label: 'Username',
+          value: envVars.MONGO_INITDB_ROOT_USERNAME || 'root',
+          copyLabel: 'Username',
+        },
+        {
+          label: 'Password',
+          value: envVars.MONGO_INITDB_ROOT_PASSWORD || 'root',
+          copyLabel: 'Password',
+        }
+      );
+    } else if (serviceId === ServiceId.Redis) {
+      creds.push(
+        { label: 'Host', value: `${project.name}-redis`, copyLabel: 'Host' },
+        { label: 'Port', value: '6379', copyLabel: 'Port' }
+      );
+    } else if (serviceId === ServiceId.PhpMyAdmin) {
+      url = `http://phpmyadmin.${project.domain.replace(/^https?:\/\//, '')}`;
+    } else if (serviceId === ServiceId.Adminer) {
+      url = `http://adminer.${project.domain.replace(/^https?:\/\//, '')}`;
+    } else if (serviceId === ServiceId.Mailpit) {
+      creds.push({
+        label: 'SMTP Host',
+        value: `${project.name}-mailpit:1025`,
+        copyLabel: 'SMTP host',
+      });
+      url = `http://mailpit.${project.domain.replace(/^https?:\/\//, '')}`;
+    } else {
+      // Fallback for services without explicit credential mapping
+      Object.entries(envVars).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          creds.push({ label: key, value, copyLabel: key });
+        }
+      });
+    }
 
-        setCredentials(creds);
-        setAdminUrl(url);
-      } catch (err) {
-        console.error('Failed to fetch service credentials:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch service credentials');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCredentials();
-  }, [projectId, serviceId]);
+    return { credentials: creds, adminUrl: url };
+  })();
 
   const handleOpenUrl = async () => {
     if (adminUrl) {
@@ -1129,7 +1119,7 @@ function ServiceCredentialsView({
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-4">
         <IconLoader2 className="text-muted-foreground h-5 w-5 animate-spin" />
@@ -1137,7 +1127,7 @@ function ServiceCredentialsView({
     );
   }
 
-  if (error) {
+  if (isError || !containerState?.exists || !containerState?.running) {
     return (
       <div className="bg-muted/50 flex items-center gap-2 rounded-lg p-3">
         <IconAlertTriangle className="text-muted-foreground h-4 w-4 shrink-0" />

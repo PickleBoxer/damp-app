@@ -15,6 +15,7 @@ import {
   serviceContainerStateQueryOptions,
   serviceQueryOptions,
 } from '@renderer/services';
+import { parseEnvVars } from '@renderer/utils/container';
 import { getServiceUIUrl, hasServiceUI } from '@renderer/utils/services/ui';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 import {
@@ -242,16 +243,6 @@ function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) 
 // Get environment variables from container state, falling back to definition defaults
 function getEnvironmentVars(service: ServiceInfo, containerEnvVars?: string[]): string[] {
   return containerEnvVars?.length ? containerEnvVars : service.default_config.environment_vars;
-}
-
-// Helper function to parse env vars into an object
-function parseEnvVars(envVars: string[]): Record<string, string> {
-  const parsed: Record<string, string> = {};
-  for (const envVar of envVars) {
-    const [key, ...valueParts] = envVar.split('=');
-    parsed[key] = valueParts.join('=');
-  }
-  return parsed;
 }
 
 // Format environment variables as Laravel .env configuration

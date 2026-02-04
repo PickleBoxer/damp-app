@@ -1,6 +1,5 @@
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router';
 //import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
-//import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import CaddyStatusBanner from '@renderer/components/CaddyStatusBanner';
 import AppHeader from '@renderer/components/layout/AppHeader';
 import Footer from '@renderer/components/layout/Footer';
@@ -18,6 +17,7 @@ import { useDockerEvents } from '@renderer/hooks/use-docker-events';
 import { useSyncProgress } from '@renderer/hooks/use-sync';
 import { useTheme } from '@renderer/hooks/use-theme';
 import type { QueryClient } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'sonner';
 
 function RootComponent() {
@@ -60,7 +60,7 @@ function RootComponent() {
       {/* Uncomment the following line to enable the router devtools */}
       {/* <TanStackRouterDevtools position="bottom-right" /> */}
       {/* Uncomment the following line to enable the React Query devtools */}
-      {/*<ReactQueryDevtools buttonPosition="top-right" /> */}
+      <ReactQueryDevtools buttonPosition="top-right" />
     </div>
   );
 }
