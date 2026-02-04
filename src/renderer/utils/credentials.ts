@@ -191,6 +191,7 @@ const SERVICES_WITH_CREDENTIALS = new Set<ServiceId>([
   ServiceId.MongoDB,
   ServiceId.Redis,
   ServiceId.Valkey,
+  ServiceId.Memcached,
   ServiceId.RabbitMQ,
   ServiceId.MinIO,
   ServiceId.RustFS,

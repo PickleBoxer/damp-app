@@ -5,13 +5,13 @@
  * Only renders for services that have admin URLs and only when the service is running.
  */
 
+import { IconAlertTriangle, IconExternalLink, IconLoader2 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { IconExternalLink, IconLoader2, IconAlertTriangle } from '@tabler/icons-react';
 import { toast } from 'sonner';
 
 import { Button } from '@renderer/components/ui/button';
 import { bundledServiceContainerStateQueryOptions } from '@renderer/services';
-import { hasAdminUrl, getServiceAdminUrl } from '@renderer/utils/credentials';
+import { getServiceAdminUrl, hasAdminUrl } from '@renderer/utils/credentials';
 import { ServiceId } from '@shared/types/service';
 
 interface ServiceAdminLinkProps {
@@ -68,7 +68,7 @@ export function ServiceAdminLink({
 
   const handleOpenUrl = async () => {
     try {
-      await globalThis.window.electronWindow.openExternal(adminUrl);
+      await window.electronWindow.openExternal(adminUrl);
       toast.success('Opening in browser...');
     } catch {
       toast.error('Failed to open URL');

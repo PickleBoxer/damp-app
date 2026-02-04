@@ -196,7 +196,6 @@ export function DatabaseOperations({ serviceId, projectId }: DatabaseOperationsP
           )}
           {!isComponentLoading && !isDisabled && (
             <div className="space-y-3">
-              {' '}
               <div className="flex gap-2">
                 <Select
                   value={selectedDatabase}
