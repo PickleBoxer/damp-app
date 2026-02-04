@@ -278,6 +278,31 @@ function ResourcesPage() {
       },
     },
     {
+      id: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        if (row.getIsGrouped()) return null;
+        const resource = row.original;
+        return (
+          <div className="flex items-center gap-2">
+            {resource.isOrphan && (
+              <Badge variant="destructive" className="text-xs">
+                Orphaned
+              </Badge>
+            )}
+            {resource.needsUpdate && (
+              <Badge variant="default" className="text-xs">
+                Update Available
+              </Badge>
+            )}
+            {!resource.isOrphan && !resource.needsUpdate && (
+              <span className="text-muted-foreground text-xs">—</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       id: 'actions',
       header: () => null,
       cell: ({ row }) => {
@@ -471,6 +496,12 @@ function ResourcesPage() {
                     firstResource?.ownerDisplayName || (row.groupingValue as string);
                   const ownerCategory = firstResource?.category;
 
+                  // Count orphaned and update-needed resources in this group
+                  const orphanCount = row.subRows.filter(subRow => subRow.original.isOrphan).length;
+                  const updateCount = row.subRows.filter(
+                    subRow => subRow.original.needsUpdate
+                  ).length;
+
                   return (
                     <TableRow key={row.id}>
                       <TableCell colSpan={row.getVisibleCells().length} className="py-2">
@@ -494,6 +525,16 @@ function ResourcesPage() {
                           <span className="text-muted-foreground text-xs font-normal">
                             ({row.subRows.length} resource{row.subRows.length === 1 ? '' : 's'})
                           </span>
+                          {orphanCount > 0 && (
+                            <Badge variant="destructive" className="text-[10px]">
+                              {orphanCount} Orphaned
+                            </Badge>
+                          )}
+                          {updateCount > 0 && (
+                            <Badge variant="default" className="text-[10px]">
+                              {updateCount} Update{updateCount === 1 ? '' : 's'}
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

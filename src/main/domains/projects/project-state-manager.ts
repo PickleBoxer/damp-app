@@ -8,7 +8,7 @@ import {
   copyToVolume,
   createProjectVolume,
   removeContainersByLabels,
-  removeVolume as removeDockerVolume,
+  removeVolumesByLabels,
 } from '@main/core/docker';
 import { addHostEntry, removeHostEntry } from '@main/core/hosts-manager/hosts-manager';
 import { syncProjectsToCaddy } from '@main/core/reverse-proxy/caddy-config';
@@ -802,10 +802,10 @@ class ProjectStateManager extends BaseStateManager {
       // Remove Docker volume if created
       if (volumeCreated && project) {
         try {
-          await removeDockerVolume(project.volumeName);
-          this.logger.info('Rollback: Removed Docker volume');
+          await removeVolumesByLabels([`${LABEL_KEYS.PROJECT_ID}=${project.id}`]);
+          this.logger.info('Rollback: Removed Docker volumes');
         } catch (rollbackError) {
-          this.logger.warn('Rollback failed: Could not remove volume', { error: rollbackError });
+          this.logger.warn('Rollback failed: Could not remove volumes', { error: rollbackError });
         }
       }
 
@@ -1126,9 +1126,9 @@ class ProjectStateManager extends BaseStateManager {
         this.logger.warn('Failed to remove project containers:', { error });
       }
 
-      // Remove Docker volume if requested
+      // Remove Docker volumes if requested (main + bundled service volumes)
       if (removeVolume) {
-        await removeDockerVolume(project.volumeName);
+        await removeVolumesByLabels([`${LABEL_KEYS.PROJECT_ID}=${projectId}`]);
       }
 
       // Remove project folder if requested

@@ -179,6 +179,12 @@ async function getAllResources(): Promise<DockerResource[]> {
         isOrphan =
           !projects.some(p => p.id === projectId) &&
           !projectStateManager.isPendingProject(projectId);
+      } else if (type === RESOURCE_TYPES.BUNDLED_SERVICE_VOLUME && projectId) {
+        category = 'bundled';
+        // Bundled service volume is orphaned if project doesn't exist
+        isOrphan =
+          !projects.some(p => p.id === projectId) &&
+          !projectStateManager.isPendingProject(projectId);
       } else if (type === RESOURCE_TYPES.SERVICE_VOLUME && serviceId) {
         category = 'service';
         // Volume is orphaned if there's no container for this service
