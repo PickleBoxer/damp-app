@@ -1,6 +1,7 @@
 import { DatabaseOperations } from '@renderer/components/DatabaseOperations';
 import { HealthBadge } from '@renderer/components/HealthBadge';
 import ServiceActions from '@renderer/components/ServiceActions';
+import { ServiceCredentials } from '@renderer/components/ServiceCredentials';
 import { ServiceIcon } from '@renderer/components/ServiceIcon';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
@@ -9,7 +10,6 @@ import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from '@renderer/
 import { ScrollArea } from '@renderer/components/ui/scroll-area';
 import { Separator } from '@renderer/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   caddyCertStatusQueryOptions,
   serviceContainerStateQueryOptions,
@@ -19,10 +19,7 @@ import { parseEnvVars } from '@renderer/utils/container';
 import { getServiceUIUrl, hasServiceUI } from '@renderer/utils/services/ui';
 import { ServiceId, ServiceInfo } from '@shared/types/service';
 import {
-  IconAlertTriangle,
   IconCheck,
-  IconChevronDown,
-  IconChevronRight,
   IconContainer,
   IconCopy,
   IconDeviceMobile,
@@ -90,153 +87,6 @@ function CopyButton({ text, label }: { readonly text: string; readonly label: st
     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleCopy}>
       {copied ? <IconCheck className="h-4 w-4" /> : <IconCopy className="h-4 w-4" />}
     </Button>
-  );
-}
-
-// Credential row component for displaying individual credentials
-function CredentialRow({
-  label,
-  value,
-  copyLabel,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly copyLabel: string;
-}) {
-  return (
-    <div className="border-border/50 flex items-center justify-between border-b py-2 last:border-0">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-muted-foreground text-xs">{label}</span>
-        <code className="text-foreground font-mono text-sm">{value}</code>
-      </div>
-      <CopyButton text={value} label={copyLabel} />
-    </div>
-  );
-}
-
-// Credentials summary card component
-function CredentialsSummaryCard({ service }: { readonly service: ServiceInfo }) {
-  const { data: state } = useQuery(serviceContainerStateQueryOptions(service.id));
-  const [isExpanded, setIsExpanded] = useState(false);
-  const envVars = getEnvironmentVars(service, state?.environment_vars);
-  const credentials: { label: string; value: string; copyLabel: string }[] = [];
-
-  // Extract credentials based on service type
-  if (service.service_type === 'database') {
-    if (service.name === 'mysql' || service.name === 'mariadb') {
-      const prefix = service.name === 'mysql' ? 'MYSQL_' : 'MARIADB_';
-      const rootPassword = envVars.find(v => v.includes(`${prefix}ROOT_PASSWORD=`))?.split('=')[1];
-      const database = envVars.find(v => v.includes(`${prefix}DATABASE=`))?.split('=')[1];
-      const user = envVars.find(v => v.includes(`${prefix}USER=`))?.split('=')[1];
-      const password = envVars
-        .find(v => v.includes(`${prefix}PASSWORD=`) && !v.includes('ROOT'))
-        ?.split('=')[1];
-
-      if (rootPassword)
-        credentials.push({
-          label: 'Root Password',
-          value: rootPassword,
-          copyLabel: 'Root password',
-        });
-      if (database)
-        credentials.push({ label: 'Database', value: database, copyLabel: 'Database name' });
-      if (user) credentials.push({ label: 'Username', value: user, copyLabel: 'Username' });
-      if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
-    } else if (service.name === 'postgresql') {
-      const user = envVars.find(v => v.startsWith('POSTGRES_USER='))?.split('=')[1];
-      const password = envVars.find(v => v.startsWith('POSTGRES_PASSWORD='))?.split('=')[1];
-      const database = envVars.find(v => v.startsWith('POSTGRES_DB='))?.split('=')[1];
-
-      if (user) credentials.push({ label: 'Username', value: user, copyLabel: 'Username' });
-      if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
-      if (database)
-        credentials.push({ label: 'Database', value: database, copyLabel: 'Database name' });
-    } else if (service.name === 'mongodb') {
-      const username = envVars
-        .find(v => v.startsWith('MONGO_INITDB_ROOT_USERNAME='))
-        ?.split('=')[1];
-      const password = envVars
-        .find(v => v.startsWith('MONGO_INITDB_ROOT_PASSWORD='))
-        ?.split('=')[1];
-
-      if (username) credentials.push({ label: 'Username', value: username, copyLabel: 'Username' });
-      if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
-    }
-  } else if (service.name === 'rabbitmq') {
-    const user = envVars.find(v => v.startsWith('RABBITMQ_DEFAULT_USER='))?.split('=')[1];
-    const password = envVars.find(v => v.startsWith('RABBITMQ_DEFAULT_PASS='))?.split('=')[1];
-
-    if (user) credentials.push({ label: 'Username', value: user, copyLabel: 'Username' });
-    if (password) credentials.push({ label: 'Password', value: password, copyLabel: 'Password' });
-  } else if (service.name === 'minio') {
-    const user = envVars.find(v => v.startsWith('MINIO_ROOT_USER='))?.split('=')[1];
-    const password = envVars.find(v => v.startsWith('MINIO_ROOT_PASSWORD='))?.split('=')[1];
-
-    if (user) credentials.push({ label: 'Access Key', value: user, copyLabel: 'Access key' });
-    if (password)
-      credentials.push({ label: 'Secret Key', value: password, copyLabel: 'Secret key' });
-  } else if (service.name === 'rustfs') {
-    const accessKey = envVars.find(v => v.startsWith('RUSTFS_ACCESS_KEY='))?.split('=')[1];
-    const secretKey = envVars.find(v => v.startsWith('RUSTFS_SECRET_KEY='))?.split('=')[1];
-
-    if (accessKey)
-      credentials.push({ label: 'Access Key', value: accessKey, copyLabel: 'Access key' });
-    if (secretKey)
-      credentials.push({ label: 'Secret Key', value: secretKey, copyLabel: 'Secret key' });
-  } else if (service.name === 'meilisearch') {
-    const masterKey = envVars.find(v => v.startsWith('MEILI_MASTER_KEY='))?.split('=')[1];
-    if (masterKey)
-      credentials.push({ label: 'Master Key', value: masterKey, copyLabel: 'Master key' });
-  } else if (service.name === 'typesense') {
-    const apiKey = envVars.find(v => v.startsWith('TYPESENSE_API_KEY='))?.split('=')[1];
-    if (apiKey) credentials.push({ label: 'API Key', value: apiKey, copyLabel: 'API key' });
-  }
-
-  if (credentials.length === 0) return null;
-
-  return (
-    <Card size="sm" className="mx-auto w-full">
-      <CardContent>
-        <div className="space-y-3">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex w-full items-center justify-between gap-2 text-left transition-colors hover:opacity-80"
-          >
-            <div className="flex items-center gap-2">
-              <IconShieldCheck className="text-primary h-4 w-4" />
-              <h3 className="text-foreground text-sm font-semibold">Authentication Credentials</h3>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <IconAlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <p className="text-xs">
-                    ⚠️ Local Development Only - These credentials are not secure for production use
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            {isExpanded ? (
-              <IconChevronDown className="text-muted-foreground h-4 w-4" />
-            ) : (
-              <IconChevronRight className="text-muted-foreground h-4 w-4" />
-            )}
-          </button>
-          {isExpanded && (
-            <div className="space-y-0">
-              {credentials.map(cred => (
-                <CredentialRow
-                  key={`${cred.label}-${cred.value}`}
-                  label={cred.label}
-                  value={cred.value}
-                  copyLabel={cred.copyLabel}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -679,20 +529,16 @@ function ServiceDetails({ service }: { readonly service: ServiceInfo }) {
         ) : (
           state?.exists && (
             <div className="space-y-4 p-4">
-              <CredentialsSummaryCard service={service} />
+              <ServiceCredentials serviceId={service.id} />
               {service.default_config.ports.length > 0 && <ConnectionInfo service={service} />}
             </div>
           )
         )}
 
-        {/* Database operations for database services */}
-        {service.databaseConfig && state?.exists && (
+        {/* Database operations */}
+        {state?.exists && (
           <div className="space-y-4 p-4 pt-0">
-            <DatabaseOperations
-              service={service}
-              isRunning={state.running}
-              healthStatus={state.health_status}
-            />
+            <DatabaseOperations serviceId={service.id} />
           </div>
         )}
       </ScrollArea>
