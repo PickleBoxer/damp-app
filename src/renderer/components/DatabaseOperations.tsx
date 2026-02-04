@@ -13,8 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@renderer/components/ui/select';
-import type { ContainerState } from '@shared/types/container';
-import { ServiceId, ServiceInfo } from '@shared/types/service';
+import { Skeleton } from '@renderer/components/ui/skeleton';
+import {
+  bundledServiceContainerStateQueryOptions,
+  serviceContainerStateQueryOptions,
+  serviceQueryOptions,
+} from '@renderer/services';
+import type { ServiceId } from '@shared/types/service';
 import {
   IconChevronDown,
   IconChevronRight,
@@ -22,34 +27,16 @@ import {
   IconRefresh,
   IconUpload,
 } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
 interface DatabaseOperationsProps {
-  readonly service?: ServiceInfo;
-  readonly serviceId?: ServiceId;
+  readonly serviceId: ServiceId;
   readonly projectId?: string;
-  readonly isRunning: boolean;
-  readonly healthStatus: ContainerState['health_status'];
 }
 
-function getDisabledMessage(
-  isRunning: boolean,
-  healthStatus: ContainerState['health_status']
-): string {
-  if (!isRunning) {
-    return 'Start the service to use database operations.';
-  }
-  return `Service is ${healthStatus}. Wait for healthy status.`;
-}
-
-export function DatabaseOperations({
-  service,
-  serviceId,
-  projectId,
-  isRunning,
-  healthStatus,
-}: DatabaseOperationsProps) {
+export function DatabaseOperations({ serviceId, projectId }: DatabaseOperationsProps) {
   const [databases, setDatabases] = useState<string[]>([]);
   const [selectedDatabase, setSelectedDatabase] = useState<string>('');
   const [customDatabaseName, setCustomDatabaseName] = useState<string>('');
@@ -58,30 +45,46 @@ export function DatabaseOperations({
   const [isRestoring, setIsRestoring] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const currentServiceId = serviceId || service?.id;
+  // Fetch service info (cached from route loader - no performance cost)
+  const { data: service } = useQuery(serviceQueryOptions(serviceId));
 
-  useEffect(() => {
-    setDatabases([]);
-    setSelectedDatabase('');
-    setCustomDatabaseName('');
-    setIsLoading(false);
-    setIsDumping(false);
-    setIsRestoring(false);
-    setIsExpanded(false);
-  }, [currentServiceId, projectId]);
+  const isDatabase = service?.service_type === 'database';
 
-  // Early return if no serviceId provided
-  if (!currentServiceId) return null;
+  // Fetch container state - use different hooks based on bundled vs standalone
+  const standaloneQuery = useQuery({
+    ...serviceContainerStateQueryOptions(serviceId),
+    enabled: !projectId && isDatabase,
+  });
+  const bundledQuery = useQuery({
+    ...bundledServiceContainerStateQueryOptions(projectId!, serviceId),
+    enabled: !!projectId && isDatabase,
+  });
+
+  // Early return if not a database service (after all hooks are called)
+  if (!isDatabase) {
+    return null;
+  }
+
+  const containerState = projectId ? bundledQuery.data : standaloneQuery.data;
+  const isStateLoading = projectId ? bundledQuery.isLoading : standaloneQuery.isLoading;
 
   const servicesApi = (globalThis as unknown as Window).services;
+  const isRunning = containerState?.running || false;
+  const healthStatus = containerState?.health_status || 'none';
   const isDisabled = !isRunning || (healthStatus !== 'healthy' && healthStatus !== 'none');
+  const isComponentLoading = isStateLoading;
+
+  const getDisabledMessage = () => {
+    if (isRunning) {
+      return `Service is ${healthStatus}. Wait for healthy status.`;
+    }
+    return 'Start the service to use database operations.';
+  };
 
   const handleFetchDatabases = async () => {
-    if (!currentServiceId) return;
-
     setIsLoading(true);
     try {
-      const dbs = await servicesApi.listDatabases(currentServiceId, projectId);
+      const dbs = await servicesApi.listDatabases(serviceId, projectId);
 
       setDatabases(dbs);
       if (dbs.length > 0 && !selectedDatabase) {
@@ -99,11 +102,11 @@ export function DatabaseOperations({
   };
 
   const handleDumpDatabase = async () => {
-    if (!selectedDatabase || !currentServiceId) return;
+    if (!selectedDatabase) return;
 
     setIsDumping(true);
     try {
-      const result = await servicesApi.dumpDatabase(currentServiceId, selectedDatabase, projectId);
+      const result = await servicesApi.dumpDatabase(serviceId, selectedDatabase, projectId);
 
       if (result.success) {
         toast.success('Dump created', { description: result.path });
@@ -120,8 +123,6 @@ export function DatabaseOperations({
   };
 
   const handleRestoreDatabase = async () => {
-    if (!currentServiceId) return;
-
     const targetDatabase = customDatabaseName.trim() || selectedDatabase;
 
     if (!targetDatabase) {
@@ -133,7 +134,7 @@ export function DatabaseOperations({
 
     setIsRestoring(true);
     try {
-      const result = await servicesApi.restoreDatabase(currentServiceId, targetDatabase, projectId);
+      const result = await servicesApi.restoreDatabase(serviceId, targetDatabase, projectId);
 
       if (result.success) {
         toast.success('Database restored', {
@@ -159,10 +160,12 @@ export function DatabaseOperations({
       <CollapsibleTrigger className="w-full">
         <div className="hover:bg-muted/50 border-border flex items-center justify-between rounded-lg border p-3 transition-colors">
           <div className="flex items-center gap-3">
-            {currentServiceId && <ServiceIcon serviceId={currentServiceId} className="h-4 w-4" />}
+            <ServiceIcon serviceId={serviceId} className="h-4 w-4" />
             <div className="text-left">
               <h3 className="text-sm font-medium">Backup & Restore</h3>
-              <p className="text-muted-foreground text-xs">Database operations</p>
+              <p className="text-muted-foreground text-xs">
+                {isComponentLoading ? 'Loading...' : 'Database operations'}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -181,80 +184,82 @@ export function DatabaseOperations({
 
       <CollapsibleContent>
         <div className="border-border rounded-b-lg border border-t-0 p-3">
-          <div className="space-y-3">
-            {isDisabled ? (
-              <p className="text-muted-foreground text-xs">
-                {getDisabledMessage(isRunning, healthStatus)}
-              </p>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                  <Select
-                    value={selectedDatabase}
-                    onValueChange={setSelectedDatabase}
-                    disabled={databases.length === 0}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select database" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {databases.map(db => (
-                        <SelectItem key={db} value={db}>
-                          {db}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleFetchDatabases}
-                    disabled={isLoading}
-                    title="Fetch databases"
-                  >
-                    <IconRefresh className={`size-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="custom-db-name" className="text-muted-foreground text-xs">
-                    Or enter custom database name for restore:
-                  </label>
-                  <Input
-                    id="custom-db-name"
-                    type="text"
-                    placeholder="e.g., staging_db, test_db"
-                    value={customDatabaseName}
-                    onChange={e => setCustomDatabaseName(e.target.value)}
-                    className="h-7 text-xs"
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="default"
-                    onClick={handleDumpDatabase}
-                    disabled={!selectedDatabase || isDumping}
-                    className="flex-1"
-                    size="sm"
-                  >
-                    <IconDownload className="mr-2 size-4" />
-                    {isDumping ? 'Dumping...' : 'Dump'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleRestoreDatabase}
-                    disabled={(!selectedDatabase && !customDatabaseName.trim()) || isRestoring}
-                    className="flex-1"
-                    size="sm"
-                  >
-                    <IconUpload className="mr-2 size-4" />
-                    {isRestoring ? 'Restoring...' : 'Restore'}
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+          {isComponentLoading && (
+            <div className="space-y-2">
+              <Skeleton className="h-9 w-full" />
+              <Skeleton className="h-7 w-full" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          )}
+          {!isComponentLoading && isDisabled && (
+            <p className="text-muted-foreground text-xs">{getDisabledMessage()}</p>
+          )}
+          {!isComponentLoading && !isDisabled && (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Select
+                  value={selectedDatabase}
+                  onValueChange={setSelectedDatabase}
+                  disabled={databases.length === 0}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select database" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {databases.map(db => (
+                      <SelectItem key={db} value={db}>
+                        {db}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleFetchDatabases}
+                  disabled={isLoading}
+                  title="Fetch databases"
+                >
+                  <IconRefresh className={`size-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="custom-db-name" className="text-muted-foreground text-xs">
+                  Or enter custom database name for restore:
+                </label>
+                <Input
+                  id="custom-db-name"
+                  type="text"
+                  placeholder="e.g., staging_db, test_db"
+                  value={customDatabaseName}
+                  onChange={e => setCustomDatabaseName(e.target.value)}
+                  className="h-7 text-xs"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  onClick={handleDumpDatabase}
+                  disabled={!selectedDatabase || isDumping}
+                  className="flex-1"
+                  size="sm"
+                >
+                  <IconDownload className="mr-2 size-4" />
+                  {isDumping ? 'Dumping...' : 'Dump'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleRestoreDatabase}
+                  disabled={(!selectedDatabase && !customDatabaseName.trim()) || isRestoring}
+                  className="flex-1"
+                  size="sm"
+                >
+                  <IconUpload className="mr-2 size-4" />
+                  {isRestoring ? 'Restoring...' : 'Restore'}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>
