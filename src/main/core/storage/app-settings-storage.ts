@@ -14,8 +14,6 @@ const logger = createLogger('AppSettingsStorage');
  * App settings data structure
  */
 export interface AppSettings {
-  /** Whether Caddy SSL certificate has been installed on host */
-  caddyCertInstalled: boolean;
   /** Timestamps of when Docker images were last pulled (imageName -> timestamp) */
   imagePullTimes: Record<string, number>;
   /** Storage schema version for future migrations */
@@ -25,7 +23,6 @@ export interface AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  caddyCertInstalled: false,
   imagePullTimes: {},
   version: '1.0.0',
   lastUpdated: Date.now(),
@@ -98,23 +95,6 @@ class AppSettingsStorage {
   getAll(): AppSettings {
     this.ensureInitialized();
     return { ...this.settings! };
-  }
-
-  /**
-   * Get Caddy certificate installed status
-   */
-  getCaddyCertInstalled(): boolean {
-    this.ensureInitialized();
-    return this.settings!.caddyCertInstalled;
-  }
-
-  /**
-   * Set Caddy certificate installed status
-   */
-  async setCaddyCertInstalled(installed: boolean): Promise<void> {
-    this.ensureInitialized();
-    this.settings!.caddyCertInstalled = installed;
-    await this.save();
   }
 
   /**

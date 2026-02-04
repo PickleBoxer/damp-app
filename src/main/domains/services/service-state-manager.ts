@@ -107,19 +107,12 @@ class ServiceStateManager extends BaseStateManager {
   }
 
   /**
-   * Check if Caddy SSL certificate is installed on host
+   * Check if Caddy SSL certificate is installed on host (real-time verification)
    */
-  getCaddyCertInstalled(): boolean {
+  async getCaddyCertInstalled(): Promise<boolean> {
     this.ensureInitialized();
-    return appSettingsStorage.getCaddyCertInstalled();
-  }
-
-  /**
-   * Set Caddy SSL certificate installed status
-   */
-  async setCaddyCertInstalled(installed: boolean): Promise<void> {
-    this.ensureInitialized();
-    await appSettingsStorage.setCaddyCertInstalled(installed);
+    const { verifyCaddyCertInstalled } = await import('@main/core/reverse-proxy/caddy-setup');
+    return await verifyCaddyCertInstalled();
   }
 
   /**
@@ -206,11 +199,6 @@ class ServiceStateManager extends BaseStateManager {
             customConfig: options?.custom_config || null,
           });
 
-          // For Caddy, store certInstalled in app settings
-          if (serviceId === ServiceId.Caddy && hookResult.data?.certInstalled) {
-            await appSettingsStorage.setCaddyCertInstalled(true);
-          }
-
           // Log hook results (backend only - user not notified)
           if (hookResult.success) {
             this.logger.info(
@@ -290,11 +278,6 @@ class ServiceStateManager extends BaseStateManager {
           this.logger.info(`Also attempting removal by name: ${volumeNames.join(', ')}`);
           await removeServiceVolumes(volumeNames);
         }
-      }
-
-      // Reset certInstalled if uninstalling Caddy
-      if (serviceId === ServiceId.Caddy) {
-        await appSettingsStorage.setCaddyCertInstalled(false);
       }
 
       this.logger.info(`Service ${serviceId} uninstalled successfully`);

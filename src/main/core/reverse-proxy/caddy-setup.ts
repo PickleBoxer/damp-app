@@ -49,6 +49,179 @@ const CERT_GENERATION_TIMEOUT = 30000;
 const POLL_INTERVAL = 2000;
 
 /**
+ * Verify if the CURRENT Caddy SSL certificate is installed in system trust store
+ * Compares certificate thumbprint from running container with installed certificates
+ * @returns Promise<boolean> - true if current certificate is installed, false otherwise
+ */
+export async function verifyCaddyCertInstalled(): Promise<boolean> {
+  logger.debug('Checking if Caddy certificate is installed...');
+
+  try {
+    // Find running Caddy container
+    const caddyContainer = await findServiceContainer(ServiceId.Caddy);
+    if (!caddyContainer) {
+      logger.debug('Caddy container not found, cannot verify certificate');
+      return false;
+    }
+
+    const containerName = caddyContainer.Names[0]?.replace(/^\//, '') || caddyContainer.Id;
+    logger.debug(`Found Caddy container: ${containerName}`);
+
+    // Check if certificate exists in container
+    const certExists = await new Promise<boolean>(resolve => {
+      execCommand(containerName, ['test', '-f', CADDY_ROOT_CERT_PATH])
+        .then(result => resolve(result.exitCode === 0))
+        .catch(() => resolve(false));
+    });
+
+    if (!certExists) {
+      logger.debug('Certificate not yet generated in Caddy container');
+      return false;
+    }
+
+    logger.debug('Certificate found in container, extracting for verification...');
+
+    // Extract current certificate from container
+    const certBuffer = await getFileFromContainer(containerName, CADDY_ROOT_CERT_PATH);
+    const tempDir = tmpdir();
+    const certPath = join(tempDir, `damp-caddy-verify-${Date.now()}.crt`);
+    writeFileSync(certPath, certBuffer);
+
+    try {
+      let isInstalled = false;
+      if (isWindows()) {
+        isInstalled = await verifyCertificateWindows(certPath);
+      } else if (isMacOS()) {
+        isInstalled = await verifyCertificateMacOS(certPath);
+      } else {
+        logger.warn('Certificate verification not supported on this platform');
+        return false;
+      }
+
+      logger.debug(
+        `Certificate verification result: ${isInstalled ? 'Installed' : 'Not installed'}`
+      );
+      return isInstalled;
+    } finally {
+      // Clean up temp file
+      try {
+        unlinkSync(certPath);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  } catch (error) {
+    logger.error('Exception during certificate verification', { error });
+    return false;
+  }
+}
+
+/**
+ * Verify certificate on Windows by comparing thumbprints
+ * Uses .NET X509Certificate2 classes (production-ready, no external dependencies)
+ */
+async function verifyCertificateWindows(certPath: string): Promise<boolean> {
+  return new Promise(resolve => {
+    // Escape single quotes by doubling them for PowerShell
+    const escapedPath = certPath.replace(/'/g, "''");
+    const psCommand = String.raw`
+      try {
+        $fileCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2('${escapedPath}')
+        $thumbprint = $fileCert.Thumbprint
+        $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root", "LocalMachine")
+        $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+        $found = $store.Certificates | Where-Object { $_.Thumbprint -eq $thumbprint }
+        $store.Close()
+        if ($found) { Write-Output "true" } else { Write-Output "false" }
+      } catch {
+        Write-Error $_.Exception.Message
+        Write-Output "false"
+      }
+    `;
+
+    const proc = spawn('powershell', ['-NoProfile', '-Command', psCommand], {
+      stdio: 'pipe',
+      shell: false,
+    });
+
+    let stdout = '';
+
+    proc.stdout?.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    proc.on('close', (code: number) => {
+      resolve(code === 0 && stdout.trim() === 'true');
+    });
+
+    proc.on('error', err => {
+      logger.error('Failed to verify certificate on Windows', { error: err });
+      resolve(false);
+    });
+  });
+}
+
+/**
+ * Verify certificate on macOS by comparing SHA-1 fingerprints
+ */
+async function verifyCertificateMacOS(certPath: string): Promise<boolean> {
+  return new Promise(resolve => {
+    // Get SHA-1 fingerprint of the certificate file
+    const proc = spawn('openssl', ['x509', '-noout', '-fingerprint', '-sha1', '-in', certPath], {
+      stdio: 'pipe',
+    });
+
+    let stdout = '';
+
+    proc.stdout?.on('data', (data: Buffer) => {
+      stdout += data.toString();
+    });
+
+    proc.on('close', (code: number) => {
+      if (code !== 0) {
+        resolve(false);
+        return;
+      }
+
+      // Extract fingerprint from output like "SHA1 Fingerprint=XX:XX:XX:..."
+      const match = stdout.match(/SHA1 Fingerprint=([A-F0-9:]+)/i);
+      if (!match) {
+        resolve(false);
+        return;
+      }
+
+      const fingerprint = match[1];
+
+      // Check if certificate with this fingerprint exists in System keychain
+      const checkProc = spawn(
+        'security',
+        ['find-certificate', '-Z', '/Library/Keychains/System.keychain'],
+        { stdio: 'pipe' }
+      );
+
+      let checkStdout = '';
+      checkProc.stdout?.on('data', (data: Buffer) => {
+        checkStdout += data.toString();
+      });
+
+      checkProc.on('close', () => {
+        resolve(checkStdout.toUpperCase().includes(fingerprint.toUpperCase()));
+      });
+
+      checkProc.on('error', err => {
+        logger.error('Failed to verify certificate on macOS', { error: err });
+        resolve(false);
+      });
+    });
+
+    proc.on('error', err => {
+      logger.error('Failed to get certificate fingerprint on macOS', { error: err });
+      resolve(false);
+    });
+  });
+}
+
+/**
  * Result of the Caddy SSL setup process
  */
 export interface CaddySSLSetupResult {
@@ -325,8 +498,9 @@ async function installCertificateWindows(
   const tryElevated = (): Promise<{ success: boolean; error?: string }> =>
     new Promise(resolve => {
       // Use PowerShell to trigger UAC prompt and run certutil elevated
-      // The -ArgumentList is provided as comma-separated quoted strings
-      const psCommand = `Start-Process -FilePath 'certutil.exe' -ArgumentList '-addstore','-f','ROOT','${certPath}' -Verb RunAs -Wait`;
+      // Escape single quotes by doubling them for PowerShell
+      const escapedPath = certPath.replace(/'/g, "''");
+      const psCommand = `Start-Process -FilePath 'certutil.exe' -ArgumentList '-addstore','-f','ROOT','${escapedPath}' -Verb RunAs -Wait`;
 
       const elevated = spawn('powershell', ['-NoProfile', '-Command', psCommand], {
         stdio: 'ignore', // Ignore stdio to prevent terminal corruption from UAC prompt
