@@ -1,0 +1,41 @@
+---
+title: 'Bundled Services, Real-time Verification, and Enhanced UI'
+description: 'Per-project databases, improved credentials management, and Docker operation refinements.'
+date: '2026-02-09'
+tags: ['Feature', 'Improvement', 'Bug Fix']
+version: '0.4.0'
+---
+
+This release introduces bundled services that run alongside projects, real-time certificate verification, and major improvements to resource management and UI.
+
+- **Bundled Services**: Per-project databases (MySQL, PostgreSQL, MongoDB) and admin tools that run alongside specific projects
+- **Credentials Viewer**: Copy-to-clipboard functionality for bundled service credentials
+- **Database Operations**: Dump, restore, and copy data between bundled services
+- **Real-time Caddy Verification**: Ensures HTTPS certificates are properly configured
+- **Enhanced Resources UI**: Redesigned table with grouping and improved pagination
+
+<Accordions type="multiple">
+  <Accordion title="Added">
+    - **Bundled Services**: Per-project databases (MySQL, PostgreSQL, MongoDB) and admin tools (phpMyAdmin, Adminer, pgAdmin, mongo-express) that run alongside specific projects
+    - **Credentials viewer** for bundled services with copy-to-clipboard functionality
+    - **Database operations support** for bundled services (dump, restore, copy between services)
+    - **Real-time Caddy certificate verification** to ensure HTTPS is properly configured
+    - **Enhanced service credentials UI** with improved copy functionality
+  </Accordion>
+  <Accordion title="Fixed">
+    - **Cleanup bundled service volumes** when deleting projects to prevent orphaned data
+    - **Distinguish bundled vs global services** in Docker operations for proper isolation
+    - **Docs download page** now waits for API fetch before auto-downloading latest release
+  </Accordion>
+  <Accordion title="Changed">
+    - **Redesigned resources table** with grouping and improved pagination for better organization
+    - **Refactored Docker integration** to use containers as source of truth, simplifying image pull API
+    - **Unified credential components** and separated admin URLs for cleaner architecture
+    - **Unified service container state queries** for bundled services
+    - **Replaced delete button** with actions dropdown menu for more options
+    - **Replaced lucide-react** with @tabler/icons-react for improved icon consistency
+    - **General stability improvements** across bundled services and Docker operations
+  </Accordion>
+</Accordions>
+
+[0.4.0]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.4.0

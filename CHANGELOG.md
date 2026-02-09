@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-09
+
+### Added
+
+- Bundled Services: Per-project databases (MySQL, PostgreSQL, MongoDB) and admin tools (phpMyAdmin, Adminer, pgAdmin, mongo-express) that run alongside specific projects (PR #27, #29, #31)
+- Credentials viewer for bundled services with copy-to-clipboard functionality (PR #29)
+- Database operations support for bundled services (dump, restore, copy between services) (PR #31)
+- Real-time Caddy certificate verification to ensure HTTPS is properly configured (PR #37)
+- Enhanced service credentials UI with improved copy functionality (PR #b9cb3b4)
+
+### Fixed
+
+- Cleanup bundled service volumes when deleting projects to prevent orphaned data (PR #38)
+- Distinguish bundled vs global services in Docker operations for proper isolation (PR #34)
+- Docs download page now waits for API fetch before auto-downloading latest release
+
+### Changed
+
+- Redesigned resources table with grouping and improved pagination for better organization (PR #32)
+- Refactored Docker integration to use containers as source of truth, simplifying image pull API (PR #30)
+- Unified credential components and separated admin URLs for cleaner architecture (PR #36)
+- Unified service container state queries for bundled services (PR #35)
+- Replaced delete button with actions dropdown menu for more options (PR #33)
+- Replaced lucide-react with @tabler/icons-react for improved icon consistency
+- General stability and performance improvements across bundled services and Docker operations
+
 ## [0.3.0] - 2026-01-26
 
 ### Added
@@ -72,7 +98,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shadcn UI component library
 - Tailwind CSS v4 for styling
 
+[0.4.0]: https://github.com/PickleBoxer/damp-app/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/PickleBoxer/damp-app/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/PickleBoxer/damp-app/compare/v0.1.1...v0.2.0
-[0.3.0]: https://github.com/PickleBoxer/damp-app/compare/v0.2.0...main
 [0.1.1]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.1.1
 [0.1.0]: https://github.com/PickleBoxer/damp-app/releases/tag/v0.1.0

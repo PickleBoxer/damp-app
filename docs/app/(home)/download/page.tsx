@@ -9,12 +9,12 @@ export const metadata = {
 
 // Fallback data if API fetch fails
 const FALLBACK_DATA: ReleaseData = {
-  version: '0.3.0',
-  date: '2026-01-26',
+  version: '0.4.0',
+  date: '2026-02-09',
   setupUrl:
-    'https://github.com/PickleBoxer/damp-app/releases/download/v0.3.0/damp-0.3.0%20Setup.exe',
+    'https://github.com/PickleBoxer/damp-app/releases/download/v0.4.0/damp-0.4.0%20Setup.exe',
   portableUrl:
-    'https://github.com/PickleBoxer/damp-app/releases/download/v0.3.0/damp-win32-x64-0.3.0.zip',
+    'https://github.com/PickleBoxer/damp-app/releases/download/v0.4.0/damp-win32-x64-0.4.0.zip',
 };
 
 async function getLatestRelease(): Promise<ReleaseData | null> {
